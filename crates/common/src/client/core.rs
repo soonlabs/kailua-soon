@@ -355,12 +355,12 @@ pub fn recover_collected_executions(
         .collect::<Vec<_>>()
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "__test"))]
 #[cfg_attr(coverage_nightly, coverage(off))]
 pub mod tests {
     use super::*;
-    use crate::client::tests::TestOracle;
     use crate::precondition::PreconditionValidationData;
+    use crate::test::TestOracle;
     use alloy_primitives::{b256, B256};
     use kona_proof::l1::OracleBlobProvider;
     use kona_proof::BootInfo;

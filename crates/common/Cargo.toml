@@ -19,6 +19,12 @@ pot.workspace = true
 rkyv.workspace = true
 spin.workspace = true
 
+# Test feature dependencies
+copy_dir = { workspace = true, optional = true }
+kona-host = { workspace = true, optional = true }
+tempfile = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+
 alloy-consensus.workspace = true
 alloy-eips.workspace = true
 alloy-evm.workspace = true
@@ -53,6 +59,23 @@ rayon.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
 tracing-subscriber.workspace = true
+kailua-build.workspace = true
+bonsai-sdk.workspace = true
+
+[features]
+default = []
+__test = ["copy_dir", "kona-host", "tempfile", "tokio"]
 
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage,coverage_nightly)'] }
+unexpected_cfgs = { level = "warn", check-cfg = [
+	'cfg(coverage,coverage_nightly)',
+] }
+
+# Examples
+[[example]]
+name = "test_witness_extractor"
+path = "examples/test_witness_extractor.rs"
+
+[[example]]
+name = "risc_zero_verify"
+path = "examples/risc_zero_verify.rs"

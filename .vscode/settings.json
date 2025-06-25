@@ -1,0 +1,19 @@
+{
+	"rust-analyzer.cargo.features": [
+		"__test"
+	],
+	"rust-analyzer.cargo.allFeatures": false,
+	"rust-analyzer.diagnostics.disabled": [],
+	"rust-analyzer.cargo.buildScripts.enable": true,
+	"rust-analyzer.procMacro.enable": true,
+	"rust-analyzer.check.command": "clippy",
+	"rust-analyzer.check.features": [
+		"__test"
+	],
+	"editor.formatOnSave": true,
+	"editor.defaultFormatter": "rust-lang.rust-analyzer",
+	"[rust]": {
+		"editor.defaultFormatter": "rust-lang.rust-analyzer",
+		"editor.formatOnSave": true
+	}
+}

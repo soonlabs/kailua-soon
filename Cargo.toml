@@ -11,11 +11,7 @@ categories = ["cryptography", "cryptography::cryptocurrencies"]
 
 [workspace]
 resolver = "2"
-members = [
-    "bin/*",
-    "build/*",
-    "crates/*",
-]
+members = ["bin/*", "build/*", "crates/*"]
 
 [workspace.dependencies]
 anyhow = "1.0.98"
@@ -68,20 +64,30 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Alloy
 alloy = { version = "0.15.6", default-features = false, features = ["json"] }
 alloy-chains = "0.2.0"
-alloy-consensus = { version = "0.15.6", default-features = false, features = ["serde"] }
-alloy-eips = { version = "0.15.6", default-features = false, features = ["kzg"] }
+alloy-consensus = { version = "0.15.6", default-features = false, features = [
+    "serde",
+] }
+alloy-eips = { version = "0.15.6", default-features = false, features = [
+    "kzg",
+] }
 alloy-evm = { version = "0.6.0", default-features = false, features = ["op"] }
 alloy-op-evm = { version = "0.6.0", default-features = false }
 alloy-provider = { version = "0.15.6" }
 alloy-rlp = "0.3.11"
-alloy-primitives = { version = "1.1.0", default-features = false, features = ["map-hashbrown"] }
+alloy-primitives = { version = "1.1.0", default-features = false, features = [
+    "map-hashbrown",
+] }
 alloy-rpc-types-beacon = "0.15.6"
 alloy-rpc-types-engine = { version = "0.15.6", default-features = false }
 alloy-sol-types = { version = "1.0.0", features = ["json"] }
 
 # OP Alloy
-op-alloy-consensus = { version = "0.15.1", default-features = false, features = ["serde"] }
-op-alloy-rpc-types-engine = { version = "0.15.1", default-features = false, features = ["serde"] }
+op-alloy-consensus = { version = "0.15.1", default-features = false, features = [
+    "serde",
+] }
+op-alloy-rpc-types-engine = { version = "0.15.1", default-features = false, features = [
+    "serde",
+] }
 
 # Kailua
 kailua-build = { path = "build/risczero" }
@@ -93,13 +99,23 @@ kailua-host = { path = "bin/host" }
 # Kona git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1"
 kona-cli = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1", default-features = false }
 kona-client = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1", default-features = false }
-kona-derive = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1", default-features = false, features = ["serde"] }
+kona-derive = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1", default-features = false, features = [
+    "serde",
+] }
 kona-driver = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1" }
 kona-executor = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1" }
 kona-genesis = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1" }
-kona-host = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1", default-features = false, features = ["single"] }
-kona-mpt = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1", features = ["serde"] }
-kona-preimage = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1", features = ["serde", "rkyv", "std"] }
+kona-host = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1", default-features = false, features = [
+    "single",
+] }
+kona-mpt = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1", features = [
+    "serde",
+] }
+kona-preimage = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1", features = [
+    "serde",
+    "rkyv",
+    "std",
+] }
 kona-proof = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1" }
 kona-protocol = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1" }
 kona-providers-alloy = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1" }
@@ -112,7 +128,10 @@ bonsai-sdk = { version = "1.4.0", features = ["non_blocking"] }
 # RISC Zero
 risc0-build = { version = "2.1.2", features = ["unstable"] }
 risc0-ethereum-contracts = "2.1.0"
-risc0-zkvm = { version = "2.1.0", features = ["heap-embedded-alloc", "unstable"] }
+risc0-zkvm = { version = "2.1.0", features = [
+    "heap-embedded-alloc",
+    "unstable",
+] }
 
 # Boundless
 boundless-market = "0.8.0"

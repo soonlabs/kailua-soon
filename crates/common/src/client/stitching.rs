@@ -474,13 +474,13 @@ pub fn stitch_boot_info(
     stitched_journal
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "__test"))]
 #[cfg_attr(coverage_nightly, coverage(off))]
 pub mod tests {
     use super::*;
     use crate::client::core::tests::test_derivation;
-    use crate::client::tests::TestOracle;
     use crate::precondition::PreconditionValidationData;
+    use crate::test::TestOracle;
     use alloy_primitives::b256;
     use anyhow::Context;
     use kona_proof::l1::OracleBlobProvider;
