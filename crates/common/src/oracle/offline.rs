@@ -188,7 +188,13 @@ impl OfflineOracle<OfflineKeyValueStore> {
         // Create a cloned disk store in a temp dir
         let dest = if let Some(target_db_path) = target_db_path {
             let dest = target_db_path.join("testdata");
-            copy_dir(source_db_path, &dest).unwrap();
+            copy_dir(source_db_path.clone(), &dest).unwrap_or_else(|_| {
+                panic!(
+                    "Failed to copy testdata from {} to {}",
+                    source_db_path.display(),
+                    dest.display()
+                )
+            });
             dest
         } else {
             source_db_path

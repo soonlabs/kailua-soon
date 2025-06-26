@@ -5121,6 +5121,7 @@ dependencies = [
  "kailua-contracts",
  "kona-cli",
  "kona-derive",
+ "kona-genesis",
  "kona-host",
  "kona-preimage",
  "kona-proof",

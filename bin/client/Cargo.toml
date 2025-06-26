@@ -46,6 +46,7 @@ kona-preimage.workspace = true
 kona-proof.workspace = true
 kona-protocol.workspace = true
 kona-std-fpvm.workspace = true
+kona-genesis.workspace = true
 
 bonsai-sdk.workspace = true
 boundless-market.workspace = true
@@ -68,3 +69,7 @@ disable-dev-mode = [
 rebuild-fpvm = [
     "kailua-build/rebuild-fpvm"
 ]
+
+[[bin]]
+name = "kailua-offline"
+path = "src/bins/offline.rs"

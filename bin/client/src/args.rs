@@ -32,9 +32,15 @@ pub struct KailuaClientArgs {
 
     #[clap(flatten)]
     pub boundless: BoundlessArgs,
+}
 
-    #[clap(long, env)]
-    pub offline_cfg: Option<PathBuf>,
+#[derive(Parser, Clone, Debug)]
+pub struct OfflineClientArgs {
+    #[arg(long, env, action = clap::ArgAction::Count)]
+    pub kailua_verbosity: u8,
+
+    #[arg(long, env)]
+    pub offline_cfg: PathBuf,
 }
 
 pub fn parse_b256(s: &str) -> Result<B256, String> {
