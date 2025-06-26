@@ -1,3 +1,5 @@
 pub mod oracle;
 
-pub use oracle::{TestKeyValueStore, TestOracle};
+pub use oracle::{
+    create_analyzed_oracle, AccessAnalyzer, AccessStats, TestKeyValueStore, TestOracle,
+};
