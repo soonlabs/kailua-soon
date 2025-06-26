@@ -15,6 +15,7 @@
 pub mod args;
 pub mod bonsai;
 pub mod boundless;
+pub mod offline;
 pub mod oracle;
 pub mod proof;
 pub mod provider;

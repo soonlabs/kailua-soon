@@ -1,134 +1,25 @@
 use alloy_primitives::B256;
 use async_trait::async_trait;
-use copy_dir::copy_dir;
-use kona_host::single::{SingleChainHost, SingleChainLocalInputs};
-use kona_host::{DiskKeyValueStore, KeyValueStore, OfflineHostBackend, SplitKeyValueStore};
+use kona_host::KeyValueStore;
 use kona_preimage::errors::PreimageOracleResult;
-use kona_preimage::{
-    HintWriterClient, PreimageFetcher, PreimageKey, PreimageKeyType, PreimageOracleClient,
-};
+use kona_preimage::{HintWriterClient, PreimageKey, PreimageOracleClient};
 use kona_proof::{BootInfo, FlushableCache};
-use std::collections::HashMap;
 use std::fmt::Debug;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tempfile::{tempdir, TempDir};
-use tokio::sync::RwLock;
-use tokio::task::block_in_place;
 
+use crate::oracle::offline::{OfflineKeyValueStore, OfflineOracle};
 use crate::oracle::WitnessOracle;
 use crate::precondition::PreconditionValidationData;
 
-/// Data access statistics
-#[derive(Debug, Clone, Default)]
-pub struct AccessStats {
-    pub total_accesses: usize,
-    pub key_type_counts: HashMap<String, usize>,
-    pub data_sizes: HashMap<String, usize>,
-    pub accessed_keys: Vec<(PreimageKey, usize)>,
-}
-
-/// Access pattern analyzer
-#[derive(Debug, Clone, Default)]
-pub struct AccessAnalyzer {
-    stats: Arc<Mutex<AccessStats>>,
-}
-
-impl AccessAnalyzer {
-    pub fn new() -> Self {
-        Self {
-            stats: Arc::new(Mutex::new(AccessStats::default())),
-        }
-    }
-
-    /// Record data access
-    pub fn record_access(&self, key: PreimageKey, data_size: usize) {
-        let mut stats = self.stats.lock().unwrap();
-
-        stats.total_accesses += 1;
-        stats.accessed_keys.push((key, data_size));
-
-        let key_type = format!("{:?}", key.key_type());
-        *stats.key_type_counts.entry(key_type.clone()).or_insert(0) += 1;
-        *stats.data_sizes.entry(key_type).or_insert(0) += data_size;
-    }
-
-    /// Get statistics
-    pub fn get_stats(&self) -> AccessStats {
-        self.stats.lock().unwrap().clone()
-    }
-
-    /// Print detailed statistics
-    pub fn print_analysis(&self, test_name: &str) {
-        let stats = self.get_stats();
-
-        println!("\n=== {} Data Access Analysis ===", test_name);
-        println!("Total accesses: {}", stats.total_accesses);
-
-        if stats.total_accesses == 0 {
-            println!("No data access detected");
-            return;
-        }
-
-        println!("\nStatistics by preimage type:");
-        println!(
-            "{:<20} {:<10} {:<15} {:<12}",
-            "Key Type", "Accesses", "Total Size(bytes)", "Average Size"
-        );
-        println!("{:-<60}", "");
-
-        for (key_type, &count) in &stats.key_type_counts {
-            let total_size = stats.data_sizes.get(key_type).unwrap_or(&0);
-            let avg_size = if count > 0 { total_size / count } else { 0 };
-            println!(
-                "{:<20} {:<10} {:<15} {:<12}",
-                key_type, count, total_size, avg_size
-            );
-        }
-
-        // Show specific accessed keys (first 10)
-        println!("\nAccessed preimage keys (first 10):");
-        for (i, (key, size)) in stats.accessed_keys.iter().take(10).enumerate() {
-            let key_bytes = format!("{:?}", key);
-            let display_key = if key_bytes.len() > 50 {
-                format!(
-                    "{}...{}",
-                    &key_bytes[0..25],
-                    &key_bytes[key_bytes.len() - 20..]
-                )
-            } else {
-                key_bytes
-            };
-            println!(
-                "{}. {:?}: {} ({} bytes)",
-                i + 1,
-                key.key_type(),
-                display_key,
-                size
-            );
-        }
-
-        if stats.accessed_keys.len() > 10 {
-            println!("... {} more access records", stats.accessed_keys.len() - 10);
-        }
-    }
-
-    /// Clear statistics
-    pub fn clear(&self) {
-        *self.stats.lock().unwrap() = AccessStats::default();
-    }
-}
-
 #[derive(Debug)]
 pub struct TestOracle<T: KeyValueStore + Send + Sync + Debug> {
-    pub kv: Arc<RwLock<T>>,
-    pub backend: OfflineHostBackend<T>,
+    pub inner: OfflineOracle<T>,
     pub temp_dir: Option<TempDir>,
-    /// Access analyzer (optional, for data access analysis)
-    pub analyzer: Option<AccessAnalyzer>,
 }
 
-impl Default for TestOracle<TestKeyValueStore> {
+impl Default for TestOracle<OfflineKeyValueStore> {
     fn default() -> Self {
         Self::new(BootInfo {
             l1_head: Default::default(),
@@ -141,34 +32,35 @@ impl Default for TestOracle<TestKeyValueStore> {
     }
 }
 
-impl WitnessOracle for TestOracle<TestKeyValueStore> {
+impl WitnessOracle for TestOracle<OfflineKeyValueStore> {
     fn preimage_count(&self) -> usize {
-        1
+        self.inner.preimage_count()
     }
 
     fn validate_preimages(&self) -> anyhow::Result<()> {
-        Ok(())
+        self.inner.validate_preimages()
     }
 
-    fn insert_preimage(&mut self, _key: PreimageKey, _value: Vec<u8>) {}
+    fn insert_preimage(&mut self, key: PreimageKey, value: Vec<u8>) {
+        self.inner.insert_preimage(key, value)
+    }
 
-    fn finalize_preimages(&mut self, _shard_size: usize, _with_validation_cache: bool) {}
+    fn finalize_preimages(&mut self, shard_size: usize, with_validation_cache: bool) {
+        self.inner
+            .finalize_preimages(shard_size, with_validation_cache)
+    }
 }
 
 impl<T: KeyValueStore + Send + Sync + Debug> Clone for TestOracle<T> {
     fn clone(&self) -> Self {
         Self {
-            kv: self.kv.clone(),
-            backend: OfflineHostBackend::new(self.kv.clone()),
+            inner: self.inner.clone(),
             temp_dir: None,
-            analyzer: self.analyzer.clone(),
         }
     }
 }
 
-pub type TestKeyValueStore = SplitKeyValueStore<SingleChainLocalInputs, DiskKeyValueStore>;
-
-impl TestOracle<TestKeyValueStore> {
+impl TestOracle<OfflineKeyValueStore> {
     pub fn new(boot_info: BootInfo) -> Self {
         // Create a cloned disk store in a temp dir
         let temp_dir = tempdir().unwrap();
@@ -176,102 +68,24 @@ impl TestOracle<TestKeyValueStore> {
             boot_info,
             concat!(env!("CARGO_MANIFEST_DIR"), "/testdata").into(),
             temp_dir.path().to_path_buf(),
+            Some(temp_dir),
         )
-    }
-
-    /// Create a new TestOracle with data access analysis enabled
-    pub fn new_with_analysis(boot_info: BootInfo) -> Self {
-        let mut oracle = Self::new(boot_info);
-        oracle.analyzer = Some(AccessAnalyzer::new());
-        oracle
     }
 
     pub fn new_with_path(
         boot_info: BootInfo,
         source_db_path: PathBuf,
         target_db_path: PathBuf,
+        temp_dir: Option<TempDir>,
     ) -> Self {
-        // Create memory store
-        let scli = SingleChainLocalInputs::new(SingleChainHost {
-            l1_head: boot_info.l1_head,
-            agreed_l2_output_root: boot_info.agreed_l2_output_root,
-            claimed_l2_output_root: boot_info.claimed_l2_output_root,
-            claimed_l2_block_number: boot_info.claimed_l2_block_number,
-            l2_chain_id: Some(boot_info.chain_id),
-            // rollup_config_path: None, // no support for custom chains
-            ..Default::default()
-        });
-        // Create a cloned disk store in a temp dir
-        let dest = target_db_path.join("testdata");
-        copy_dir(source_db_path, &dest).unwrap();
-        let disk = DiskKeyValueStore::new(dest);
-        let kv = Arc::new(RwLock::new(SplitKeyValueStore::new(scli, disk)));
-
         Self {
-            kv: kv.clone(),
-            backend: OfflineHostBackend::new(kv.clone()),
-            temp_dir: None, // We don't store the temp_dir PathBuf as TempDir anymore
-            analyzer: None,
-        }
-    }
-
-    /// Create a new TestOracle with analysis enabled and custom path
-    pub fn new_with_path_and_analysis(
-        boot_info: BootInfo,
-        source_db_path: PathBuf,
-        target_db_path: PathBuf,
-    ) -> Self {
-        let mut oracle = Self::new_with_path(boot_info, source_db_path, target_db_path);
-        oracle.analyzer = Some(AccessAnalyzer::new());
-        oracle
-    }
-
-    /// Enable data access analysis
-    pub fn enable_analysis(&mut self) {
-        self.analyzer = Some(AccessAnalyzer::new());
-    }
-
-    /// Disable data access analysis
-    pub fn disable_analysis(&mut self) {
-        self.analyzer = None;
-    }
-
-    /// Check if analysis is enabled
-    pub fn is_analysis_enabled(&self) -> bool {
-        self.analyzer.is_some()
-    }
-
-    /// Get access statistics (if analysis is enabled)
-    pub fn get_stats(&self) -> Option<AccessStats> {
-        self.analyzer.as_ref().map(|a| a.get_stats())
-    }
-
-    /// Print analysis results (if analysis is enabled)
-    pub fn print_analysis(&self, test_name: &str) {
-        if let Some(analyzer) = &self.analyzer {
-            analyzer.print_analysis(test_name);
-        } else {
-            println!("Data access analysis is not enabled");
-        }
-    }
-
-    /// Clear statistics (if analysis is enabled)
-    pub fn clear_stats(&self) {
-        if let Some(analyzer) = &self.analyzer {
-            analyzer.clear();
+            inner: OfflineOracle::new(boot_info, source_db_path, Some(target_db_path)),
+            temp_dir,
         }
     }
 
     pub fn add_precondition_data(&self, data: PreconditionValidationData) -> B256 {
-        block_in_place(move || {
-            let mut kv = self.kv.blocking_write();
-            let precondition_data_hash = data.hash();
-            let preimage_key = PreimageKey::new(precondition_data_hash.0, PreimageKeyType::Sha256);
-            kv.set(B256::from(preimage_key), data.to_vec()).unwrap();
-            // sanity check
-            assert_eq!(kv.get(B256::from(preimage_key)).unwrap(), data.to_vec());
-            precondition_data_hash
-        })
+        self.inner.add_precondition_data(data)
     }
 }
 
@@ -284,53 +98,35 @@ impl<T: KeyValueStore + Send + Sync + Debug> FlushableCache for TestOracle<T> {
 #[async_trait]
 impl<T: KeyValueStore + Send + Sync + Debug> PreimageOracleClient for TestOracle<T> {
     async fn get(&self, key: PreimageKey) -> PreimageOracleResult<Vec<u8>> {
-        let result = self.backend.get_preimage(key).await;
-
-        // Record access if analysis is enabled
-        if let (Ok(ref data), Some(analyzer)) = (&result, &self.analyzer) {
-            analyzer.record_access(key, data.len());
-        }
-
-        result
+        self.inner.get(key).await
     }
 
     async fn get_exact(&self, key: PreimageKey, buf: &mut [u8]) -> PreimageOracleResult<()> {
-        let result = self.backend.get_preimage(key).await;
-
-        match result {
-            Ok(value) => {
-                buf.copy_from_slice(value.as_ref());
-
-                // Record access if analysis is enabled
-                if let Some(analyzer) = &self.analyzer {
-                    analyzer.record_access(key, buf.len());
-                }
-
-                Ok(())
-            }
-            Err(e) => Err(e),
-        }
+        self.inner.get_exact(key, buf).await
     }
 }
 
 #[async_trait]
 impl<T: KeyValueStore + Send + Sync + Debug> HintWriterClient for TestOracle<T> {
     async fn write(&self, _hint: &str) -> PreimageOracleResult<()> {
-        // just hit the noop
-        self.flush();
-        Ok(())
+        self.inner.write(_hint).await
     }
 }
 
 /// Create a TestOracle with data access analysis enabled
-pub fn create_analyzed_oracle(boot_info: BootInfo) -> Arc<TestOracle<TestKeyValueStore>> {
-    Arc::new(TestOracle::new_with_analysis(boot_info))
+pub fn create_analyzed_oracle(boot_info: BootInfo) -> Arc<TestOracle<OfflineKeyValueStore>> {
+    let mut oracle = TestOracle::new(boot_info);
+    oracle.inner.enable_analysis();
+    Arc::new(oracle)
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::oracle::offline::AccessAnalyzer;
+
     use super::*;
     use alloy_primitives::b256;
+    use kona_preimage::PreimageKeyType;
     use kona_proof::BootInfo;
 
     #[test]
@@ -350,23 +146,23 @@ mod tests {
 
         // Test creating oracle without analysis
         let mut oracle = TestOracle::new(boot_info.clone());
-        assert!(!oracle.is_analysis_enabled());
-        assert!(oracle.get_stats().is_none());
+        assert!(!oracle.inner.is_analysis_enabled());
+        assert!(oracle.inner.get_stats().is_none());
 
         // Test enabling analysis
-        oracle.enable_analysis();
-        assert!(oracle.is_analysis_enabled());
-        let stats = oracle.get_stats().unwrap();
+        oracle.inner.enable_analysis();
+        assert!(oracle.inner.is_analysis_enabled());
+        let stats = oracle.inner.get_stats().unwrap();
         assert_eq!(stats.total_accesses, 0);
 
         // Test creating oracle with analysis enabled from start
-        let oracle_with_analysis = TestOracle::new_with_analysis(boot_info.clone());
-        assert!(oracle_with_analysis.is_analysis_enabled());
+        let oracle_with_analysis = create_analyzed_oracle(boot_info.clone());
+        assert!(oracle_with_analysis.inner.is_analysis_enabled());
 
         // Test disabling analysis
-        oracle.disable_analysis();
-        assert!(!oracle.is_analysis_enabled());
-        assert!(oracle.get_stats().is_none());
+        oracle.inner.disable_analysis();
+        assert!(!oracle.inner.is_analysis_enabled());
+        assert!(oracle.inner.get_stats().is_none());
     }
 
     #[test]
@@ -409,7 +205,7 @@ mod tests {
         };
 
         let oracle = create_analyzed_oracle(boot_info);
-        assert!(oracle.is_analysis_enabled());
-        assert_eq!(oracle.get_stats().unwrap().total_accesses, 0);
+        assert!(oracle.inner.is_analysis_enabled());
+        assert_eq!(oracle.inner.get_stats().unwrap().total_accesses, 0);
     }
 }

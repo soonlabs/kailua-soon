@@ -24,20 +24,24 @@ async fn main() -> anyhow::Result<()> {
     let precondition_validation_data_hash =
         args.precondition_validation_data_hash.unwrap_or_default();
 
-    kailua_client::proving::run_proving_client(
-        args.proving,
-        args.boundless,
-        ORACLE_READER,
-        HINT_WRITER,
-        precondition_validation_data_hash,
-        vec![],
-        vec![],
-        vec![],
-        true,
-        true,
-        true,
-    )
-    .await?;
+    if let Some(offline_cfg) = args.offline_cfg {
+        kailua_client::offline::run_offline_client(offline_cfg)?;
+    } else {
+        kailua_client::proving::run_proving_client(
+            args.proving,
+            args.boundless,
+            ORACLE_READER,
+            HINT_WRITER,
+            precondition_validation_data_hash,
+            vec![],
+            vec![],
+            vec![],
+            true,
+            true,
+            true,
+        )
+        .await?;
+    }
 
     Ok(())
 }

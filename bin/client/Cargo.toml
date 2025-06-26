@@ -36,7 +36,7 @@ alloy = { workspace = true, features = ["full", "kzg"] }
 alloy-primitives = { workspace = true, features = ["map-hashbrown"] }
 
 kailua-build.workspace = true
-kailua-common.workspace = true
+kailua-common = { workspace = true, features = ["offline"] }
 kailua-contracts.workspace = true
 
 kona-cli.workspace = true

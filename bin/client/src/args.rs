@@ -16,7 +16,7 @@ use crate::boundless::BoundlessArgs;
 use crate::proving::ProvingArgs;
 use alloy_primitives::{Address, B256};
 use clap::Parser;
-use std::str::FromStr;
+use std::{path::PathBuf, str::FromStr};
 
 /// The client binary CLI application arguments.
 #[derive(Parser, Clone, Debug)]
@@ -32,6 +32,9 @@ pub struct KailuaClientArgs {
 
     #[clap(flatten)]
     pub boundless: BoundlessArgs,
+
+    #[clap(long, env)]
+    pub offline_cfg: Option<PathBuf>,
 }
 
 pub fn parse_b256(s: &str) -> Result<B256, String> {

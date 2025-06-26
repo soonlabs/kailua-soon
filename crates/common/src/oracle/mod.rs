@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub mod offline;
 pub mod vec;
 
 use alloy_primitives::keccak256;

@@ -478,9 +478,9 @@ pub fn stitch_boot_info(
 #[cfg_attr(coverage_nightly, coverage(off))]
 pub mod tests {
     use super::*;
-    use crate::client::core::tests::test_derivation;
     use crate::precondition::PreconditionValidationData;
     use crate::test::TestOracle;
+    use crate::{client::core::tests::test_derivation, test::create_analyzed_oracle};
     use alloy_primitives::b256;
     use anyhow::Context;
     use kona_proof::l1::OracleBlobProvider;
@@ -559,6 +559,40 @@ pub mod tests {
             stitched_executions,
             stitched_boot_info,
         )
+    }
+
+    /// Test client with data access analysis
+    pub fn test_stitching_client_with_analysis(
+        test_name: &str,
+        boot_info: BootInfo,
+        precondition_validation_data: Option<PreconditionValidationData>,
+        stitched_executions: Vec<Vec<Execution>>,
+        stitched_boot_info: Vec<StitchedBootInfo>,
+    ) -> ProofJournal {
+        println!("\nStarting analysis test: {}", test_name);
+
+        let oracle = create_analyzed_oracle(boot_info.clone());
+
+        let precondition_validation_data_hash = match precondition_validation_data {
+            None => B256::ZERO,
+            Some(data) => oracle.add_precondition_data(data),
+        };
+
+        let result = run_stitching_client(
+            precondition_validation_data_hash,
+            oracle.clone(),
+            oracle.clone(),
+            OracleBlobProvider::new(oracle.clone()),
+            B256::ZERO,
+            Address::ZERO,
+            stitched_executions,
+            stitched_boot_info,
+        );
+
+        // Print access analysis results
+        oracle.inner.print_analysis(test_name);
+
+        result
     }
 
     pub fn test_stitching_boots(
@@ -883,5 +917,154 @@ pub mod tests {
         .unwrap();
 
         teardown();
+    }
+
+    /// Data access analysis test
+    #[tokio::test(flavor = "multi_thread")]
+    pub async fn test_data_access_analysis() {
+        setup();
+
+        let boot_info = BootInfo {
+            l1_head: b256!("0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"),
+            agreed_l2_output_root: b256!(
+                "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
+            ),
+            claimed_l2_output_root: b256!(
+                "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
+            ),
+            claimed_l2_block_number: 16491349,
+            chain_id: 11155420,
+            rollup_config: Default::default(),
+        };
+
+        // Analyze data access patterns in different scenarios
+        println!("\n=== Starting TestData Data Access Analysis ===");
+
+        // Scenario 1: Simple stitching test
+        test_stitching_client_with_analysis(
+            "Simple Stitching Test",
+            boot_info.clone(),
+            None,
+            vec![],
+            vec![],
+        );
+
+        // Scenario 2: Test with preconditions
+        test_stitching_client_with_analysis(
+            "Stitching Test with Preconditions",
+            boot_info.clone(),
+            Some(PreconditionValidationData::Validity {
+                proposal_l2_head_number: 16491249,
+                proposal_output_count: 1,
+                output_block_span: 100,
+                blob_hashes: vec![],
+            }),
+            vec![],
+            vec![],
+        );
+
+        // Scenario 3: Execution analysis test (if execution data exists)
+        if let Ok(executions) = test_derivation(boot_info.clone(), None) {
+            let stitched_executions =
+                vec![executions.into_iter().map(|e| e.as_ref().clone()).collect()];
+            test_stitching_client_with_analysis(
+                "Execution Data Stitching Test",
+                boot_info.clone(),
+                None,
+                stitched_executions,
+                vec![],
+            );
+        }
+
+        println!("\n=== TestData Data Access Analysis Complete ===");
+
+        teardown();
+    }
+
+    /// Analyze data access patterns of a specific existing test
+    #[tokio::test(flavor = "multi_thread")]
+    pub async fn test_analyze_specific_test_data_access() {
+        setup();
+
+        let boot_info = BootInfo {
+            l1_head: b256!("0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"),
+            agreed_l2_output_root: b256!(
+                "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
+            ),
+            claimed_l2_output_root: b256!(
+                "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
+            ),
+            claimed_l2_block_number: 16491349,
+            chain_id: 11155420,
+            rollup_config: Default::default(),
+        };
+
+        println!("\n=== Starting Single Test Data Access Analysis ===");
+
+        // Re-run a specific test scenario using monitored Oracle
+        test_stitching_client_with_analysis(
+            "Sepolia 16491249-16491349 Analysis",
+            boot_info.clone(),
+            Some(PreconditionValidationData::Validity {
+                proposal_l2_head_number: 16491249,
+                proposal_output_count: 1,
+                output_block_span: 100,
+                blob_hashes: vec![],
+            }),
+            vec![],
+            vec![],
+        );
+
+        println!("\n=== Single Test Data Access Analysis Complete ===");
+
+        teardown();
+    }
+
+    /// Analyze various scenarios in existing tests
+    #[tokio::test(flavor = "multi_thread")]
+    pub async fn test_analyze_all_scenarios() {
+        setup();
+
+        let boot_info = BootInfo {
+            l1_head: b256!("0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"),
+            agreed_l2_output_root: b256!(
+                "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
+            ),
+            claimed_l2_output_root: b256!(
+                "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
+            ),
+            claimed_l2_block_number: 16491349,
+            chain_id: 11155420,
+            rollup_config: Default::default(),
+        };
+
+        println!("\n=== Starting All Scenarios Data Access Analysis ===");
+
+        // Scenario 1: Basic stitching
+        test_stitching_client_with_analysis(
+            "Scenario 1: Basic Stitching",
+            boot_info.clone(),
+            None,
+            vec![],
+            vec![],
+        );
+
+        // Scenario 2: With precondition validation
+        test_stitching_client_with_analysis(
+            "Scenario 2: With Precondition Validation",
+            boot_info.clone(),
+            Some(PreconditionValidationData::Validity {
+                proposal_l2_head_number: 16491249,
+                proposal_output_count: 1,
+                output_block_span: 100,
+                blob_hashes: vec![],
+            }),
+            vec![],
+            vec![],
+        );
+
+        println!("\n=== All Scenarios Data Access Analysis Complete ===");
+
+        teardown()
     }
 }

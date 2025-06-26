@@ -64,7 +64,8 @@ bonsai-sdk.workspace = true
 
 [features]
 default = []
-__test = ["copy_dir", "kona-host", "tempfile", "tokio"]
+offline = ["kona-host", "copy_dir", "tokio"]
+__test = ["offline", "tempfile"]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = [
