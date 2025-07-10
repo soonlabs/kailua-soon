@@ -18,7 +18,6 @@ use crate::{client, precondition};
 use alloy_op_evm::OpEvmFactory;
 use alloy_primitives::{Sealed, B256};
 use anyhow::{bail, Context};
-use kona_derive::prelude::{BlobProvider, EthereumDataSource};
 use kona_driver::{Driver, Executor};
 use kona_executor::TrieDBProvider;
 use kona_preimage::{CommsClient, PreimageKey};
@@ -138,7 +137,6 @@ where
                 rollup_config.as_ref(),
                 l2_provider.clone(),
                 l2_provider.clone(),
-                OpEvmFactory::default(),
                 None,
             );
             kona_executor.update_safe_head(safe_head);
@@ -236,7 +234,6 @@ where
                 rollup_config.as_ref(),
                 l2_provider.clone(),
                 l2_provider.clone(),
-                OpEvmFactory::default(),
                 None,
             ),
             collection_target,
