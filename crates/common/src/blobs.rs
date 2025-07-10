@@ -21,9 +21,6 @@ use alloy_primitives::{B256, U256};
 use anyhow::bail;
 use async_trait::async_trait;
 use c_kzg::{ethereum_kzg_settings, Bytes48};
-use kona_derive::errors::BlobProviderError;
-use kona_derive::traits::BlobProvider;
-use kona_protocol::BlockInfo;
 use serde::{Deserialize, Serialize};
 
 /// A struct representing a request to fetch a specific blob based on its hash and associated block reference.

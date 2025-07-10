@@ -14,7 +14,6 @@
 
 use alloy_primitives::{b256, Address, B256};
 use anyhow::Context;
-use kona_genesis::{AltDAConfig, RollupConfig, SystemConfig};
 use risc0_zkvm::sha::{Impl as SHA2, Sha256};
 use std::fmt::Debug;
 

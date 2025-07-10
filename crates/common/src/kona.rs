@@ -18,12 +18,10 @@ use alloy_primitives::map::B256Map;
 use alloy_primitives::{Sealed, B256};
 use alloy_rlp::Decodable;
 use async_trait::async_trait;
-use kona_derive::prelude::ChainProvider;
 use kona_mpt::{OrderedListWalker, TrieNode, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use kona_proof::errors::OracleProviderError;
 use kona_proof::HintType;
-use kona_protocol::BlockInfo;
 use std::sync::Arc;
 
 /// The oracle-backed L1 chain provider for the client program.

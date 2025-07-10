@@ -15,7 +15,6 @@ use crate::blobs::{hash_to_fe, BlobFetchRequest};
 use alloy_eips::eip4844::{Blob, FIELD_ELEMENTS_PER_BLOB};
 use alloy_primitives::B256;
 use anyhow::{bail, Context};
-use kona_derive::prelude::BlobProvider;
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use kona_proof::errors::OracleProviderError;
 use risc0_zkvm::sha::{Impl as SHA2, Sha256};

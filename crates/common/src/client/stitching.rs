@@ -17,7 +17,6 @@ use crate::client::log;
 use crate::executor::Execution;
 use crate::journal::ProofJournal;
 use alloy_primitives::{Address, B256};
-use kona_derive::prelude::BlobProvider;
 use kona_preimage::CommsClient;
 use kona_proof::{BootInfo, FlushableCache};
 use std::fmt::Debug;
