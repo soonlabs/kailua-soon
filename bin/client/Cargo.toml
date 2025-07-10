@@ -40,13 +40,11 @@ kailua-common = { workspace = true, features = ["offline"] }
 kailua-contracts.workspace = true
 
 kona-cli.workspace = true
-kona-derive.workspace = true
+soon-derive.workspace = true
 kona-host.workspace = true
 kona-preimage.workspace = true
 kona-proof.workspace = true
-kona-protocol.workspace = true
 kona-std-fpvm.workspace = true
-kona-genesis.workspace = true
 
 bonsai-sdk.workspace = true
 boundless-market.workspace = true

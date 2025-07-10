@@ -97,30 +97,24 @@ kailua-contracts = { path = "crates/contracts" }
 kailua-host = { path = "bin/host" }
 
 # Kona git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1"
-kona-cli = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1", default-features = false }
-kona-client = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1", default-features = false }
-kona-derive = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1", default-features = false, features = [
-    "serde",
-] }
-kona-driver = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1" }
-kona-executor = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1" }
-kona-genesis = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1" }
-kona-host = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1", default-features = false, features = [
+kona-cli = { path = "../kona/crates/utilities/cli", default-features = false }
+kona-client = { path = "../kona/bin/client", default-features = false }
+soon-derive = { path = '../soon/node/derive' }
+kona-driver = { path = "../kona/crates/protocol/driver" }
+kona-executor = { path = "../kona/crates/proof/executor" }
+kona-host = { path = "../kona/bin/host", default-features = false, features = [
     "single",
 ] }
-kona-mpt = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1", features = [
+kona-mpt = { path = "../kona/crates/proof/mpt", features = [
     "serde",
 ] }
-kona-preimage = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1", features = [
+kona-preimage = { path = "../kona/crates/proof/preimage", features = [
     "serde",
     "rkyv",
     "std",
 ] }
-kona-proof = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1" }
-kona-protocol = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1" }
-kona-providers-alloy = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1" }
-kona-registry = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1" }
-kona-std-fpvm = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.0.1" }
+kona-proof = { path = "../kona/crates/proof/proof" }
+kona-std-fpvm = { path = "../kona/crates/proof/std-fpvm" }
 
 # Bonsai
 bonsai-sdk = { version = "1.4.0", features = ["non_blocking"] }
@@ -134,7 +128,7 @@ risc0-zkvm = { version = "2.1.0", features = [
 ] }
 
 # Boundless
-boundless-market = "0.8.0"
+boundless-market = "0.11.0"
 
 [profile.dev]
 opt-level = 3
@@ -149,3 +143,18 @@ overflow-checks = true
 [profile.release.build-override]
 codegen-units = 1
 opt-level = 3
+
+[patch.crates-io]
+# Core Solana packages that definitely exist in soonlabs/agave
+solana-program = { git = "https://github.com/soonlabs/agave", branch = "upgrade_curve25519" }
+solana-sdk = { git = "https://github.com/soonlabs/agave", branch = "upgrade_curve25519" }
+solana-account-decoder = { git = "https://github.com/soonlabs/agave", branch = "upgrade_curve25519" }
+
+# Critical patch to resolve SPL package dependencies with our custom Solana version
+# This prevents duplicate versions of solana-program and solana-zk-token-sdk
+solana-zk-token-sdk = { git = "https://github.com/soonlabs/agave", branch = "upgrade_curve25519" }
+
+[patch.crates-io.curve25519-dalek]
+git = "https://github.com/SVM-L2-temp/curve25519-dalek.git"
+branch = "dep"
+
