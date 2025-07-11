@@ -196,7 +196,7 @@ where
         //                   DERIVATION & EXECUTION                   //
         ////////////////////////////////////////////////////////////////
         client::log("PRECONDITION");
-        let _precondition_data = precondition::load_precondition_data(
+        let precondition_data = precondition::load_precondition_data(
             precondition_validation_data_hash,
             oracle.clone(),
             &mut beacon,
@@ -269,36 +269,35 @@ where
             output_roots.push(output_root);
         }
 
-        //     ////////////////////////////////////////////////////////////////
-        //     //                          EPILOGUE                          //
-        //     ////////////////////////////////////////////////////////////////
-        //     client::log("EPILOGUE");
-        //
-        //     let precondition_hash = precondition_data
-        //         .map(|(precondition_validation_data, blobs)| {
-        //             precondition::validate_precondition(
-        //                 precondition_validation_data,
-        //                 blobs,
-        //                 safe_head_number,
-        //                 &output_roots,
-        //             )
-        //         })
-        //         .unwrap_or(Ok(B256::ZERO))
-        //         .context("validate_precondition")?;
-        //
-        //     if output_roots.len() != expected_output_count {
-        //         // Not enough data to derive output root at claimed height
-        //         Ok((boot, precondition_hash, None))
-        //     } else if output_roots.is_empty() {
-        //         // note: This implies expected_output_count == 0
-        //         // Claimed output height is equal to agreed output height
-        //         let real_output_hash = boot.agreed_l2_output_root;
-        //         Ok((boot, precondition_hash, Some(real_output_hash)))
-        //     } else {
-        //         // Derived output root at future height
-        //         Ok((boot, precondition_hash, output_roots.pop()))
-        //     }
-        Ok((boot, B256::ZERO, None))
+        ////////////////////////////////////////////////////////////////
+        //                          EPILOGUE                          //
+        ////////////////////////////////////////////////////////////////
+        client::log("EPILOGUE");
+
+        let precondition_hash = precondition_data
+            .map(|(precondition_validation_data, blobs)| {
+                precondition::validate_precondition(
+                    precondition_validation_data,
+                    blobs,
+                    safe_head_number,
+                    &output_roots,
+                )
+            })
+            .unwrap_or(Ok(B256::ZERO))
+            .context("validate_precondition")?;
+
+        if output_roots.len() != expected_output_count {
+            // Not enough data to derive output root at claimed height
+            Ok((boot, precondition_hash, None))
+        } else if output_roots.is_empty() {
+            // note: This implies expected_output_count == 0
+            // Claimed output height is equal to agreed output height
+            let real_output_hash = boot.agreed_l2_output_root;
+            Ok((boot, precondition_hash, Some(real_output_hash)))
+        } else {
+            // Derived output root at future height
+            Ok((boot, precondition_hash, output_roots.pop()))
+        }
     })?;
 
     // Check claimed_l2_output_root correctness
