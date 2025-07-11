@@ -17,7 +17,7 @@ use crate::sync::provider::SyncProvider;
 use crate::KAILUA_GAME_TYPE;
 use alloy::primitives::{Address, B256};
 use kailua_contracts::*;
-use kona_genesis::RollupConfig;
+use soon_primitives::rollup_config::SoonRollupConfig;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::{TraceContextExt, Tracer};
 use opentelemetry::Context;
@@ -58,7 +58,7 @@ pub struct SyncDeployment {
 impl SyncDeployment {
     pub async fn load(
         provider: &SyncProvider,
-        config: &RollupConfig,
+        config: &SoonRollupConfig,
         game_impl_address: Option<Address>,
     ) -> anyhow::Result<Self> {
         let tracer = tracer("kailua");

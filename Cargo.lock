@@ -654,9 +654,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-node-bindings"
-version = "1.0.18"
+version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d17165a7f049283bcc047720cb97e152f188dc1b5a40f9d50fbee1a0dfb4e21"
+checksum = "15fdb7f13794430ec98cf9a8bca8d9509ade14d12b260b6d7b7e0d133f6631fc"
 dependencies = [
  "alloy-genesis 1.0.18",
  "alloy-hardforks",
@@ -818,7 +818,7 @@ dependencies = [
  "alloy-node-bindings",
  "alloy-primitives 1.2.1",
  "alloy-rpc-client 1.0.18",
- "alloy-rpc-types-anvil 1.0.18",
+ "alloy-rpc-types-anvil 1.0.20",
  "alloy-rpc-types-eth 1.0.18",
  "alloy-signer 1.0.18",
  "alloy-sol-types",
@@ -984,9 +984,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-rpc-types-anvil"
-version = "1.0.18"
+version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6425892f9addc08b0c687878feb8e4a61a89e085ffdf52865fd44fa1d54f84f"
+checksum = "9d34231e06b5f1ad5f274a6ddb3eca8730db5eb868b70a4494a1e4b716b7fe88"
 dependencies = [
  "alloy-primitives 1.2.1",
  "alloy-rpc-types-eth 1.0.18",
@@ -6441,6 +6441,7 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "soon-derive",
+ "soon-primitives",
  "tempfile",
  "threadpool",
  "tokio",
@@ -6483,6 +6484,7 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "soon-derive",
+ "soon-primitives",
  "thiserror 2.0.12",
  "tokio",
  "tracing",
@@ -6523,6 +6525,7 @@ dependencies = [
  "rkyv",
  "serde",
  "soon-derive",
+ "soon-primitives",
  "spin 0.10.0",
  "tempfile",
  "tokio",
@@ -6568,6 +6571,7 @@ dependencies = [
  "serde",
  "serde_json",
  "soon-derive",
+ "soon-primitives",
  "tempfile",
  "tokio",
  "tracing",
@@ -11982,8 +11986,10 @@ name = "soon-primitives"
 version = "0.7.4"
 dependencies = [
  "alloy 0.15.11",
+ "alloy-consensus 0.15.11",
  "alloy-eips 0.15.11",
  "alloy-primitives 1.2.1",
+ "alloy-sol-types",
  "bincode",
  "bridge",
  "derive_more 0.99.20",

@@ -3,7 +3,7 @@ use kailua_common::{
     oracle::offline::{OfflineKeyValueStore, OfflineOracle},
     precondition::PreconditionValidationData,
 };
-use kona_genesis::RollupConfig;
+use soon_primitives::rollup_config::SoonRollupConfig;
 use kona_proof::BootInfo;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
@@ -29,12 +29,12 @@ where
         if rollup_config.is_null() || rollup_config == &Value::Object(serde_json::Map::new()) {
             debug!("rollup_config is empty or null, using default");
             *rollup_config =
-                serde_json::to_value(RollupConfig::default()).map_err(serde::de::Error::custom)?;
+                serde_json::to_value(SoonRollupConfig::default()).map_err(serde::de::Error::custom)?;
         } else {
             // Check if it's missing required fields like genesis
             if rollup_config.get("genesis").is_none() {
                 debug!("rollup_config missing genesis field, using default");
-                *rollup_config = serde_json::to_value(RollupConfig::default())
+                *rollup_config = serde_json::to_value(SoonRollupConfig::default())
                     .map_err(serde::de::Error::custom)?;
             }
         }
@@ -43,7 +43,7 @@ where
         if let Some(obj) = value.as_object_mut() {
             obj.insert(
                 "rollup_config".to_string(),
-                serde_json::to_value(RollupConfig::default()).map_err(serde::de::Error::custom)?,
+                serde_json::to_value(SoonRollupConfig::default()).map_err(serde::de::Error::custom)?,
             );
         }
     }

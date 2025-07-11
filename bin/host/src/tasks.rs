@@ -21,7 +21,7 @@ use async_channel::{Receiver, Sender};
 use kailua_client::proving::ProvingError;
 use kailua_common::boot::StitchedBootInfo;
 use kailua_common::executor::Execution;
-use kona_genesis::RollupConfig;
+use soon_primitives::rollup_config::SoonRollupConfig;
 use risc0_zkvm::Receipt;
 use std::cmp::Ordering;
 use tracing::error;
@@ -29,7 +29,7 @@ use tracing::error;
 #[derive(Clone, Debug)]
 pub struct Cached {
     pub args: KailuaHostArgs,
-    pub rollup_config: RollupConfig,
+    pub rollup_config: SoonRollupConfig,
     pub disk_kv_store: Option<RWLKeyValueStore>,
     pub precondition_hash: B256,
     pub precondition_validation_data_hash: B256,
@@ -155,7 +155,7 @@ pub async fn handle_oneshot_tasks(task_receiver: Receiver<Oneshot>) -> anyhow::R
 #[allow(clippy::too_many_arguments)]
 pub async fn compute_oneshot_task(
     args: KailuaHostArgs,
-    rollup_config: RollupConfig,
+    rollup_config: SoonRollupConfig,
     disk_kv_store: Option<RWLKeyValueStore>,
     precondition_hash: B256,
     precondition_validation_data_hash: B256,

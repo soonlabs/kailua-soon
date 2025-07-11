@@ -349,7 +349,8 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
     let receipt = KailuaGame::deploy_builder(
         &deployer_provider,
         *kailua_treasury_implementation.address(),
-        U256::from(config.genesis.l2_time),
+        //TODO genesis l2_time
+        U256::from(0),
         U256::from(config.block_time),
         args.challenge_timeout,
     )

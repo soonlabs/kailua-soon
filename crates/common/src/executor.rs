@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::client::log;
+// use crate::client::log;
 use crate::config::safe_default;
 use crate::rkyv::execution::BlockBuildingOutcomeRkyv;
 use crate::rkyv::optimism::OpPayloadAttributesRkyv;
@@ -33,6 +33,9 @@ use risc0_zkvm::sha::{Impl as SHA2, Sha256};
 use spin::RwLock;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
+use soon_primitives::rollup_config::SoonRollupConfig;
+use soon_primitives::blocks::{BlockInfo, L2BlockInfo};
+use soon_derive::prelude::L2ChainProvider;
 
 /// Represents a block execution process and its results.
 ///
@@ -155,32 +158,9 @@ impl<E: Executor + Send + Sync + Debug> Executor for CachedExecutor<E> {
     ///   - Payload execution via `self.executor` encounters an issue.
     async fn execute_payload(
         &mut self,
-        attributes: OpPayloadAttributes,
-    ) -> Result<BlockBuildingOutcome, Self::Error> {
-        let agreed_output = self.compute_output_root()?;
-        if self
-            .cache
-            .last()
-            .map(|e| Ok(agreed_output == e.agreed_output && attributes == e.attributes))
-            .unwrap_or(Ok(false))?
-        {
-            let artifacts = self.cache.pop().unwrap().artifacts.clone();
-            log(&format!("CACHE {}", artifacts.header.number));
-            self.update_safe_head(artifacts.header.clone());
-            return Ok(artifacts);
-        }
-        if let Some(collection_target) = &self.collection_target {
-            let artifacts = self.executor.execute_payload(attributes.clone()).await?;
-            let mut collection_target = collection_target.lock().unwrap();
-            collection_target.push(Execution {
-                agreed_output,
-                attributes,
-                artifacts: artifacts.clone(),
-                claimed_output: Default::default(),
-            });
-            return Ok(artifacts);
-        }
-        self.executor.execute_payload(attributes).await
+        _attributes: OpPayloadAttributes,
+    ) -> Result<L2BlockInfo, Self::Error> {
+        Ok(L2BlockInfo::default())
     }
 
     /// Computes the output root based on the current state of the executor.
@@ -233,7 +213,7 @@ impl<E: Executor + Send + Sync + Debug> Executor for CachedExecutor<E> {
 /// - Advances the cursor to the proper state based on default `BlockInfo` and the L2 tip.
 /// - Returns the cursor wrapped in an `Arc<RwLock<PipelineCursor>>` for safe concurrent access.
 pub async fn new_execution_cursor<O>(
-    rollup_config: &RollupConfig,
+    rollup_config: &SoonRollupConfig,
     safe_header: Sealed<Header>,
     l2_chain_provider: &mut OracleL2ChainProvider<O>,
 ) -> Result<Arc<RwLock<PipelineCursor>>, OracleProviderError>
@@ -246,7 +226,7 @@ where
 
     // Walk back the starting L1 block by `channel_timeout` to ensure that the full channel is
     // captured.
-    let channel_timeout = rollup_config.channel_timeout(safe_head_info.block_info.timestamp);
+    let channel_timeout = rollup_config.channel_timeout;
 
     // Construct the cursor.
     let mut cursor = PipelineCursor::new(channel_timeout, BlockInfo::default());
@@ -779,7 +759,7 @@ pub mod tests {
         );
         // create cursor
         let rollup_config = Arc::new({
-            let mut config = RollupConfig::default();
+            let mut config = SoonRollupConfig::default();
             config.genesis.l2.hash = safe_head_hash;
             config
         });

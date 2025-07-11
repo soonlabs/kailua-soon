@@ -24,9 +24,9 @@ use kailua_client::provider::OpNodeProvider;
 use kailua_client::proving::ProvingError;
 use kailua_common::blobs::BlobFetchRequest;
 use kailua_common::precondition::PreconditionValidationData;
-use kona_genesis::RollupConfig;
+use soon_primitives::rollup_config::SoonRollupConfig;
 use kona_preimage::{PreimageKey, PreimageKeyType};
-use kona_protocol::BlockInfo;
+use soon_primitives::blocks::BlockInfo;
 use std::env::set_var;
 use std::iter::zip;
 use tracing::{error, info, warn};
@@ -135,7 +135,7 @@ pub async fn fetch_precondition_data(
 #[allow(clippy::too_many_arguments)]
 pub async fn concurrent_execution_preflight(
     args: &KailuaHostArgs,
-    rollup_config: RollupConfig,
+    rollup_config: SoonRollupConfig,
     op_node_provider: &OpNodeProvider,
     disk_kv_store: Option<RWLKeyValueStore>,
 ) -> anyhow::Result<()> {

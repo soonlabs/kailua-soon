@@ -21,7 +21,10 @@ use alloy_primitives::{B256, U256};
 use anyhow::bail;
 use async_trait::async_trait;
 use c_kzg::{ethereum_kzg_settings, Bytes48};
+use soon_primitives::blocks::BlockInfo;
 use serde::{Deserialize, Serialize};
+use soon_derive::traits::BlobProvider;
+use soon_derive::errors::BlobProviderError;
 
 /// A struct representing a request to fetch a specific blob based on its hash and associated block reference.
 ///

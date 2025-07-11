@@ -23,6 +23,7 @@ use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::iter::once;
 use std::sync::Arc;
+use soon_derive::traits::BlobProvider;
 
 /// Represents the data required to validate the output roots published in a proposal.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

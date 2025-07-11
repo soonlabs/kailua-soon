@@ -21,6 +21,7 @@ use kona_preimage::CommsClient;
 use kona_proof::{BootInfo, FlushableCache};
 use std::fmt::Debug;
 use std::sync::Arc;
+use soon_derive::traits::BlobProvider;
 #[cfg(target_os = "zkvm")]
 use {
     alloy_primitives::map::HashSet,

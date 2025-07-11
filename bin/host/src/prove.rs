@@ -25,7 +25,7 @@ use kailua_client::proving::ProvingError;
 use kailua_common::boot::StitchedBootInfo;
 use kailua_common::client::stitching::{split_executions, stitch_boot_info};
 use kailua_common::executor::{exec_precondition_hash, Execution};
-use kona_genesis::RollupConfig;
+use soon_primitives::rollup_config::SoonRollupConfig;
 use kona_proof::BootInfo;
 use risc0_zkvm::Receipt;
 use std::collections::BinaryHeap;
@@ -38,7 +38,7 @@ use tracing::{info, warn};
 #[allow(clippy::too_many_arguments)]
 pub async fn compute_fpvm_proof(
     args: KailuaHostArgs,
-    rollup_config: RollupConfig,
+    rollup_config: SoonRollupConfig,
     disk_kv_store: Option<RWLKeyValueStore>,
     precondition_hash: B256,
     precondition_validation_data_hash: B256,
@@ -277,7 +277,7 @@ pub async fn compute_fpvm_proof(
 
 pub fn create_cached_execution_task(
     args: KailuaHostArgs,
-    rollup_config: RollupConfig,
+    rollup_config: SoonRollupConfig,
     disk_kv_store: Option<RWLKeyValueStore>,
     execution_cache: &[Arc<Execution>],
 ) -> Cached {
@@ -332,7 +332,7 @@ pub fn create_cached_execution_task(
 #[allow(clippy::too_many_arguments)]
 pub async fn compute_cached_proof(
     args: KailuaHostArgs,
-    rollup_config: RollupConfig,
+    rollup_config: SoonRollupConfig,
     disk_kv_store: Option<RWLKeyValueStore>,
     precondition_hash: B256,
     precondition_validation_data_hash: B256,
@@ -349,7 +349,8 @@ pub async fn compute_cached_proof(
         agreed_l2_output_root: args.kona.agreed_l2_output_root,
         claimed_l2_output_root: args.kona.claimed_l2_output_root,
         claimed_l2_block_number: args.kona.claimed_l2_block_number,
-        chain_id: rollup_config.l2_chain_id,
+        //TODO l2 chain id
+        chain_id: 0,
         rollup_config,
     };
     // Construct expected journal

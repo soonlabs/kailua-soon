@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use alloy_consensus::{Header, Receipt, ReceiptEnvelope, TxEnvelope};
-use alloy_eips::Decodable2718;
+use alloy_eips::{BlockNumberOrTag, Decodable2718};
 use alloy_primitives::map::B256Map;
 use alloy_primitives::{Sealed, B256};
 use alloy_rlp::Decodable;
@@ -23,6 +23,9 @@ use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use kona_proof::errors::OracleProviderError;
 use kona_proof::HintType;
 use std::sync::Arc;
+use alloy_consensus::TxEip4844Variant::{TxEip4844, TxEip4844WithSidecar};
+use soon_derive::traits::ChainProvider;
+use soon_primitives::blocks::{BlockInfo, L1Header, L1Transaction};
 
 /// The oracle-backed L1 chain provider for the client program.
 /// Forked from [kona_proof::l1::OracleL1ChainProvider]
@@ -95,10 +98,10 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
     /// # Errors
     /// - Returns a `Self::Error` if the oracle request, response retrieval, or
     ///   RLP decoding fails.
-    async fn header_by_hash(&mut self, hash: B256) -> Result<Header, Self::Error> {
+    async fn header_by_hash(&self, hash: B256) -> Result<L1Header, Self::Error> {
         // Use cached headers
         if let Some(index) = self.headers_map.get(&hash) {
-            return Ok(self.headers[*index].clone().unseal());
+            return Ok(self.headers[*index].clone().unseal().into());
         }
 
         // Fetch the header RLP from the oracle.
@@ -109,7 +112,18 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
         let header_rlp = self.oracle.get(PreimageKey::new_keccak256(*hash)).await?;
 
         // Decode the header RLP into a Header.
-        Header::decode(&mut header_rlp.as_slice()).map_err(OracleProviderError::Rlp)
+        let header = Header::decode(&mut header_rlp.as_slice()).map_err(OracleProviderError::Rlp)?;
+        Ok(header.into())
+    }
+
+    async fn block_info_by_hash(&self, hash: B256) -> Result<BlockInfo, Self::Error> {
+        let header = self.header_by_hash(hash).await?;
+        Ok(BlockInfo {
+            hash: header.hash,
+            number: header.number,
+            parent_hash: header.parent_hash,
+            timestamp: header.timestamp,
+        })
     }
 
     /// Retrieves block information for a specific block number asynchronously.
@@ -141,7 +155,8 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
     ///    cached, fetching additional parent headers as needed via `header_by_hash`.
     /// 4. Constructs and returns a `BlockInfo` struct containing the required block's hash, number,
     ///    parent hash, and timestamp.
-    async fn block_info_by_number(&mut self, block_number: u64) -> Result<BlockInfo, Self::Error> {
+    async fn block_info_by_number(&self, block_number: BlockNumberOrTag) -> Result<BlockInfo, Self::Error> {
+        let block_number = block_number.as_number().unwrap_or_default();
         // Check if the block number is in range. If not, we can fail early.
         if block_number > self.headers[0].number {
             return Err(OracleProviderError::BlockNumberPastHead(
@@ -153,12 +168,12 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
         let header_index = (self.headers[0].number - block_number) as usize;
 
         // Walk back the block headers to the desired block number.
-        while self.headers_map.len() <= header_index {
-            let header_hash = self.headers[self.headers_map.len() - 1].parent_hash;
-            let header = self.header_by_hash(header_hash).await?;
-            self.headers_map.insert(header_hash, self.headers.len());
-            self.headers.push(header.seal(header_hash));
-        }
+        // while self.headers_map.len() <= header_index {
+        //     let header_hash = self.headers[self.headers_map.len() - 1].parent_hash;
+        //     let header = self.header_by_hash(header_hash).await?;
+        //     self.headers_map.insert(header_hash, self.headers.len());
+        //     self.headers.push(header.seal(header_hash));
+        // }
 
         let header = &self.headers[header_index];
 
@@ -170,7 +185,7 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
         })
     }
 
-    async fn receipts_by_hash(&mut self, hash: B256) -> Result<Vec<Receipt>, Self::Error> {
+    async fn receipts_by_hash(&self, hash: B256) -> Result<Vec<Receipt>, Self::Error> {
         // Fetch the block header to find the receipts root.
         let header = self.header_by_hash(hash).await?;
 
@@ -196,18 +211,12 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
         Ok(receipts)
     }
 
-    async fn block_info_and_transactions_by_hash(
-        &mut self,
+    async fn get_block_transactions_by_hash(
+        &self,
         hash: B256,
-    ) -> Result<(BlockInfo, Vec<TxEnvelope>), Self::Error> {
+    ) -> Result<Vec<L1Transaction>, Self::Error> {
         // Fetch the block header to construct the block info.
         let header = self.header_by_hash(hash).await?;
-        let block_info = BlockInfo {
-            hash,
-            number: header.number,
-            parent_hash: header.parent_hash,
-            timestamp: header.timestamp,
-        };
 
         // Send a hint for the block's transactions, and walk through the transactions trie in the
         // header to verify them.
@@ -229,7 +238,32 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
             .collect::<Result<Vec<_>, _>>()
             .map_err(OracleProviderError::Rlp)?;
 
-        Ok((block_info, transactions))
+        let l1_transactions = transactions.iter().map(|tx| {
+            let (to, data) = match tx {
+                TxEnvelope::Legacy(tx) => (tx.tx().to.into_to(), &tx.tx().input),
+                TxEnvelope::Eip2930(tx) => (tx.tx().to.into_to(), &tx.tx().input),
+                TxEnvelope::Eip1559(tx) => (tx.tx().to.into_to(), &tx.tx().input),
+                TxEnvelope::Eip4844(tx) => match tx.tx() {
+                    TxEip4844(tx) => {
+                        (Some(tx.to), &tx.input)
+                    },
+                    TxEip4844WithSidecar(tx) => {
+                        (Some(tx.tx().to), &tx.tx().input)
+                    },
+                }
+                TxEnvelope::Eip7702(tx) => (Some(tx.tx().to), &tx.tx().input),
+            };
+            Ok(L1Transaction {
+                hash: *tx.hash(),
+                from: tx.recover_signer().unwrap(),
+                to,
+                input: data.to_vec(),
+            })
+        })
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(OracleProviderError::Rlp)?;
+
+        Ok(l1_transactions)
     }
 }
 

@@ -128,7 +128,7 @@ pub async fn config(args: ConfigArgs) -> anyhow::Result<()> {
     );
 
     // report genesis time
-    println!("GENESIS_TIMESTAMP: {}", config.genesis.l2_time);
+    // println!("GENESIS_TIMESTAMP: {}", config.genesis.l2_time);
     // report inter-block time
     println!("BLOCK_TIME: {}", config.block_time);
     // report rollup config hash

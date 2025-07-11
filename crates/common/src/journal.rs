@@ -174,7 +174,7 @@ pub mod tests {
     use super::*;
     use crate::boot::tests::gen_boot_infos;
     use alloy_primitives::{keccak256, Address, B256};
-    use kona_genesis::RollupConfig;
+    use soon_primitives::rollup_config::SoonRollupConfig;
     use risc0_zkvm::{FakeReceipt, InnerReceipt, ReceiptClaim};
 
     pub fn gen_proof_journals(count: usize, gap: u64, config_hash: B256) -> Vec<ProofJournal> {
@@ -220,7 +220,7 @@ pub mod tests {
 
     #[test]
     fn test_proof_journal_constructor() {
-        let config_hash = B256::from(crate::config::config_hash(&RollupConfig::default()).unwrap());
+        let config_hash = B256::from(crate::config::config_hash(&SoonRollupConfig::default()).unwrap());
         let proof_journals = gen_proof_journals(512, 64, config_hash);
         // Test constructor
         for journal in proof_journals {

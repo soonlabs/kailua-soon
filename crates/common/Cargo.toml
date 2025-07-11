@@ -38,7 +38,6 @@ op-alloy-consensus.workspace = true
 op-alloy-rpc-types-engine.workspace = true
 
 kona-driver.workspace = true
-soon-derive.workspace = true
 kona-executor.workspace = true
 kona-mpt.workspace = true
 kona-preimage.workspace = true
@@ -48,6 +47,10 @@ risc0-zkvm.workspace = true
 
 serde.workspace = true
 tracing.workspace = true
+
+#SOON
+soon-primitives.workspace = true
+soon-derive.workspace = true
 
 [dev-dependencies]
 copy_dir.workspace = true

@@ -33,7 +33,7 @@ use kailua_contracts::{
     *,
 };
 use kailua_host::config::fetch_rollup_config;
-use kona_genesis::RollupConfig;
+use soon_primitives::rollup_config::SoonRollupConfig;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::FutureExt;
 use opentelemetry::trace::{TraceContextExt, Tracer};
@@ -51,7 +51,7 @@ pub struct SyncAgent {
     /// Telemetry object for reporting synchronization state
     pub telemetry: SyncTelemetry,
     /// L2 Configuration of the rollup being monitored
-    pub config: RollupConfig,
+    pub config: SoonRollupConfig,
     /// Kailua deployment configuration for instance being synchronized
     pub deployment: SyncDeployment,
     /// Local persistent key-value store

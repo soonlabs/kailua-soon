@@ -41,10 +41,13 @@ kailua-common.workspace = true
 # Kona
 kona-cli.workspace = true
 kona-client.workspace = true
-soon-derive.workspace = true
 kona-host.workspace = true
 kona-preimage.workspace = true
 kona-proof.workspace = true
+
+#SOON
+soon-derive.workspace = true
+soon-primitives.workspace = true
 
 # zkVM
 bonsai-sdk.workspace = true

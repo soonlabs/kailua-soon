@@ -25,7 +25,7 @@ use anyhow::{bail, Context};
 use kailua_client::await_tel;
 use kailua_common::blobs::BlobFetchRequest;
 use kailua_common::precondition::PreconditionValidationData;
-use kona_protocol::BlockInfo;
+use soon_primitives::blocks::BlockInfo;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::FutureExt;
 use opentelemetry::trace::{TraceContextExt, Tracer};
@@ -101,9 +101,10 @@ pub fn create_proving_args(
         ]);
     }
     // boundless args
-    if let Some(market) = &args.boundless.market {
-        proving_args.extend(market.to_arg_vec(&args.boundless.storage));
-    }
+    //TODO boundless check
+    // if let Some(market) = &args.boundless.market {
+    //     proving_args.extend(market.to_arg_vec(&args.boundless.storage));
+    // }
     // data directory
     let data_dir = data_dir.join(format!(
         "{}-{}",
