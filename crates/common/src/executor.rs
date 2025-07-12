@@ -113,8 +113,8 @@ impl<E: Executor + Send + Sync + Debug> Executor for CachedExecutor<E> {
     /// # Behavior
     /// Delegates the update operation to the `executor` component that handles
     /// the internal logic for updating the safe head within the system.
-    fn update_safe_head(&mut self, header: Sealed<Header>) {
-        self.executor.update_safe_head(header);
+    fn update_safe_head(&mut self, header: Sealed<Header>) -> Result<(), Self::Error> {
+        self.executor.update_safe_head(header)
     }
 
     /// Executes a given payload based on the specified `OpPayloadAttributes` and manages its outcomes.

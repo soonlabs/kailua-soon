@@ -19,7 +19,7 @@ use crate::{client, precondition};
 use alloy_primitives::{Sealed, B256};
 use anyhow::{bail, Context};
 use kona_driver::{Driver, Executor};
-use kona_executor::TrieDBProvider;
+use kona_executor::{L2BlockBuilder, StatelessL2Builder, TrieDBProvider};
 use kona_preimage::{CommsClient, PreimageKey};
 use kona_proof::errors::OracleProviderError;
 use kona_proof::executor::KonaExecutor;
@@ -88,12 +88,38 @@ pub fn run_core_client<
     precondition_validation_data_hash: B256,
     oracle: Arc<O>,
     stream: Arc<O>,
+    beacon: B,
+    execution_cache: Vec<Arc<Execution>>,
+    collection_target: Option<Arc<Mutex<Vec<Execution>>>>,
+) -> anyhow::Result<(BootInfo, B256)>
+where
+    <B as BlobProvider>::Error: Debug,
+{
+    run_core_client_ex::<StatelessL2Builder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>>, O, B>(
+        precondition_validation_data_hash,
+        oracle,
+        stream,
+        beacon,
+        execution_cache,
+        collection_target,
+    )
+}
+
+pub fn run_core_client_ex<
+    E,
+    O: CommsClient + FlushableCache + Send + Sync + Debug,
+    B: BlobProvider + Send + Sync + Debug + Clone,
+>(
+    precondition_validation_data_hash: B256,
+    oracle: Arc<O>,
+    stream: Arc<O>,
     mut beacon: B,
     execution_cache: Vec<Arc<Execution>>,
     collection_target: Option<Arc<Mutex<Vec<Execution>>>>,
 ) -> anyhow::Result<(BootInfo, B256)>
 where
     <B as BlobProvider>::Error: Debug,
+    E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug,
 {
     let (boot, precondition_hash, output_hash) = kona_proof::block_on(async move {
         ////////////////////////////////////////////////////////////////
@@ -137,13 +163,13 @@ where
                     .context("new_execution_cursor")?;
             l2_provider.set_cursor(cursor.clone());
 
-            let mut kona_executor = KonaExecutor::new(
-                rollup_config.as_ref(),
+            let mut kona_executor = KonaExecutor::<_, _, E>::new(
+                rollup_config.as_ref().clone(),
                 l2_provider.clone(),
                 l2_provider.clone(),
                 None,
             );
-            kona_executor.update_safe_head(safe_head);
+            kona_executor.update_safe_head(safe_head)?;
 
             // Validate expected block count
             assert_eq!(expected_output_count, execution_cache.len());
@@ -176,7 +202,7 @@ where
                 //     executor_result.execution_result
                 // );
                 // Update state
-                kona_executor.update_safe_head(execution.artifacts.header.clone());
+                kona_executor.update_safe_head(execution.artifacts.header.clone())?;
                 latest_output_root = kona_executor
                     .compute_output_root()
                     .context("compute_output_root: Verify post state")?;
@@ -234,8 +260,8 @@ where
                 cache.reverse();
                 cache
             },
-            executor: KonaExecutor::new(
-                rollup_config.as_ref(),
+            executor: KonaExecutor::<_, _, E>::new(
+                rollup_config.as_ref().clone(),
                 l2_provider.clone(),
                 l2_provider.clone(),
                 None,

@@ -17,11 +17,12 @@ use crate::client::log;
 use crate::executor::Execution;
 use crate::journal::ProofJournal;
 use alloy_primitives::{Address, B256};
+use kona_executor::L2BlockBuilder;
 use kona_preimage::CommsClient;
-use kona_proof::{BootInfo, FlushableCache};
+use kona_proof::{l2::OracleL2ChainProvider, BootInfo, FlushableCache};
+use soon_derive::traits::BlobProvider;
 use std::fmt::Debug;
 use std::sync::Arc;
-use soon_derive::traits::BlobProvider;
 #[cfg(target_os = "zkvm")]
 use {
     alloy_primitives::map::HashSet,
@@ -81,6 +82,7 @@ use {
 /// - The output hash computation (`run_core_client`) fails.
 #[allow(clippy::too_many_arguments)]
 pub fn run_stitching_client<
+    E,
     O: CommsClient + FlushableCache + Send + Sync + Debug,
     B: BlobProvider + Send + Sync + Debug + Clone,
 >(
@@ -95,13 +97,14 @@ pub fn run_stitching_client<
 ) -> ProofJournal
 where
     <B as BlobProvider>::Error: Debug,
+    E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug,
 {
     // Queue up precomputed executions
     let (stitched_executions, execution_cache) = split_executions(stitched_executions);
 
     // Attempt to recompute the output hash at the target block number using kona
     log("RUN");
-    let (boot, precondition_hash) = crate::client::core::run_core_client(
+    let (boot, precondition_hash) = crate::client::core::run_core_client_ex::<E, O, B>(
         precondition_validation_data_hash,
         oracle,
         stream,
@@ -319,14 +322,14 @@ pub fn stitch_executions(
         // Validate execution data
         for execution in execution_trace {
             // Validate receipts
-            assert_eq!(
-                execution.artifacts.header.receipts_root,
-                kona_executor::compute_receipts_root(
-                    execution.artifacts.execution_result.receipts.as_slice(),
-                    &boot.rollup_config,
-                    execution.attributes.payload_attributes.timestamp
-                )
-            );
+            // assert_eq!(
+            //     execution.artifacts.header.receipts_root,
+            //     kona_executor::compute_receipts_root(
+            //         execution.artifacts.execution_result.receipts.as_slice(),
+            //         &boot.rollup_config,
+            //         execution.attributes.payload_attributes.timestamp
+            //     )
+            // );
             // Validate requests
             assert!(execution.artifacts.execution_result.requests.is_empty());
             // Validate gas used

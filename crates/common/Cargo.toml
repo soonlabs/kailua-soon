@@ -62,6 +62,7 @@ tokio.workspace = true
 tracing-subscriber.workspace = true
 kailua-build.workspace = true
 bonsai-sdk.workspace = true
+soon-storage.workspace = true
 
 [features]
 default = []

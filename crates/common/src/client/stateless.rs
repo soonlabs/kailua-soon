@@ -17,6 +17,9 @@ use crate::client::log;
 use crate::journal::ProofJournal;
 use crate::oracle::WitnessOracle;
 use crate::witness::Witness;
+use kona_executor::L2BlockBuilder;
+use kona_proof::l2::OracleL2ChainProvider;
+use std::fmt::Debug;
 use std::sync::Arc;
 
 /// Executes a stateless client workflow by validating witness data, and running the stitching
@@ -47,7 +50,16 @@ use std::sync::Arc;
 /// * Logs the count of preimages provided via the `oracle_witness`.
 /// * Logs the count of blobs contained in the `blobs_witness`.
 /// * Logs a warning if any extra preimages are found during execution.
-pub fn run_stateless_client<O: WitnessOracle>(witness: Witness<O>) -> ProofJournal {
+pub fn run_stateless_client<
+    O: WitnessOracle,
+    E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>>
+        + Send
+        + Sync
+        + Clone
+        + Debug,
+>(
+    witness: Witness<O>,
+) -> ProofJournal {
     log(&format!(
         "ORACLE: {} PREIMAGES",
         witness.oracle_witness.preimage_count()
@@ -65,7 +77,7 @@ pub fn run_stateless_client<O: WitnessOracle>(witness: Witness<O>) -> ProofJourn
     ));
     let beacon = PreloadedBlobProvider::from(witness.blobs_witness);
 
-    let proof_journal = crate::client::stitching::run_stitching_client(
+    let proof_journal = crate::client::stitching::run_stitching_client::<E, O, _>(
         witness.precondition_validation_data_hash,
         oracle.clone(),
         stream,

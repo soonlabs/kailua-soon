@@ -1,6 +1,6 @@
 use alloy_primitives::{Address, B256};
 use kailua_common::client::stitching::run_stitching_client;
-use kona_proof::l1::OracleBlobProvider;
+use kona_proof::{executor::OffchainL2Builder, l1::OracleBlobProvider};
 use tracing::info;
 
 use crate::offline::{OfflineConfig, OfflineOracleShared};
@@ -29,7 +29,7 @@ impl OfflineClient {
             .precondition_validation_data
             .as_ref()
             .map_or_else(|| B256::ZERO, |data| data.hash());
-        let proof_journal = run_stitching_client(
+        let proof_journal = run_stitching_client::<OffchainL2Builder<_, _>, _, _>(
             precondition_validation_data_hash,
             self.oracle.clone(),
             self.oracle.clone(),

@@ -112,6 +112,7 @@ kona-std-fpvm = { path = "../kona/crates/proof/std-fpvm" }
 # SOON
 soon-primitives = { path = '../soon/node/primitives' }
 soon-derive = { path = '../soon/node/derive' }
+soon-storage = { path = '../soon/node/storage' }
 
 # Bonsai
 bonsai-sdk = { version = "1.4.0", features = ["non_blocking"] }
