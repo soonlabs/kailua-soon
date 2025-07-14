@@ -35,9 +35,9 @@ lazy_static = "1.5.0"
 paste = "1.0.15"
 pot = "3.0.1"
 rayon = "1.10.0"
-reqwest = "0.12.12"
-rkyv = { version = "0.8.9", features = ["hashbrown-0_15", "std"] }
-rocksdb = "0.23.0"
+reqwest = { version = "0.12.3", features = ["json"] }
+rkyv = "0.8.9"
+rocksdb = "0.22.0"
 semver = "1.0.23"
 serde = { version = "1.0", features = ["derive", "alloc", "std"] }
 serde_json = "1.0.127"
@@ -97,22 +97,22 @@ kailua-contracts = { path = "crates/contracts" }
 kailua-host = { path = "bin/host" }
 
 # Kona
-kona-cli = { path = "../kona/crates/utilities/cli", default-features = false }
-kona-client = { path = "../kona/bin/client", default-features = false }
-kona-driver = { path = "../kona/crates/protocol/driver" }
-kona-executor = { path = "../kona/crates/proof/executor" }
-kona-host = { path = "../kona/bin/host", default-features = false, features = [
+kona-cli = { path = "../kona-soon/crates/utilities/cli", default-features = false }
+kona-client = { path = "../kona-soon/bin/client", default-features = false }
+kona-driver = { path = "../kona-soon/crates/protocol/driver" }
+kona-executor = { path = "../kona-soon/crates/proof/executor" }
+kona-host = { path = "../kona-soon/bin/host", default-features = false, features = [
     "single",
 ] }
-kona-mpt = { path = "../kona/crates/proof/mpt", features = ["serde"] }
-kona-preimage = { path = "../kona/crates/proof/preimage", features = [
+kona-mpt = { path = "../kona-soon/crates/proof/mpt", features = ["serde"] }
+kona-preimage = { path = "../kona-soon/crates/proof/preimage", features = [
     "serde",
     "rkyv",
     "std",
 ] }
-kona-proof = { path = "../kona/crates/proof/proof" }
-kona-std-fpvm = { path = "../kona/crates/proof/std-fpvm" }
-fraud-executor = { path = "../kona/crates/executor/fraud" }
+kona-proof = { path = "../kona-soon/crates/proof/proof" }
+kona-std-fpvm = { path = "../kona-soon/crates/proof/std-fpvm" }
+fraud-executor = { path = "../kona-soon/crates/executor/fraud" }
 
 # SOON
 soon-primitives = { path = '../soon/node/primitives' }
@@ -127,17 +127,14 @@ bonsai-sdk = { version = "1.4.0", features = ["non_blocking"] }
 # RISC Zero
 risc0-build = { version = "2.1.2", features = ["unstable"] }
 risc0-ethereum-contracts = "2.1.0"
-risc0-zkvm = { version = "2.1.0", features = [
-    "heap-embedded-alloc",
-    "unstable",
-] }
+risc0-zkvm = { version = "2.1.0", features = ["unstable"] }
 
 # Boundless
 boundless-market = "0.11.0"
 
 # for testing
-solana-sdk = { git = "https://github.com/soonlabs/agave", branch = "upgrade_curve25519" }
-solana-program = { git = "https://github.com/soonlabs/agave", branch = "upgrade_curve25519" }
+solana-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
+solana-program = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
 l1-block-info = { path = "../soon/node/programs/l1-block-info-program", features = [
     "no-entrypoint",
 ] }
@@ -163,14 +160,21 @@ opt-level = 3
 
 [patch.crates-io]
 # Core Solana packages that definitely exist in soonlabs/agave
-solana-program = { git = "https://github.com/soonlabs/agave", branch = "upgrade_curve25519" }
-solana-sdk = { git = "https://github.com/soonlabs/agave", branch = "upgrade_curve25519" }
-solana-account-decoder = { git = "https://github.com/soonlabs/agave", branch = "upgrade_curve25519" }
+solana-program = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
+solana-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
+solana-account-decoder = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
 
 # Critical patch to resolve SPL package dependencies with our custom Solana version
 # This prevents duplicate versions of solana-program and solana-zk-token-sdk
-solana-zk-token-sdk = { git = "https://github.com/soonlabs/agave", branch = "upgrade_curve25519" }
+solana-zk-token-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
+solana-curve25519 = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
+solana-zk-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
+solana_rbpf = { git = "https://github.com/soonlabs/rbpf", branch = "feat/risc0-zkvm" }
 
-[patch.crates-io.curve25519-dalek]
-git = "https://github.com/SVM-L2-temp/curve25519-dalek.git"
-branch = "dep"
+# Risc0 related dependencies
+curve25519-dalek = { git = "https://github.com/risc0/curve25519-dalek.git", tag = "curve25519-4.1.2-risczero.0" }
+ed25519-dalek = { git = "https://github.com/risc0/curve25519-dalek.git", tag = "curve25519-4.1.2-risczero.0" }
+sha2 = { git = "https://github.com/risc0/RustCrypto-hashes", tag = "sha2-v0.10.8-risczero.0" }
+k256 = { git = "https://github.com/risc0/RustCrypto-elliptic-curves", tag = "k256/v0.13.4-risczero.1" }
+tiny-keccak = { git = "https://github.com/risc0/tiny-keccak", tag = "tiny-keccak/v2.0.2-risczero.0" }
+crypto-bigint = { git = "https://github.com/risc0/RustCrypto-crypto-bigint", tag = "v0.5.5-risczero.0" }

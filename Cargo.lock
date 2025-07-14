@@ -92,7 +92,7 @@ dependencies = [
 [[package]]
 name = "agave-geyser-plugin-interface"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "log",
  "solana-sdk",
@@ -441,7 +441,7 @@ dependencies = [
  "derive_more 2.0.1",
  "either",
  "serde",
- "sha2 0.10.9",
+ "sha2 0.10.8",
 ]
 
 [[package]]
@@ -461,7 +461,7 @@ dependencies = [
  "derive_more 2.0.1",
  "either",
  "serde",
- "sha2 0.10.9",
+ "sha2 0.10.8",
 ]
 
 [[package]]
@@ -481,7 +481,7 @@ dependencies = [
  "derive_more 2.0.1",
  "either",
  "serde",
- "sha2 0.10.9",
+ "sha2 0.10.8",
 ]
 
 [[package]]
@@ -1708,7 +1708,7 @@ dependencies = [
  "digest 0.10.7",
  "fnv",
  "merlin",
- "sha2 0.10.9",
+ "sha2 0.10.8",
 ]
 
 [[package]]
@@ -2612,7 +2612,7 @@ dependencies = [
  "lru 0.12.5",
  "percent-encoding 2.3.1",
  "regex-lite",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "tracing",
  "url 2.5.4",
 ]
@@ -2705,7 +2705,7 @@ dependencies = [
  "p256 0.11.1",
  "percent-encoding 2.3.1",
  "ring 0.17.14",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "subtle",
  "time",
  "tracing",
@@ -2739,7 +2739,7 @@ dependencies = [
  "md-5",
  "pin-project-lite",
  "sha1",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "tracing",
 ]
 
@@ -3099,12 +3099,6 @@ name = "base16ct"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c7f02d4ea65f2c1853089ffd8d2787bdbc63de2f0d29dedbcf8ccdfa0ccd4cf"
-
-[[package]]
-name = "base64"
-version = "0.12.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3441f0f7b02788e948e47f457ca01f1d7e6d92c693bc132c22b087d3141c03ff"
 
 [[package]]
 name = "base64"
@@ -3480,7 +3474,7 @@ dependencies = [
  "rmp-serde",
  "serde",
  "serde_json",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "siwe",
  "tempfile",
  "thiserror 2.0.12",
@@ -3563,7 +3557,7 @@ version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bf88ba1141d185c399bee5288d850d63b8369520c1eafc32a0430b5b6c287bf4"
 dependencies = [
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "tinyvec",
 ]
 
@@ -3982,7 +3976,7 @@ dependencies = [
  "hmac 0.12.1",
  "k256",
  "serde",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "thiserror 1.0.69",
 ]
 
@@ -3998,7 +3992,7 @@ dependencies = [
  "once_cell",
  "pbkdf2 0.12.2",
  "rand 0.8.5",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "thiserror 1.0.69",
 ]
 
@@ -4017,7 +4011,7 @@ dependencies = [
  "ripemd",
  "serde",
  "serde_derive",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "sha3",
  "thiserror 1.0.69",
 ]
@@ -4082,12 +4076,6 @@ dependencies = [
  "log",
  "web-sys",
 ]
-
-[[package]]
-name = "const-default"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b396d1f76d455557e1218ec8066ae14bba60b4b36ecd55577ba979f5db7ecaa"
 
 [[package]]
 name = "const-hex"
@@ -4329,10 +4317,10 @@ dependencies = [
 [[package]]
 name = "crypto-bigint"
 version = "0.5.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0dc92fb57ca44df6db8059111ab3af99a63d5d0f8375d9972e319a379c6bab76"
+source = "git+https://github.com/risc0/RustCrypto-crypto-bigint?tag=v0.5.5-risczero.0#3ab63a6f1048833f7047d5a50532e4a4cc789384"
 dependencies = [
  "generic-array",
+ "getrandom 0.2.16",
  "rand_core 0.6.4",
  "subtle",
  "zeroize",
@@ -4380,27 +4368,17 @@ dependencies = [
 
 [[package]]
 name = "curve25519-dalek"
-version = "3.2.1"
-source = "git+https://github.com/SVM-L2-temp/curve25519-dalek.git?branch=dep#b24316288bdfd464305fba827e2ab9ce9893db2e"
-dependencies = [
- "byteorder",
- "digest 0.9.0",
- "rand_core 0.5.1",
- "subtle",
- "zeroize",
-]
-
-[[package]]
-name = "curve25519-dalek"
-version = "4.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "373b7c5dbd637569a2cca66e8d66b8c446a1e7bf064ea321d265d7b3dfe7c97e"
+version = "4.1.2"
+source = "git+https://github.com/risc0/curve25519-dalek.git?tag=curve25519-4.1.2-risczero.0#3dccc5b71b806f500e73829e2a5cbfe288cce2a0"
 dependencies = [
  "cfg-if 1.0.1",
  "cpufeatures",
+ "crypto-bigint 0.5.5",
  "curve25519-dalek-derive",
  "digest 0.10.7",
  "fiat-crypto",
+ "hex",
+ "platforms",
  "rand_core 0.6.4",
  "rustc_version 0.4.1",
  "serde",
@@ -4411,8 +4389,7 @@ dependencies = [
 [[package]]
 name = "curve25519-dalek-derive"
 version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f46882e17999c6cc590af592290432be3bce0428cb0d5f8b6715e4dc7b383eb3"
+source = "git+https://github.com/risc0/curve25519-dalek.git?tag=curve25519-4.1.2-risczero.0#3dccc5b71b806f500e73829e2a5cbfe288cce2a0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4979,37 +4956,38 @@ dependencies = [
 
 [[package]]
 name = "ed25519"
-version = "1.5.3"
+version = "2.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91cff35c70bba8a626e3185d8cd48cc11b5437e1a5bcd15b9b5fa3c64b6dfee7"
+checksum = "115531babc129696a58c64a4fef0a8bf9e9698629fb97e9e40767d235cfbcd53"
 dependencies = [
- "signature 1.6.4",
+ "pkcs8 0.10.2",
+ "signature 2.2.0",
 ]
 
 [[package]]
 name = "ed25519-dalek"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c762bae6dcaf24c4c84667b8579785430908723d5c889f469d76a41d59cc7a9d"
+version = "2.1.1"
+source = "git+https://github.com/risc0/curve25519-dalek.git?tag=curve25519-4.1.2-risczero.0#3dccc5b71b806f500e73829e2a5cbfe288cce2a0"
 dependencies = [
- "curve25519-dalek 3.2.1",
+ "curve25519-dalek",
  "ed25519",
- "rand 0.7.3",
+ "rand_core 0.6.4",
  "serde",
- "sha2 0.9.9",
+ "sha2 0.10.8",
+ "subtle",
  "zeroize",
 ]
 
 [[package]]
 name = "ed25519-dalek-bip32"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d2be62a4061b872c8c0873ee4fc6f101ce7b889d039f019c5fa2af471a59908"
+checksum = "6b49a684b133c4980d7ee783936af771516011c8cd15f429dbda77245e282f03"
 dependencies = [
  "derivation-path",
  "ed25519-dalek",
  "hmac 0.12.1",
- "sha2 0.10.9",
+ "sha2 0.10.8",
 ]
 
 [[package]]
@@ -5078,18 +5056,6 @@ dependencies = [
  "serdect",
  "subtle",
  "zeroize",
-]
-
-[[package]]
-name = "embedded-alloc"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f2de9133f68db0d4627ad69db767726c99ff8585272716708227008d3f1bddd"
-dependencies = [
- "const-default",
- "critical-section",
- "linked_list_allocator",
- "rlsf",
 ]
 
 [[package]]
@@ -5311,7 +5277,7 @@ dependencies = [
  "scrypt",
  "serde",
  "serde_json",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "sha3",
  "thiserror 1.0.69",
  "uuid 0.8.2",
@@ -5576,7 +5542,7 @@ dependencies = [
  "eth-keystore",
  "ethers-core",
  "rand 0.8.5",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "thiserror 1.0.69",
  "tracing",
 ]
@@ -5745,9 +5711,9 @@ dependencies = [
 
 [[package]]
 name = "fiat-crypto"
-version = "0.3.0"
+version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64cd1e32ddd350061ae6edb1b082d7c54915b5c672c389143b9a63403a109f24"
+checksum = "28dea519a9695b9977216879a3ebfddf92f1c08c05d984f8996aecd6ecdc811d"
 
 [[package]]
 name = "filetime"
@@ -6620,17 +6586,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
 dependencies = [
  "digest 0.10.7",
-]
-
-[[package]]
-name = "hmac-drbg"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17ea0a1394df5b6574da6e0c1ade9e78868c9fb0a4e5ef4428e32da4676b85b1"
-dependencies = [
- "digest 0.9.0",
- "generic-array",
- "hmac 0.8.1",
 ]
 
 [[package]]
@@ -7523,15 +7478,16 @@ dependencies = [
 [[package]]
 name = "k256"
 version = "0.13.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6e3919bbaa2945715f0bb6d3934a173d1e9a59ac23767fbaaef277265a7411b"
+source = "git+https://github.com/risc0/RustCrypto-elliptic-curves?tag=k256%2Fv0.13.4-risczero.1#7d4a8d6477e258ce4169ee4669cf92aee0582c39"
 dependencies = [
+ "bytemuck",
  "cfg-if 1.0.1",
  "ecdsa 0.16.9",
  "elliptic-curve 0.13.8",
  "once_cell",
+ "risc0-bigint2",
  "serdect",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "signature 2.2.0",
 ]
 
@@ -7580,7 +7536,7 @@ dependencies = [
  "rocksdb",
  "serde",
  "serde_json",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "soon-derive",
  "soon-primitives",
  "tempfile",
@@ -7623,7 +7579,7 @@ dependencies = [
  "rkyv",
  "serde",
  "serde_json",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "soon-derive",
  "soon-primitives",
  "thiserror 2.0.12",
@@ -8156,36 +8112,18 @@ dependencies = [
 
 [[package]]
 name = "librocksdb-sys"
-version = "0.17.1+9.9.3"
+version = "0.16.0+8.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b7869a512ae9982f4d46ba482c2a304f1efd80c6412a3d4bf57bb79a619679f"
+checksum = "ce3d60bc059831dc1c83903fb45c103f75db65c5a7bf22272764d9cc683e348c"
 dependencies = [
  "bindgen 0.69.5",
  "bzip2-sys",
  "cc",
+ "glob",
  "libc",
  "libz-sys",
  "lz4-sys",
  "zstd-sys",
-]
-
-[[package]]
-name = "libsecp256k1"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9d220bc1feda2ac231cb78c3d26f27676b8cf82c96971f7aeef3d0cf2797c73"
-dependencies = [
- "arrayref",
- "base64 0.12.3",
- "digest 0.9.0",
- "hmac-drbg",
- "libsecp256k1-core 0.2.2",
- "libsecp256k1-gen-ecmult 0.2.1",
- "libsecp256k1-gen-genmult 0.2.1",
- "rand 0.7.3",
- "serde",
- "sha2 0.9.9",
- "typenum",
 ]
 
 [[package]]
@@ -8197,23 +8135,12 @@ dependencies = [
  "arrayref",
  "base64 0.22.1",
  "digest 0.9.0",
- "libsecp256k1-core 0.3.0",
- "libsecp256k1-gen-ecmult 0.3.0",
- "libsecp256k1-gen-genmult 0.3.0",
+ "libsecp256k1-core",
+ "libsecp256k1-gen-ecmult",
+ "libsecp256k1-gen-genmult",
  "rand 0.8.5",
  "serde",
  "sha2 0.9.9",
-]
-
-[[package]]
-name = "libsecp256k1-core"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0f6ab710cec28cef759c5f18671a27dae2a5f952cdaaee1d8e2908cb2478a80"
-dependencies = [
- "crunchy",
- "digest 0.9.0",
- "subtle",
 ]
 
 [[package]]
@@ -8229,29 +8156,11 @@ dependencies = [
 
 [[package]]
 name = "libsecp256k1-gen-ecmult"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccab96b584d38fac86a83f07e659f0deafd0253dc096dab5a36d53efe653c5c3"
-dependencies = [
- "libsecp256k1-core 0.2.2",
-]
-
-[[package]]
-name = "libsecp256k1-gen-ecmult"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3038c808c55c87e8a172643a7d87187fc6c4174468159cb3090659d55bcb4809"
 dependencies = [
- "libsecp256k1-core 0.3.0",
-]
-
-[[package]]
-name = "libsecp256k1-gen-genmult"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67abfe149395e3aa1c48a2beb32b068e2334402df8181f818d3aee2b304c4f5d"
-dependencies = [
- "libsecp256k1-core 0.2.2",
+ "libsecp256k1-core",
 ]
 
 [[package]]
@@ -8260,7 +8169,7 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3db8d6ba2cec9eacc40e6e8ccc98931840301f1006e95647ceb2dd5c3aa06f7c"
 dependencies = [
- "libsecp256k1-core 0.3.0",
+ "libsecp256k1-core",
 ]
 
 [[package]]
@@ -8286,12 +8195,6 @@ dependencies = [
  "num-bigint 0.4.6",
  "thiserror 1.0.69",
 ]
-
-[[package]]
-name = "linked_list_allocator"
-version = "0.10.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9afa463f5405ee81cdb9cc2baf37e08ec7e4c8209442b5d72c04cfb2cd6e6286"
 
 [[package]]
 name = "linux-raw-sys"
@@ -9541,7 +9444,7 @@ checksum = "51f44edd08f51e2ade572f141051021c5af22677e42b7dd28a88155151c33594"
 dependencies = [
  "ecdsa 0.14.8",
  "elliptic-curve 0.12.3",
- "sha2 0.10.9",
+ "sha2 0.10.8",
 ]
 
 [[package]]
@@ -9553,7 +9456,7 @@ dependencies = [
  "ecdsa 0.16.9",
  "elliptic-curve 0.13.8",
  "primeorder",
- "sha2 0.10.9",
+ "sha2 0.10.8",
 ]
 
 [[package]]
@@ -9700,7 +9603,7 @@ dependencies = [
  "digest 0.10.7",
  "hmac 0.12.1",
  "password-hash",
- "sha2 0.10.9",
+ "sha2 0.10.8",
 ]
 
 [[package]]
@@ -9803,7 +9706,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "edd1101f170f5903fde0914f899bb503d9ff5271d7ba76bbb70bea63690cc0d5"
 dependencies = [
  "pest",
- "sha2 0.10.9",
+ "sha2 0.10.8",
 ]
 
 [[package]]
@@ -9977,6 +9880,12 @@ checksum = "1e19e6491bdde87c2c43d70f4c194bc8a758f2eb732df00f61e43f7362e3b4cc"
 dependencies = [
  "crunchy",
 ]
+
+[[package]]
+name = "platforms"
+version = "3.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b02ffed1bc8c2234bb6f8e760e34613776c5102a041f25330b869a78153a68c"
 
 [[package]]
 name = "polling"
@@ -11175,13 +11084,13 @@ dependencies = [
  "c-kzg",
  "cfg-if 1.0.1",
  "k256",
- "libsecp256k1 0.7.2",
+ "libsecp256k1",
  "once_cell",
  "p256 0.13.2",
  "revm-primitives",
  "ripemd",
  "secp256k1",
- "sha2 0.10.9",
+ "sha2 0.10.8",
 ]
 
 [[package]]
@@ -11290,6 +11199,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "risc0-bigint2"
+version = "1.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b9fcc9b964c17bdc953dec1e288dad5e24ce3694d5a514911c3a15294a201aa"
+dependencies = [
+ "include_bytes_aligned",
+ "stability",
+]
+
+[[package]]
 name = "risc0-binfmt"
 version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11343,7 +11262,7 @@ dependencies = [
  "glob",
  "hex",
  "rayon",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "tempfile",
 ]
 
@@ -11406,7 +11325,7 @@ dependencies = [
  "risc0-sys",
  "risc0-zkp",
  "serde",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "tracing",
  "zip 2.4.2",
 ]
@@ -11578,7 +11497,7 @@ dependencies = [
  "risc0-sys",
  "risc0-zkvm-platform",
  "serde",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "stability",
  "tracing",
 ]
@@ -11623,7 +11542,7 @@ dependencies = [
  "rzup",
  "semver 1.0.26",
  "serde",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "stability",
  "tempfile",
  "tracing",
@@ -11638,8 +11557,6 @@ checksum = "cae9cb2c2f6cab2dfa395ea6e2576713929040c7fb0c5f4150d13e1119d18686"
 dependencies = [
  "bytemuck",
  "cfg-if 1.0.1",
- "critical-section",
- "embedded-alloc",
  "getrandom 0.2.16",
  "getrandom 0.3.3",
  "libm",
@@ -11699,18 +11616,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rlsf"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "222fb240c3286247ecdee6fa5341e7cdad0ffdf8e7e401d9937f2d58482a20bf"
-dependencies = [
- "cfg-if 1.0.1",
- "const-default",
- "libc",
- "svgbobdoc",
-]
-
-[[package]]
 name = "rmp"
 version = "0.8.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11744,9 +11649,9 @@ dependencies = [
 
 [[package]]
 name = "rocksdb"
-version = "0.23.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26ec73b20525cb235bad420f911473b69f9fe27cc856c5461bccd7e4af037f43"
+checksum = "6bd13e55d6d7b8cd0ea569161127567cd587676c99f4472f779a0279aa60a7a7"
 dependencies = [
  "libc",
  "librocksdb-sys",
@@ -12158,7 +12063,7 @@ dependencies = [
  "hmac 0.12.1",
  "pbkdf2 0.11.0",
  "salsa20",
- "sha2 0.10.9",
+ "sha2 0.10.8",
 ]
 
 [[package]]
@@ -12518,9 +12423,8 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.10.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283"
+version = "0.10.8"
+source = "git+https://github.com/risc0/RustCrypto-hashes?tag=sha2-v0.10.8-risczero.0#244dc3b08788f7a4ccce14c66896ae3b4f24c166"
 dependencies = [
  "cfg-if 1.0.1",
  "cpufeatures",
@@ -12536,7 +12440,7 @@ dependencies = [
  "async-trait",
  "bytes",
  "hex",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "tokio",
 ]
 
@@ -12765,7 +12669,7 @@ dependencies = [
 [[package]]
 name = "solana-account-decoder"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "Inflector",
  "base64 0.22.1",
@@ -12789,7 +12693,7 @@ dependencies = [
 [[package]]
 name = "solana-accounts-db"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bincode",
  "blake3",
@@ -12833,7 +12737,7 @@ dependencies = [
 [[package]]
 name = "solana-address-lookup-table-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bincode",
  "bytemuck",
@@ -12850,7 +12754,7 @@ dependencies = [
 [[package]]
 name = "solana-bloom"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bv",
  "fnv",
@@ -12866,11 +12770,11 @@ dependencies = [
 [[package]]
 name = "solana-bpf-loader-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bincode",
  "byteorder",
- "libsecp256k1 0.6.0",
+ "k256",
  "log",
  "scopeguard",
  "solana-compute-budget",
@@ -12887,7 +12791,7 @@ dependencies = [
 [[package]]
 name = "solana-bucket-map"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bv",
  "bytemuck",
@@ -12905,7 +12809,7 @@ dependencies = [
 [[package]]
 name = "solana-clap-utils"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "chrono",
  "clap 2.34.0",
@@ -12921,7 +12825,7 @@ dependencies = [
 [[package]]
 name = "solana-cli-config"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "dirs-next",
  "lazy_static",
@@ -12936,7 +12840,7 @@ dependencies = [
 [[package]]
 name = "solana-client"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "async-trait",
  "bincode",
@@ -12968,7 +12872,7 @@ dependencies = [
 [[package]]
 name = "solana-compute-budget"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "rustc_version 0.4.1",
  "solana-sdk",
@@ -12977,7 +12881,7 @@ dependencies = [
 [[package]]
 name = "solana-compute-budget-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "solana-program-runtime",
  "solana-sdk",
@@ -12986,7 +12890,7 @@ dependencies = [
 [[package]]
 name = "solana-config-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bincode",
  "chrono",
@@ -12999,7 +12903,7 @@ dependencies = [
 [[package]]
 name = "solana-connection-cache"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "async-trait",
  "bincode",
@@ -13019,7 +12923,7 @@ dependencies = [
 [[package]]
 name = "solana-core"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "ahash 0.8.12",
  "base64 0.22.1",
@@ -13096,7 +13000,7 @@ dependencies = [
 [[package]]
 name = "solana-cost-model"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "ahash 0.8.12",
  "lazy_static",
@@ -13118,11 +13022,11 @@ dependencies = [
 [[package]]
 name = "solana-curve25519"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bytemuck",
  "bytemuck_derive",
- "curve25519-dalek 4.2.0",
+ "curve25519-dalek",
  "solana-program",
  "thiserror 1.0.69",
 ]
@@ -13130,7 +13034,7 @@ dependencies = [
 [[package]]
 name = "solana-download-utils"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "console",
  "indicatif",
@@ -13143,7 +13047,7 @@ dependencies = [
 [[package]]
 name = "solana-entry"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bincode",
  "crossbeam-channel",
@@ -13164,7 +13068,7 @@ dependencies = [
 [[package]]
 name = "solana-faucet"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bincode",
  "byteorder",
@@ -13187,7 +13091,7 @@ dependencies = [
 [[package]]
 name = "solana-genesis-utils"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "log",
  "solana-accounts-db",
@@ -13199,7 +13103,7 @@ dependencies = [
 [[package]]
 name = "solana-geyser-plugin-manager"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "agave-geyser-plugin-interface",
  "bs58 0.5.1",
@@ -13225,7 +13129,7 @@ dependencies = [
 [[package]]
 name = "solana-gossip"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "assert_matches",
  "bincode",
@@ -13272,7 +13176,7 @@ dependencies = [
 [[package]]
 name = "solana-inline-spl"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bytemuck",
  "rustc_version 0.4.1",
@@ -13282,7 +13186,7 @@ dependencies = [
 [[package]]
 name = "solana-ledger"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "assert_matches",
  "bincode",
@@ -13315,7 +13219,7 @@ dependencies = [
  "scopeguard",
  "serde",
  "serde_bytes",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "solana-account-decoder",
  "solana-accounts-db",
  "solana-bpf-loader-program",
@@ -13350,7 +13254,7 @@ dependencies = [
 [[package]]
 name = "solana-loader-v4-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "log",
  "solana-compute-budget",
@@ -13364,7 +13268,7 @@ dependencies = [
 [[package]]
 name = "solana-logger"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "env_logger 0.9.3",
  "lazy_static",
@@ -13374,7 +13278,7 @@ dependencies = [
 [[package]]
 name = "solana-measure"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "log",
  "solana-sdk",
@@ -13383,7 +13287,7 @@ dependencies = [
 [[package]]
 name = "solana-merkle-tree"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "fast-math",
  "solana-program",
@@ -13392,7 +13296,7 @@ dependencies = [
 [[package]]
 name = "solana-metrics"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "crossbeam-channel",
  "gethostname",
@@ -13406,7 +13310,7 @@ dependencies = [
 [[package]]
 name = "solana-net-utils"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bincode",
  "clap 3.2.25",
@@ -13434,13 +13338,13 @@ checksum = "8b8a731ed60e89177c8a7ab05fe0f1511cedd3e70e773f288f9de33a9cfdc21e"
 [[package]]
 name = "solana-perf"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "ahash 0.8.12",
  "bincode",
  "bv",
  "caps",
- "curve25519-dalek 4.2.0",
+ "curve25519-dalek",
  "dlopen2",
  "fnv",
  "lazy_static",
@@ -13460,7 +13364,7 @@ dependencies = [
 [[package]]
 name = "solana-poh"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "core_affinity",
  "crossbeam-channel",
@@ -13477,7 +13381,7 @@ dependencies = [
 [[package]]
 name = "solana-poseidon"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "ark-bn254 0.4.0",
  "light-poseidon",
@@ -13487,7 +13391,7 @@ dependencies = [
 [[package]]
 name = "solana-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "ark-bn254 0.4.0",
  "ark-ec 0.4.2",
@@ -13505,11 +13409,11 @@ dependencies = [
  "bytemuck_derive",
  "console_error_panic_hook",
  "console_log",
- "curve25519-dalek 4.2.0",
+ "curve25519-dalek",
  "getrandom 0.2.16",
  "js-sys",
+ "k256",
  "lazy_static",
- "libsecp256k1 0.6.0",
  "log",
  "memoffset",
  "num-bigint 0.4.6",
@@ -13522,17 +13426,17 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_derive",
- "sha2 0.10.9",
- "sha3",
+ "sha2 0.10.8",
  "solana-sdk-macro",
  "thiserror 1.0.69",
+ "tiny-keccak",
  "wasm-bindgen",
 ]
 
 [[package]]
 name = "solana-program-runtime"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "base64 0.22.1",
  "bincode",
@@ -13560,7 +13464,7 @@ dependencies = [
 [[package]]
 name = "solana-pubsub-client"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "crossbeam-channel",
  "futures-util",
@@ -13584,7 +13488,7 @@ dependencies = [
 [[package]]
 name = "solana-quic-client"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "async-mutex",
  "async-trait",
@@ -13609,7 +13513,7 @@ dependencies = [
 [[package]]
 name = "solana-rayon-threadlimit"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "lazy_static",
  "num_cpus",
@@ -13618,7 +13522,7 @@ dependencies = [
 [[package]]
 name = "solana-remote-wallet"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "console",
  "dialoguer",
@@ -13636,7 +13540,7 @@ dependencies = [
 [[package]]
 name = "solana-rpc"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "base64 0.22.1",
  "bincode",
@@ -13694,7 +13598,7 @@ dependencies = [
 [[package]]
 name = "solana-rpc-client"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -13720,7 +13624,7 @@ dependencies = [
 [[package]]
 name = "solana-rpc-client-api"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -13743,7 +13647,7 @@ dependencies = [
 [[package]]
 name = "solana-rpc-client-nonce-utils"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "clap 2.34.0",
  "solana-clap-utils",
@@ -13755,7 +13659,7 @@ dependencies = [
 [[package]]
 name = "solana-runtime"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "aquamarine",
  "arrayref",
@@ -13834,7 +13738,7 @@ dependencies = [
 [[package]]
 name = "solana-runtime-transaction"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "log",
  "rustc_version 0.4.1",
@@ -13846,7 +13750,7 @@ dependencies = [
 [[package]]
 name = "solana-sdk"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bincode",
  "bitflags 2.9.1",
@@ -13865,15 +13769,15 @@ dependencies = [
  "hmac 0.12.1",
  "itertools 0.12.1",
  "js-sys",
+ "k256",
  "lazy_static",
- "libsecp256k1 0.6.0",
  "log",
  "memmap2 0.5.10",
  "num_enum",
  "pbkdf2 0.11.0",
  "qstring",
- "rand 0.7.3",
  "rand 0.8.5",
+ "rand_core 0.6.4",
  "rustc_version 0.4.1",
  "rustversion",
  "serde",
@@ -13881,12 +13785,12 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "serde_with 2.3.3",
- "sha2 0.10.9",
- "sha3",
+ "sha2 0.10.8",
  "siphasher 0.3.11",
  "solana-program",
  "solana-sdk-macro",
  "thiserror 1.0.69",
+ "tiny-keccak",
  "uriparse",
  "wasm-bindgen",
 ]
@@ -13894,7 +13798,7 @@ dependencies = [
 [[package]]
 name = "solana-sdk-macro"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bs58 0.5.1",
  "proc-macro2",
@@ -13912,7 +13816,7 @@ checksum = "468aa43b7edb1f9b7b7b686d5c3aeb6630dc1708e86e31343499dd5c4d775183"
 [[package]]
 name = "solana-send-transaction-service"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "crossbeam-channel",
  "log",
@@ -13928,7 +13832,7 @@ dependencies = [
 [[package]]
 name = "solana-stake-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bincode",
  "log",
@@ -13943,7 +13847,7 @@ dependencies = [
 [[package]]
 name = "solana-storage-bigtable"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "backoff",
  "bincode",
@@ -13976,7 +13880,7 @@ dependencies = [
 [[package]]
 name = "solana-storage-proto"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bincode",
  "bs58 0.5.1",
@@ -13992,7 +13896,7 @@ dependencies = [
 [[package]]
 name = "solana-streamer"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "async-channel 1.9.0",
  "bytes",
@@ -14025,7 +13929,7 @@ dependencies = [
 [[package]]
 name = "solana-svm"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "itertools 0.12.1",
  "log",
@@ -14050,7 +13954,7 @@ dependencies = [
 [[package]]
 name = "solana-system-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bincode",
  "log",
@@ -14064,7 +13968,7 @@ dependencies = [
 [[package]]
 name = "solana-thin-client"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bincode",
  "log",
@@ -14078,7 +13982,7 @@ dependencies = [
 [[package]]
 name = "solana-tpu-client"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "async-trait",
  "bincode",
@@ -14101,7 +14005,7 @@ dependencies = [
 [[package]]
 name = "solana-transaction-metrics-tracker"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "Inflector",
  "base64 0.22.1",
@@ -14116,7 +14020,7 @@ dependencies = [
 [[package]]
 name = "solana-transaction-status"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "Inflector",
  "base64 0.22.1",
@@ -14142,7 +14046,7 @@ dependencies = [
 [[package]]
 name = "solana-turbine"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bincode",
  "bytes",
@@ -14178,7 +14082,7 @@ dependencies = [
 [[package]]
 name = "solana-type-overrides"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "lazy_static",
  "rand 0.8.5",
@@ -14187,7 +14091,7 @@ dependencies = [
 [[package]]
 name = "solana-udp-client"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "async-trait",
  "solana-connection-cache",
@@ -14201,7 +14105,7 @@ dependencies = [
 [[package]]
 name = "solana-unified-scheduler-logic"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "assert_matches",
  "solana-sdk",
@@ -14211,7 +14115,7 @@ dependencies = [
 [[package]]
 name = "solana-unified-scheduler-pool"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "assert_matches",
  "crossbeam-channel",
@@ -14231,7 +14135,7 @@ dependencies = [
 [[package]]
 name = "solana-version"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "log",
  "rustc_version 0.4.1",
@@ -14244,7 +14148,7 @@ dependencies = [
 [[package]]
 name = "solana-vote"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "itertools 0.12.1",
  "log",
@@ -14258,7 +14162,7 @@ dependencies = [
 [[package]]
 name = "solana-vote-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bincode",
  "log",
@@ -14277,7 +14181,7 @@ dependencies = [
 [[package]]
 name = "solana-wen-restart"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "anyhow",
  "log",
@@ -14301,7 +14205,7 @@ dependencies = [
 [[package]]
 name = "solana-zk-elgamal-proof-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bytemuck",
  "num-derive 0.4.2",
@@ -14314,14 +14218,14 @@ dependencies = [
 [[package]]
 name = "solana-zk-sdk"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "aes-gcm-siv",
  "base64 0.22.1",
  "bincode",
  "bytemuck",
  "bytemuck_derive",
- "curve25519-dalek 4.2.0",
+ "curve25519-dalek",
  "itertools 0.12.1",
  "lazy_static",
  "merlin",
@@ -14331,18 +14235,18 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "sha3",
  "solana-program",
  "solana-sdk",
  "subtle",
  "thiserror 1.0.69",
+ "tiny-keccak",
  "zeroize",
 ]
 
 [[package]]
 name = "solana-zk-token-proof-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "bytemuck",
  "num-derive 0.4.2",
@@ -14355,7 +14259,7 @@ dependencies = [
 [[package]]
 name = "solana-zk-token-sdk"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=upgrade_curve25519#1f05390523f22681c7b7bbcab42482a4ee8df248"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
 dependencies = [
  "aes-gcm-siv",
  "base64 0.22.1",
@@ -14363,7 +14267,7 @@ dependencies = [
  "bytemuck",
  "bytemuck_derive",
  "byteorder",
- "curve25519-dalek 4.2.0",
+ "curve25519-dalek",
  "itertools 0.12.1",
  "lazy_static",
  "merlin",
@@ -14373,20 +14277,19 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "sha3",
  "solana-curve25519",
  "solana-program",
  "solana-sdk",
  "subtle",
  "thiserror 1.0.69",
+ "tiny-keccak",
  "zeroize",
 ]
 
 [[package]]
 name = "solana_rbpf"
 version = "0.8.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff08afd63f70a1ba712fb0017be41e93b017f7e874785b54bb5ec9aa8949781d"
+source = "git+https://github.com/soonlabs/rbpf?branch=feat%2Frisc0-zkvm#0be6917a98c71dddf408149bbfb2feee237a2270"
 dependencies = [
  "byteorder",
  "combine",
@@ -14394,9 +14297,9 @@ dependencies = [
  "hash32",
  "libc",
  "log",
+ "num-traits",
  "rand 0.8.5",
  "rustc-demangle",
- "scroll",
  "thiserror 1.0.69",
  "winapi 0.3.9",
 ]
@@ -14544,6 +14447,29 @@ dependencies = [
  "log",
  "reqwest 0.11.27",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "soon-l2-chain-provider"
+version = "0.7.4"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "futures 0.3.31",
+ "lru 0.12.5",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "solana-client",
+ "solana-sdk",
+ "solana-transaction-status",
+ "soon-derive",
+ "soon-mpt-primitives",
+ "soon-primitives",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -14841,6 +14767,7 @@ dependencies = [
  "soon-genesis",
  "soon-l1-chain-provider",
  "soon-l1-client",
+ "soon-l2-chain-provider",
  "soon-monitor",
  "soon-mpt-handler",
  "soon-mpt-primitives",
@@ -14904,6 +14831,7 @@ dependencies = [
  "jsonrpc-derive",
  "jsonrpc-http-server",
  "jsonrpc-pubsub",
+ "l1-block-info",
  "libc",
  "log",
  "rayon",
@@ -15126,7 +15054,7 @@ checksum = "8c1f05593b7ca9eac7caca309720f2eafb96355e037e6d373b909a80fe7b69b9"
 dependencies = [
  "proc-macro2",
  "quote",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "syn 2.0.104",
  "thiserror 1.0.69",
 ]
@@ -15182,7 +15110,7 @@ checksum = "e6d375dd76c517836353e093c2dbb490938ff72821ab568b545fd30ab3256b3e"
 dependencies = [
  "proc-macro2",
  "quote",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "syn 2.0.104",
 ]
 
@@ -15441,19 +15369,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
-name = "svgbobdoc"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2c04b93fc15d79b39c63218f15e3fdffaa4c227830686e3b7c5f41244eb3e50"
-dependencies = [
- "base64 0.13.1",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
- "unicode-width 0.1.14",
-]
-
-[[package]]
 name = "svm-rs"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -15467,7 +15382,7 @@ dependencies = [
  "semver 1.0.26",
  "serde",
  "serde_json",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "thiserror 1.0.69",
  "url 2.5.4",
  "zip 0.6.6",
@@ -15486,7 +15401,7 @@ dependencies = [
  "semver 1.0.26",
  "serde",
  "serde_json",
- "sha2 0.10.9",
+ "sha2 0.10.8",
  "tempfile",
  "thiserror 2.0.12",
  "url 2.5.4",
@@ -15883,8 +15798,7 @@ dependencies = [
 [[package]]
 name = "tiny-keccak"
 version = "2.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c9d3793400a45f954c52e73d068316d76b6f4e36977e3fcebb13a2721e80237"
+source = "git+https://github.com/risc0/tiny-keccak?tag=tiny-keccak%2Fv2.0.2-risczero.0#8fcc866dc94dcec3e79c3b2bc8fbc51b22f2d5e1"
 dependencies = [
  "crunchy",
 ]
