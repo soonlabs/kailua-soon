@@ -52,11 +52,7 @@ use std::sync::Arc;
 /// * Logs a warning if any extra preimages are found during execution.
 pub fn run_stateless_client<
     O: WitnessOracle,
-    E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>>
-        + Send
-        + Sync
-        + Clone
-        + Debug,
+    E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug,
 >(
     witness: Witness<O>,
 ) -> ProofJournal {
@@ -103,6 +99,7 @@ pub mod tests {
     use crate::test::TestOracle;
     use alloy_primitives::{b256, B256};
     use anyhow::Context;
+    use kona_executor::StatelessL2Builder;
     use kona_proof::BootInfo;
 
     #[test]
@@ -138,7 +135,7 @@ pub mod tests {
             fpvm_image_id: Default::default(),
         };
 
-        run_stateless_client(witness);
+        run_stateless_client::<_, StatelessL2Builder<_, _>>(witness);
 
         Ok(())
     }

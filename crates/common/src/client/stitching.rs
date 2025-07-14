@@ -486,6 +486,7 @@ pub mod tests {
     use crate::{client::core::tests::test_derivation, test::create_analyzed_oracle};
     use alloy_primitives::b256;
     use anyhow::Context;
+    use kona_executor::StatelessL2Builder;
     use kona_proof::l1::OracleBlobProvider;
     use rayon::prelude::{IntoParallelIterator, ParallelIterator};
     use tracing_subscriber::EnvFilter;
@@ -552,7 +553,7 @@ pub mod tests {
             None => B256::ZERO,
             Some(data) => oracle.add_precondition_data(data),
         };
-        run_stitching_client(
+        run_stitching_client::<StatelessL2Builder<_, _>, _, _>(
             precondition_validation_data_hash,
             oracle.clone(),
             oracle.clone(),
@@ -581,7 +582,7 @@ pub mod tests {
             Some(data) => oracle.add_precondition_data(data),
         };
 
-        let result = run_stitching_client(
+        let result = run_stitching_client::<StatelessL2Builder<_, _>, _, _>(
             precondition_validation_data_hash,
             oracle.clone(),
             oracle.clone(),

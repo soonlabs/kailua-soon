@@ -52,6 +52,17 @@ tracing.workspace = true
 soon-primitives.workspace = true
 soon-derive.workspace = true
 
+# for testing
+soon-node = { workspace = true, optional = true }
+soon-storage = { workspace = true, optional = true }
+solana-sdk = { workspace = true, optional = true }
+l1-block-info = { workspace = true, optional = true }
+bridge = { workspace = true, optional = true }
+spl-token = { workspace = true, optional = true }
+bincode = { workspace = true, optional = true }
+crossbeam-channel = { workspace = true, optional = true }
+fraud-executor = { workspace = true, optional = true }
+
 [dev-dependencies]
 copy_dir.workspace = true
 kona-cli.workspace = true
@@ -62,12 +73,23 @@ tokio.workspace = true
 tracing-subscriber.workspace = true
 kailua-build.workspace = true
 bonsai-sdk.workspace = true
-soon-storage.workspace = true
 
 [features]
 default = []
 offline = ["kona-host", "copy_dir", "tokio"]
-__test = ["offline", "tempfile"]
+__test = [
+	"offline",
+	"tempfile",
+	"soon-node/__test",
+	"soon-storage",
+	"solana-sdk",
+	"l1-block-info",
+	"bridge",
+	"spl-token",
+	"bincode",
+	"crossbeam-channel",
+	"fraud-executor",
+]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = [

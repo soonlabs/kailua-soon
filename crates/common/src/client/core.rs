@@ -164,7 +164,7 @@ where
             l2_provider.set_cursor(cursor.clone());
 
             let mut kona_executor = KonaExecutor::<_, _, E>::new(
-                rollup_config.as_ref().clone(),
+                rollup_config.clone(),
                 l2_provider.clone(),
                 l2_provider.clone(),
                 None,
@@ -261,7 +261,7 @@ where
                 cache
             },
             executor: KonaExecutor::<_, _, E>::new(
-                rollup_config.as_ref().clone(),
+                rollup_config.clone(),
                 l2_provider.clone(),
                 l2_provider.clone(),
                 None,
@@ -386,8 +386,9 @@ pub fn recover_collected_executions(
 #[cfg_attr(coverage_nightly, coverage(off))]
 pub mod tests {
     use super::*;
-    use crate::precondition::PreconditionValidationData;
+    use crate::client::soon_test::{blocks_to_execution_cache, soon_to_execution_cache};
     use crate::test::TestOracle;
+    use crate::{client::soon_test::new_soon, precondition::PreconditionValidationData};
     use alloy_primitives::{b256, B256};
     use kona_proof::l1::OracleBlobProvider;
     use kona_proof::BootInfo;
@@ -476,26 +477,12 @@ pub mod tests {
         Ok(precondition_hash)
     }
 
-    #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_op_sepolia_16491249_16491250() {
-        test_derivation(
-            BootInfo {
-                l1_head: b256!(
-                    "0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"
-                ),
-                agreed_l2_output_root: b256!(
-                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
-                ),
-                claimed_l2_output_root: b256!(
-                    "0xa130fbfa315391b28668609252e4c09c3df3b77562281b996af30bf056cbb2c1"
-                ),
-                claimed_l2_block_number: 16491250,
-                chain_id: 11155420,
-                rollup_config: Default::default(),
-            },
-            None,
-        )
-        .unwrap();
+    #[test]
+    pub fn test_core_client_from_soon_executor() -> anyhow::Result<()> {
+        let (boot_info, executions) = soon_to_execution_cache()?;
+
+        test_execution(boot_info, executions)?;
+        Ok(())
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -534,121 +521,5 @@ pub mod tests {
             executions,
         )
         .unwrap();
-    }
-
-    #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_op_sepolia_16491249_16491349_validity() {
-        test_derivation(
-            BootInfo {
-                l1_head: b256!(
-                    "0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"
-                ),
-                agreed_l2_output_root: b256!(
-                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
-                ),
-                claimed_l2_output_root: b256!(
-                    "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
-                ),
-                claimed_l2_block_number: 16491349,
-                chain_id: 11155420,
-                rollup_config: Default::default(),
-            },
-            Some(PreconditionValidationData::Validity {
-                proposal_l2_head_number: 16491249,
-                proposal_output_count: 1,
-                output_block_span: 100,
-                blob_hashes: vec![],
-            }),
-        )
-        .unwrap();
-    }
-
-    #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_op_sepolia_16491249_16491349_insufficient() {
-        // data wasn't published at l1 origin
-        test_derivation(
-            BootInfo {
-                l1_head: b256!(
-                    "0x78228b4f2d59ae1820b8b8986a875630cb32d88b298d78d0f25bcac8f3bdfbf3"
-                ),
-                agreed_l2_output_root: b256!(
-                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
-                ),
-                claimed_l2_output_root: B256::ZERO,
-                claimed_l2_block_number: 16491349,
-                chain_id: 11155420,
-                rollup_config: Default::default(),
-            },
-            None,
-        )
-        .unwrap();
-    }
-
-    #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_op_sepolia_16491249_16491349_insufficient_fail() {
-        // data wasn't published at l1 origin
-        test_derivation(
-            BootInfo {
-                l1_head: b256!(
-                    "0x78228b4f2d59ae1820b8b8986a875630cb32d88b298d78d0f25bcac8f3bdfbf3"
-                ),
-                agreed_l2_output_root: b256!(
-                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
-                ),
-                claimed_l2_output_root: b256!(
-                    "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
-                ),
-                claimed_l2_block_number: 16491349,
-                chain_id: 11155420,
-                rollup_config: Default::default(),
-            },
-            None,
-        )
-        .unwrap_err();
-    }
-
-    #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_op_sepolia_16491249_16491248_failure() {
-        test_derivation(
-            BootInfo {
-                l1_head: b256!(
-                    "0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"
-                ),
-                agreed_l2_output_root: b256!(
-                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
-                ),
-                claimed_l2_output_root: b256!(
-                    "0xa130fbfa315391b28668609252e4c09c3df3b77562281b996af30bf056cbb2c1"
-                ),
-                claimed_l2_block_number: 16491248,
-                chain_id: 11155420,
-                rollup_config: Default::default(),
-            },
-            None,
-        )
-        .unwrap_err();
-    }
-
-    #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_op_sepolia_16491249_16491249() {
-        let executions = test_derivation(
-            BootInfo {
-                l1_head: b256!(
-                    "0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"
-                ),
-                agreed_l2_output_root: b256!(
-                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
-                ),
-                claimed_l2_output_root: b256!(
-                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
-                ),
-                claimed_l2_block_number: 16491249,
-                chain_id: 11155420,
-                rollup_config: Default::default(),
-            },
-            None,
-        )
-        .unwrap();
-        assert!(executions.is_empty());
     }
 }
