@@ -163,6 +163,7 @@ opt-level = 3
 solana-program = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
 solana-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
 solana-account-decoder = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
+solana-ledger = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
 
 # Critical patch to resolve SPL package dependencies with our custom Solana version
 # This prevents duplicate versions of solana-program and solana-zk-token-sdk

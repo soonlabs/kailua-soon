@@ -387,12 +387,15 @@ pub fn recover_collected_executions(
 pub mod tests {
     use super::*;
     use crate::client::soon_test::{blocks_to_execution_cache, soon_to_execution_cache};
+    use crate::test::mock::MockOracle;
     use crate::test::TestOracle;
     use crate::{client::soon_test::new_soon, precondition::PreconditionValidationData};
     use alloy_primitives::{b256, B256};
+    use kona_cli::init_tracing_subscriber;
     use kona_proof::l1::OracleBlobProvider;
     use kona_proof::BootInfo;
     use std::sync::{Arc, Mutex};
+    use tracing_subscriber::EnvFilter;
 
     pub fn test_derivation(
         boot_info: BootInfo,
@@ -443,11 +446,22 @@ pub mod tests {
         boot_info: BootInfo,
         execution_cache: Vec<Arc<Execution>>,
     ) -> anyhow::Result<B256> {
+        test_execution_ex(
+            boot_info.clone(),
+            execution_cache,
+            Arc::new(TestOracle::new(boot_info)),
+        )
+    }
+
+    pub fn test_execution_ex<O: CommsClient + FlushableCache + Send + Sync + Debug>(
+        boot_info: BootInfo,
+        execution_cache: Vec<Arc<Execution>>,
+        oracle: Arc<O>,
+    ) -> anyhow::Result<B256> {
         // Ensure boot info triggers execution only
         assert!(boot_info.l1_head.is_zero());
         let expected_precondition_hash = exec_precondition_hash(execution_cache.as_slice());
 
-        let oracle = Arc::new(TestOracle::new(boot_info.clone()));
         let (result_boot_info, precondition_hash) = run_core_client(
             B256::ZERO,
             oracle.clone(),
@@ -479,9 +493,10 @@ pub mod tests {
 
     #[test]
     pub fn test_core_client_from_soon_executor() -> anyhow::Result<()> {
-        let (boot_info, executions) = soon_to_execution_cache()?;
+        init_tracing_subscriber(4, None::<EnvFilter>)?;
+        let (boot_info, executions, oracle) = soon_to_execution_cache()?;
 
-        test_execution(boot_info, executions)?;
+        test_execution_ex(boot_info, executions, Arc::new(oracle))?;
         Ok(())
     }
 

@@ -1,4 +1,4 @@
-use crate::executor::Execution;
+use crate::{executor::Execution, oracle::WitnessOracle, test::mock::MockOracle};
 use alloy_consensus::{Header, Sealed};
 use alloy_eips::eip7685::Requests;
 use alloy_evm::block::BlockExecutionResult;
@@ -8,6 +8,7 @@ use bridge::pda::{spl_token_mint_pubkey, spl_token_owner_pubkey};
 use crossbeam_channel::Receiver;
 use fraud_executor::accounts::SoonAccounts;
 use kona_executor::BlockBuildingOutcome;
+use kona_preimage::PreimageKey;
 use kona_proof::BootInfo;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use solana_sdk::{
@@ -25,30 +26,27 @@ use soon_node::{
         },
     },
 };
-use soon_primitives::blocks::{BlockInfo, L2BlockInfo, RawBlock};
+use soon_primitives::{
+    blocks::{BlockInfo, L2BlockInfo, RawBlock},
+    rollup_config::SoonRollupConfig,
+};
 use spl_token::state::Mint;
-use std::{path::Path, sync::Arc};
+use std::{
+    env::{current_dir, var},
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 const L1_NUMBER: u64 = 100;
 
-pub(crate) fn soon_to_execution_cache() -> Result<(BootInfo, Vec<Arc<Execution>>)> {
+pub(crate) fn soon_to_execution_cache() -> Result<(BootInfo, Vec<Arc<Execution>>, MockOracle)> {
     let temp = tempfile::tempdir()?;
     let (mut producer, identity, metadata, complete_receiver) = new_soon(temp.path())?;
 
-    let executions =
+    let (boot_info, executions) =
         blocks_to_execution_cache(&mut producer, &identity, &metadata, complete_receiver)?;
-
-    Ok((
-        BootInfo {
-            l1_head: B256::ZERO,
-            agreed_l2_output_root: B256::ZERO,
-            claimed_l2_output_root: B256::ZERO,
-            claimed_l2_block_number: 0,
-            chain_id: 0,
-            rollup_config: Default::default(),
-        },
-        executions,
-    ))
+    let oracle = MockOracle::new(boot_info.clone());
+    Ok((boot_info, executions, oracle))
 }
 
 fn current_executor_state_root(executor: &SharedExecutor) -> Result<B256> {
@@ -64,12 +62,21 @@ pub(crate) fn blocks_to_execution_cache(
     identity: &Keypair,
     metadata: &TokenMetadata,
     complete_receiver: Receiver<(L2BlockInfo, Option<BlockInfo>)>,
-) -> Result<Vec<Arc<Execution>>> {
-    let mut result = Vec::new();
+) -> Result<(BootInfo, Vec<Arc<Execution>>)> {
+    let mut executions = Vec::new();
+    let mut boot_info = BootInfo {
+        l1_head: B256::ZERO,
+        agreed_l2_output_root: B256::ZERO,
+        claimed_l2_output_root: B256::ZERO,
+        claimed_l2_block_number: 0,
+        chain_id: 0,
+        rollup_config: SoonRollupConfig::default(),
+    };
     let executor = producer.get_executor().clone();
 
     // === slot 2
     let agreed_output = current_executor_state_root(&executor)?;
+    boot_info.agreed_l2_output_root = agreed_output;
     // append a `CreateSPL` tx into the block
     let last_blockhash = executor.storage_query(|s| Ok(s.current_bank().last_blockhash()))?;
     let create_spl_tx = create_spl_tx(
@@ -110,7 +117,7 @@ pub(crate) fn blocks_to_execution_cache(
         agreed_output,
         claimed_output,
     )?;
-    result.push(Arc::new(execution));
+    executions.push(Arc::new(execution));
 
     // === slot 3
     let agreed_output = claimed_output;
@@ -126,11 +133,13 @@ pub(crate) fn blocks_to_execution_cache(
     producer.mine_with_block(Some(raw.clone()))?;
     complete_receiver.try_recv()?;
     let claimed_output = current_executor_state_root(&executor)?;
+    boot_info.claimed_l2_output_root = claimed_output;
+    boot_info.claimed_l2_block_number = producer.get_executor().latest_slot()?;
 
     let execution = to_execution(raw, agreed_output, claimed_output)?;
-    result.push(Arc::new(execution));
+    executions.push(Arc::new(execution));
 
-    Ok(result)
+    Ok((boot_info, executions))
 }
 
 pub(crate) fn tx_to_execution(
@@ -187,7 +196,18 @@ pub(crate) fn new_soon(
     Receiver<(L2BlockInfo, Option<BlockInfo>)>,
 )> {
     let identity = Arc::new(Keypair::new());
-    init_soon_genesis(path, &identity, true)?;
+    init_soon_genesis(
+        path,
+        &identity,
+        true,
+        Some(
+            var("CARGO_MANIFEST_DIR")
+                .ok()
+                .map_or_else(|| current_dir().ok(), |s| Some(PathBuf::from(s)))
+                .unwrap()
+                .join("../../../soon/node/programs/target/deploy"),
+        ),
+    )?;
 
     let (mut producer, _, complete_receiver) = new_producer(path, identity.clone())?;
     let executor = producer.get_executor().clone();
