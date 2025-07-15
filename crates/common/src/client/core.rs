@@ -29,11 +29,11 @@ use kona_proof::l2::OracleL2ChainProvider;
 use kona_proof::sync::new_oracle_pipeline_cursor;
 use kona_proof::{BootInfo, FlushableCache, HintType};
 use soon_derive::sources::EthereumDataSource;
+// use soon_derive::sources::EthereumDataSource;
+use soon_derive::traits::BlobProvider;
 use std::fmt::Debug;
 use std::mem::take;
 use std::sync::{Arc, Mutex};
-// use soon_derive::sources::EthereumDataSource;
-use soon_derive::traits::BlobProvider;
 use tracing::info;
 
 /// Runs the Kailua client to drive rollup state transition derivation using Kona.
@@ -198,12 +198,20 @@ where
             let mut latest_output_root = boot.agreed_l2_output_root;
             // Validate executed chain
             for execution in execution_cache {
+                info!(
+                    "enter execution {}/{}",
+                    execution.artifacts.header.block_info.number, boot.claimed_l2_block_number
+                );
                 // Verify initial state
                 assert_eq!(execution.agreed_output, latest_output_root);
                 // Verify transition
                 let _executor_result = kona_executor
                     .execute_payload(execution.attributes.clone())
                     .await?;
+                latest_output_root = kona_executor
+                    .compute_output_root()
+                    .context("compute_output_root: Verify post state")?;
+
                 //TODO check result
                 // assert_eq!(execution.artifacts.header, executor_result.header);
                 // assert_eq!(
@@ -212,9 +220,6 @@ where
                 // );
                 // Update state
                 kona_executor.update_safe_head(execution.artifacts.header.clone())?;
-                latest_output_root = kona_executor
-                    .compute_output_root()
-                    .context("compute_output_root: Verify post state")?;
                 // Verify post state
                 assert_eq!(execution.claimed_output, latest_output_root);
                 client::log(&format!(

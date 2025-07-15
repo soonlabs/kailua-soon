@@ -7,7 +7,9 @@ use anyhow::Result;
 use bridge::pda::{spl_token_mint_pubkey, spl_token_owner_pubkey};
 use crossbeam_channel::Receiver;
 use fraud_executor::accounts::{AccountPairs, SoonAccounts};
-use kona_executor::{cal_extra_accounts_hash, BlockBuildingOutcome, INIT_ACCOUNTS_HASH};
+use kona_executor::{
+    cal_extra_accounts_hash, cal_init_accounts_hash, cal_init_state_root_hash, BlockBuildingOutcome,
+};
 use kona_preimage::PreimageKey;
 use kona_proof::BootInfo;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
@@ -45,8 +47,28 @@ const L1_NUMBER: u64 = 100;
 #[derive(Debug, Default, Clone)]
 pub struct OracleStorageItems {
     pub safe_head: L2BlockInfo,
-    pub init_accounts: SoonAccounts,
+    pub init_accounts: HashMap<u64, SoonAccounts>,
     pub sysvar_accounts: HashMap<u64, AccountPairs>,
+}
+
+pub(crate) struct TokenMetadata {
+    pub remote_token: Address,
+    pub to: Keypair,
+    pub token_name: String,
+    pub token_symbol: String,
+    pub uri: String,
+}
+
+impl Default for TokenMetadata {
+    fn default() -> Self {
+        Self {
+            remote_token: Address::random(),
+            to: Keypair::new(),
+            token_name: "Test".to_string(),
+            token_symbol: "TST".to_string(),
+            uri: "https://ipfs.io/ipfs/QmXRVXSRbH9nKYPgVfakXRhDhEaXWs6QYu3rToadXhtHPr".to_string(),
+        }
+    }
 }
 
 pub(crate) fn soon_to_execution_cache() -> Result<(BootInfo, Vec<Arc<Execution>>, MockOracle)> {
@@ -88,10 +110,19 @@ fn save_to_oracle(
     );
 
     // save init accounts
-    oracle.insert_preimage(
-        PreimageKey::new_keccak256(INIT_ACCOUNTS_HASH.0),
-        bincode::serialize(&storage_items.init_accounts)?,
-    );
+    storage_items
+        .init_accounts
+        .iter()
+        .for_each(|(slot, accounts)| {
+            oracle.insert_preimage(
+                PreimageKey::new_keccak256(cal_init_accounts_hash(*slot).0),
+                bincode::serialize(accounts).unwrap(),
+            );
+            oracle.insert_preimage(
+                PreimageKey::new_keccak256(cal_init_state_root_hash(*slot).0),
+                accounts.state_root().to_vec(),
+            )
+        });
 
     // save sysvar accounts
     for (slot, account_pairs) in &storage_items.sysvar_accounts {
@@ -121,9 +152,12 @@ pub(crate) fn blocks_to_execution_cache(
     };
     let mut storage_items = OracleStorageItems::default();
     let executor = producer.get_executor().clone();
-    storage_items.init_accounts = executor.storage_query(|s| {
+    executor.storage_query(|s| {
         let soon_accounts = SoonAccounts::try_from(s)?;
-        Ok(soon_accounts)
+        storage_items
+            .init_accounts
+            .insert(s.current_slot(), soon_accounts);
+        Ok(())
     })?;
     let agreed_output = current_executor_state_root(&executor)?;
     let slot_1_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
@@ -131,7 +165,33 @@ pub(crate) fn blocks_to_execution_cache(
     info!("storage safe head: {:?}", storage_items.safe_head);
     boot_info.agreed_l2_output_root = agreed_output;
 
+    // === slot 1
+    let derive_block_1 = new_derive_block(metadata.to.pubkey(), L1_NUMBER);
+    let raw = RawBlock::try_init(derive_block_1, 0, &Default::default())?;
+    producer.mine_with_block(Some(raw.clone()))?;
+    complete_receiver.try_recv()?;
+    // assert l1 block info state
+    assert_eq!(executor.latest_slot()?, 1);
+
+    let claimed_output = current_executor_state_root(&executor)?;
+    info!("soon slot 1 state root: {:?}", claimed_output);
+    executor.storage_query(|s| {
+        let soon_accounts = SoonAccounts::try_from(s)?;
+        storage_items
+            .init_accounts
+            .insert(s.current_slot(), soon_accounts);
+        storage_items
+            .sysvar_accounts
+            .insert(s.current_slot(), s.export_sysvars()?);
+        Ok(())
+    })?;
+
+    let slot_1_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
+    let execution = to_execution(raw, agreed_output, claimed_output, slot_1_head)?;
+    executions.push(Arc::new(execution));
+
     // === slot 2
+    let agreed_output = claimed_output;
     // append a `CreateSPL` tx into the block
     let last_blockhash = executor.storage_query(|s| Ok(s.current_bank().last_blockhash()))?;
     let create_spl_tx = create_spl_tx(
@@ -160,13 +220,17 @@ pub(crate) fn blocks_to_execution_cache(
         spl_token_owner_pubkey(&metadata.remote_token.0 .0.into())
     );
     let claimed_output = current_executor_state_root(&executor)?;
-    storage_items.sysvar_accounts.insert(
-        2,
-        executor.storage_query(|s| {
-            let sysvar_accounts = s.export_sysvars()?;
-            Ok(sysvar_accounts)
-        })?,
-    );
+    info!("soon slot 2 state root: {:?}", claimed_output);
+    executor.storage_query(|s| {
+        let soon_accounts = SoonAccounts::try_from(s)?;
+        storage_items
+            .init_accounts
+            .insert(s.current_slot(), soon_accounts);
+        storage_items
+            .sysvar_accounts
+            .insert(s.current_slot(), s.export_sysvars()?);
+        Ok(())
+    })?;
 
     let slot_2_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
     let l1_info_tx = new_attributed_deposit_tx(L1_NUMBER, 1);
@@ -197,12 +261,20 @@ pub(crate) fn blocks_to_execution_cache(
     producer.mine_with_block(Some(raw.clone()))?;
     complete_receiver.try_recv()?;
     let claimed_output = current_executor_state_root(&executor)?;
+    info!("soon slot 3 state root: {:?}", claimed_output);
     boot_info.claimed_l2_output_root = claimed_output;
     boot_info.claimed_l2_block_number = producer.get_executor().latest_slot()?;
     info!("boot info: {:?}", boot_info);
-    storage_items
-        .sysvar_accounts
-        .insert(3, executor.storage_query(|s| Ok(s.export_sysvars()?))?);
+    executor.storage_query(|s| {
+        let soon_accounts = SoonAccounts::try_from(s)?;
+        storage_items
+            .init_accounts
+            .insert(s.current_slot(), soon_accounts);
+        storage_items
+            .sysvar_accounts
+            .insert(s.current_slot(), s.export_sysvars()?);
+        Ok(())
+    })?;
 
     let slot_3_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
     let execution = to_execution(raw, agreed_output, claimed_output, slot_3_head)?;
@@ -281,37 +353,7 @@ pub(crate) fn new_soon(
     )?;
 
     let (mut producer, _, complete_receiver) = new_producer(path, identity.clone())?;
-    let executor = producer.get_executor().clone();
 
     let metadata = TokenMetadata::default();
-
-    // === slot 1
-    let derive_block_1 = new_derive_block(metadata.to.pubkey(), L1_NUMBER);
-    let raw = RawBlock::try_init(derive_block_1, 0, &Default::default())?;
-    producer.mine_with_block(Some(raw.clone()))?;
-    complete_receiver.try_recv()?;
-    // assert l1 block info state
-    assert_eq!(executor.latest_slot()?, 1);
-
     Ok((producer, identity, metadata, complete_receiver))
-}
-
-pub(crate) struct TokenMetadata {
-    pub remote_token: Address,
-    pub to: Keypair,
-    pub token_name: String,
-    pub token_symbol: String,
-    pub uri: String,
-}
-
-impl Default for TokenMetadata {
-    fn default() -> Self {
-        Self {
-            remote_token: Address::random(),
-            to: Keypair::new(),
-            token_name: "Test".to_string(),
-            token_symbol: "TST".to_string(),
-            uri: "https://ipfs.io/ipfs/QmXRVXSRbH9nKYPgVfakXRhDhEaXWs6QYu3rToadXhtHPr".to_string(),
-        }
-    }
 }
