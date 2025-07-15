@@ -7807,6 +7807,7 @@ dependencies = [
  "op-alloy-rpc-types-engine",
  "op-revm",
  "revm",
+ "solana-sdk",
  "soon-primitives",
  "thiserror 2.0.12",
  "tracing",

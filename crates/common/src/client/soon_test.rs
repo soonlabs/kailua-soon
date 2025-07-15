@@ -6,8 +6,8 @@ use alloy_primitives::{Address, Bytes, B256};
 use anyhow::Result;
 use bridge::pda::{spl_token_mint_pubkey, spl_token_owner_pubkey};
 use crossbeam_channel::Receiver;
-use fraud_executor::accounts::SoonAccounts;
-use kona_executor::BlockBuildingOutcome;
+use fraud_executor::accounts::{AccountPairs, SoonAccounts};
+use kona_executor::{cal_extra_accounts_hash, BlockBuildingOutcome, INIT_ACCOUNTS_HASH};
 use kona_preimage::PreimageKey;
 use kona_proof::BootInfo;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
@@ -15,6 +15,7 @@ use solana_sdk::{
     account::ReadableAccount, program_pack::Pack, pubkey::Pubkey, signature::Keypair,
     signer::Signer, transaction::VersionedTransaction,
 };
+use soon_node::derive::driver::L2ChainProviderImmutable;
 use soon_node::{
     derive::mock::MockInstant,
     executor::{ExecutorOperator, SharedExecutor},
@@ -31,12 +32,12 @@ use soon_primitives::{
     rollup_config::SoonRollupConfig,
 };
 use spl_token::state::Mint;
+use std::collections::HashMap;
 use std::{
     env::{current_dir, var},
     path::{Path, PathBuf},
     sync::Arc,
 };
-use soon_node::derive::driver::L2ChainProviderImmutable;
 use tracing::info;
 
 const L1_NUMBER: u64 = 100;
@@ -44,6 +45,8 @@ const L1_NUMBER: u64 = 100;
 #[derive(Debug, Default, Clone)]
 pub struct OracleStorageItems {
     pub safe_head: L2BlockInfo,
+    pub init_accounts: SoonAccounts,
+    pub sysvar_accounts: HashMap<u64, AccountPairs>,
 }
 
 pub(crate) fn soon_to_execution_cache() -> Result<(BootInfo, Vec<Arc<Execution>>, MockOracle)> {
@@ -75,8 +78,28 @@ fn save_to_oracle(
     // save safe head
     let mut agreed_output_data = [0u8; 128];
     agreed_output_data[96..].copy_from_slice(&storage_items.safe_head.block_info.hash[..]);
-    oracle.insert_preimage(PreimageKey::new_keccak256(boot_info.agreed_l2_output_root.0), agreed_output_data.to_vec());
-    oracle.insert_preimage(PreimageKey::new_keccak256(storage_items.safe_head.block_info.hash.0), bincode::serialize(&storage_items.safe_head)?);
+    oracle.insert_preimage(
+        PreimageKey::new_keccak256(boot_info.agreed_l2_output_root.0),
+        agreed_output_data.to_vec(),
+    );
+    oracle.insert_preimage(
+        PreimageKey::new_keccak256(storage_items.safe_head.block_info.hash.0),
+        bincode::serialize(&storage_items.safe_head)?,
+    );
+
+    // save init accounts
+    oracle.insert_preimage(
+        PreimageKey::new_keccak256(INIT_ACCOUNTS_HASH.0),
+        bincode::serialize(&storage_items.init_accounts)?,
+    );
+
+    // save sysvar accounts
+    for (slot, account_pairs) in &storage_items.sysvar_accounts {
+        oracle.insert_preimage(
+            PreimageKey::new_keccak256(cal_extra_accounts_hash(*slot).0),
+            bincode::serialize(account_pairs)?,
+        );
+    }
 
     Ok(())
 }
@@ -98,6 +121,10 @@ pub(crate) fn blocks_to_execution_cache(
     };
     let mut storage_items = OracleStorageItems::default();
     let executor = producer.get_executor().clone();
+    storage_items.init_accounts = executor.storage_query(|s| {
+        let soon_accounts = SoonAccounts::try_from(s)?;
+        Ok(soon_accounts)
+    })?;
     let agreed_output = current_executor_state_root(&executor)?;
     let slot_1_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
     storage_items.safe_head = slot_1_head;
@@ -133,6 +160,13 @@ pub(crate) fn blocks_to_execution_cache(
         spl_token_owner_pubkey(&metadata.remote_token.0 .0.into())
     );
     let claimed_output = current_executor_state_root(&executor)?;
+    storage_items.sysvar_accounts.insert(
+        2,
+        executor.storage_query(|s| {
+            let sysvar_accounts = s.export_sysvars()?;
+            Ok(sysvar_accounts)
+        })?,
+    );
 
     let slot_2_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
     let l1_info_tx = new_attributed_deposit_tx(L1_NUMBER, 1);
@@ -166,6 +200,9 @@ pub(crate) fn blocks_to_execution_cache(
     boot_info.claimed_l2_output_root = claimed_output;
     boot_info.claimed_l2_block_number = producer.get_executor().latest_slot()?;
     info!("boot info: {:?}", boot_info);
+    storage_items
+        .sysvar_accounts
+        .insert(3, executor.storage_query(|s| Ok(s.export_sysvars()?))?);
 
     let slot_3_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
     let execution = to_execution(raw, agreed_output, claimed_output, slot_3_head)?;
