@@ -98,12 +98,13 @@ pub(crate) fn blocks_to_execution_cache(
     };
     let mut storage_items = OracleStorageItems::default();
     let executor = producer.get_executor().clone();
-
-    // === slot 2
     let agreed_output = current_executor_state_root(&executor)?;
-    storage_items.safe_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
+    let slot_1_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
+    storage_items.safe_head = slot_1_head;
     info!("storage safe head: {:?}", storage_items.safe_head);
     boot_info.agreed_l2_output_root = agreed_output;
+
+    // === slot 2
     // append a `CreateSPL` tx into the block
     let last_blockhash = executor.storage_query(|s| Ok(s.current_bank().last_blockhash()))?;
     let create_spl_tx = create_spl_tx(
@@ -133,6 +134,7 @@ pub(crate) fn blocks_to_execution_cache(
     );
     let claimed_output = current_executor_state_root(&executor)?;
 
+    let slot_2_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
     let l1_info_tx = new_attributed_deposit_tx(L1_NUMBER, 1);
     let execution = tx_to_execution(
         vec![
@@ -143,6 +145,7 @@ pub(crate) fn blocks_to_execution_cache(
         ],
         agreed_output,
         claimed_output,
+        slot_2_head,
     )?;
     executions.push(Arc::new(execution));
 
@@ -164,7 +167,8 @@ pub(crate) fn blocks_to_execution_cache(
     boot_info.claimed_l2_block_number = producer.get_executor().latest_slot()?;
     info!("boot info: {:?}", boot_info);
 
-    let execution = to_execution(raw, agreed_output, claimed_output)?;
+    let slot_3_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
+    let execution = to_execution(raw, agreed_output, claimed_output, slot_3_head)?;
     executions.push(Arc::new(execution));
 
     Ok((boot_info, executions, storage_items))
@@ -174,6 +178,7 @@ pub(crate) fn tx_to_execution(
     txs: Vec<VersionedTransaction>,
     agreed_output: B256,
     claimed_output: B256,
+    header: L2BlockInfo,
 ) -> Result<Execution> {
     let txs = txs
         .into_iter()
@@ -186,7 +191,7 @@ pub(crate) fn tx_to_execution(
             ..Default::default()
         },
         artifacts: BlockBuildingOutcome {
-            header: Default::default(),
+            header,
             execution_result: BlockExecutionResult {
                 receipts: vec![],
                 requests: Requests::new(vec![]),
@@ -201,13 +206,14 @@ pub(crate) fn to_execution(
     block: RawBlock,
     agreed_output: B256,
     claimed_output: B256,
+    header: L2BlockInfo,
 ) -> Result<Execution> {
     let txs = block
         .transactions
         .iter()
         .map(|tx| tx.to_versioned_transaction())
         .collect::<Vec<_>>();
-    tx_to_execution(txs, agreed_output, claimed_output)
+    tx_to_execution(txs, agreed_output, claimed_output, header)
 }
 
 pub(crate) fn encode_tx(tx: VersionedTransaction) -> Result<Bytes> {

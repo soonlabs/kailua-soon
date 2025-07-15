@@ -387,10 +387,9 @@ pub fn recover_collected_executions(
 #[cfg_attr(coverage_nightly, coverage(off))]
 pub mod tests {
     use super::*;
-    use crate::client::soon_test::{blocks_to_execution_cache, soon_to_execution_cache};
-    use crate::test::mock::MockOracle;
+    use crate::client::soon_test::{soon_to_execution_cache};
     use crate::test::TestOracle;
-    use crate::{client::soon_test::new_soon, precondition::PreconditionValidationData};
+    use crate::{precondition::PreconditionValidationData};
     use alloy_primitives::{b256, B256};
     use kona_cli::init_tracing_subscriber;
     use kona_proof::l1::OracleBlobProvider;

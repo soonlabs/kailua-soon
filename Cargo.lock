@@ -5944,6 +5944,7 @@ version = "0.1.0"
 dependencies = [
  "hex",
  "litesvm",
+ "serde",
  "solana-sdk",
  "soon-mpt-primitives",
  "soon-mpt-trie",
@@ -7798,6 +7799,7 @@ dependencies = [
  "alloy-primitives 1.2.1",
  "alloy-rlp",
  "alloy-trie 0.8.1",
+ "bincode",
  "fraud-executor",
  "kona-mpt",
  "litesvm",
