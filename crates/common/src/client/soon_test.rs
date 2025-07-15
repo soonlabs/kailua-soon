@@ -36,16 +36,24 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
+use soon_node::derive::driver::L2ChainProviderImmutable;
+use tracing::info;
 
 const L1_NUMBER: u64 = 100;
+
+#[derive(Debug, Default, Clone)]
+pub struct OracleStorageItems {
+    pub safe_head: L2BlockInfo,
+}
 
 pub(crate) fn soon_to_execution_cache() -> Result<(BootInfo, Vec<Arc<Execution>>, MockOracle)> {
     let temp = tempfile::tempdir()?;
     let (mut producer, identity, metadata, complete_receiver) = new_soon(temp.path())?;
 
-    let (boot_info, executions) =
+    let (boot_info, executions, oracle_storage_items) =
         blocks_to_execution_cache(&mut producer, &identity, &metadata, complete_receiver)?;
-    let oracle = MockOracle::new(boot_info.clone());
+    let mut oracle = MockOracle::new(boot_info.clone());
+    save_to_oracle(&mut oracle, &boot_info, &oracle_storage_items)?;
     Ok((boot_info, executions, oracle))
 }
 
@@ -57,12 +65,28 @@ fn current_executor_state_root(executor: &SharedExecutor) -> Result<B256> {
     Ok(state_root)
 }
 
+fn save_to_oracle(
+    oracle: &mut MockOracle,
+    boot_info: &BootInfo,
+    storage_items: &OracleStorageItems,
+) -> Result<()> {
+    info!("save to oracle details: {:?}", storage_items);
+
+    // save safe head
+    let mut agreed_output_data = [0u8; 128];
+    agreed_output_data[96..].copy_from_slice(&storage_items.safe_head.block_info.hash[..]);
+    oracle.insert_preimage(PreimageKey::new_keccak256(boot_info.agreed_l2_output_root.0), agreed_output_data.to_vec());
+    oracle.insert_preimage(PreimageKey::new_keccak256(storage_items.safe_head.block_info.hash.0), bincode::serialize(&storage_items.safe_head)?);
+
+    Ok(())
+}
+
 pub(crate) fn blocks_to_execution_cache(
     producer: &mut Producer<SharedExecutor, MockInstant>,
     identity: &Keypair,
     metadata: &TokenMetadata,
     complete_receiver: Receiver<(L2BlockInfo, Option<BlockInfo>)>,
-) -> Result<(BootInfo, Vec<Arc<Execution>>)> {
+) -> Result<(BootInfo, Vec<Arc<Execution>>, OracleStorageItems)> {
     let mut executions = Vec::new();
     let mut boot_info = BootInfo {
         l1_head: B256::ZERO,
@@ -72,10 +96,13 @@ pub(crate) fn blocks_to_execution_cache(
         chain_id: 0,
         rollup_config: SoonRollupConfig::default(),
     };
+    let mut storage_items = OracleStorageItems::default();
     let executor = producer.get_executor().clone();
 
     // === slot 2
     let agreed_output = current_executor_state_root(&executor)?;
+    storage_items.safe_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
+    info!("storage safe head: {:?}", storage_items.safe_head);
     boot_info.agreed_l2_output_root = agreed_output;
     // append a `CreateSPL` tx into the block
     let last_blockhash = executor.storage_query(|s| Ok(s.current_bank().last_blockhash()))?;
@@ -135,11 +162,12 @@ pub(crate) fn blocks_to_execution_cache(
     let claimed_output = current_executor_state_root(&executor)?;
     boot_info.claimed_l2_output_root = claimed_output;
     boot_info.claimed_l2_block_number = producer.get_executor().latest_slot()?;
+    info!("boot info: {:?}", boot_info);
 
     let execution = to_execution(raw, agreed_output, claimed_output)?;
     executions.push(Arc::new(execution));
 
-    Ok((boot_info, executions))
+    Ok((boot_info, executions, storage_items))
 }
 
 pub(crate) fn tx_to_execution(
@@ -158,7 +186,7 @@ pub(crate) fn tx_to_execution(
             ..Default::default()
         },
         artifacts: BlockBuildingOutcome {
-            header: Sealed::new(Header::default()),
+            header: Default::default(),
             execution_result: BlockExecutionResult {
                 receipts: vec![],
                 requests: Requests::new(vec![]),

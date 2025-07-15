@@ -10,7 +10,7 @@ use std::fmt::Debug;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tempfile::{tempdir, TempDir};
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 use crate::oracle::offline::{OfflineKeyValueStore, OfflineOracle};
 use crate::oracle::WitnessOracle;
@@ -44,6 +44,7 @@ impl WitnessOracle for MockOracle {
     }
 
     fn insert_preimage(&mut self, key: PreimageKey, value: Vec<u8>) {
+        debug!("inserting preimage: {}, value: {}", key, hex::encode(&value));
         self.map.insert(key, value);
     }
 
@@ -109,11 +110,15 @@ impl FlushableCache for MockOracle {
 #[async_trait]
 impl PreimageOracleClient for MockOracle {
     async fn get(&self, key: PreimageKey) -> PreimageOracleResult<Vec<u8>> {
-        self.get_value(key).map(|v| v.clone())
+        self.get_value(key).map(|v| {
+            debug!("mock oracle get {} value: {}", key, hex::encode(&v));
+            v.clone()
+        })
     }
 
     async fn get_exact(&self, key: PreimageKey, buf: &mut [u8]) -> PreimageOracleResult<()> {
         let value = self.get_value(key)?;
+        debug!("mock oracle get exact {} value: {}", key, hex::encode(value));
         buf.copy_from_slice(value);
         Ok(())
     }

@@ -34,6 +34,7 @@ use std::mem::take;
 use std::sync::{Arc, Mutex};
 // use soon_derive::sources::EthereumDataSource;
 use soon_derive::traits::BlobProvider;
+use tracing::info;
 
 /// Runs the Kailua client to drive rollup state transition derivation using Kona.
 ///
@@ -143,13 +144,13 @@ where
         // Fetch the safe head's block header.
         client::log("SAFE HEAD");
         let safe_head = l2_provider
-            .header_by_hash(safe_head_hash)
-            .map(|header| Sealed::new_unchecked(header, safe_head_hash))?;
+            .header_by_hash(safe_head_hash)?;
 
-        if boot.claimed_l2_block_number < safe_head.number {
+        if boot.claimed_l2_block_number < safe_head.block_info.number {
             bail!("Invalid claim");
         }
-        let safe_head_number = safe_head.number;
+        let safe_head_number = safe_head.block_info.number;
+        info!("SAFE HEAD number: {}, claimed_l2_block_number: {}", safe_head_number, boot.claimed_l2_block_number);
         let expected_output_count = (boot.claimed_l2_block_number - safe_head_number) as usize;
 
         ////////////////////////////////////////////////////////////////
@@ -182,7 +183,7 @@ where
 
             // Validate terminating block number
             assert_eq!(
-                execution_cache.last().unwrap().artifacts.header.number,
+                execution_cache.last().unwrap().artifacts.header.block_info.number,
                 boot.claimed_l2_block_number
             );
 
@@ -210,7 +211,7 @@ where
                 assert_eq!(execution.claimed_output, latest_output_root);
                 client::log(&format!(
                     "OUTPUT: {}/{}",
-                    execution.artifacts.header.number, boot.claimed_l2_block_number
+                    execution.artifacts.header.block_info.number, boot.claimed_l2_block_number
                 ));
             }
 

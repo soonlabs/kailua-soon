@@ -113,7 +113,7 @@ impl<E: Executor + Send + Sync + Debug> Executor for CachedExecutor<E> {
     /// # Behavior
     /// Delegates the update operation to the `executor` component that handles
     /// the internal logic for updating the safe head within the system.
-    fn update_safe_head(&mut self, header: Sealed<Header>) -> Result<(), Self::Error> {
+    fn update_safe_head(&mut self, header: L2BlockInfo) -> Result<(), Self::Error> {
         self.executor.update_safe_head(header)
     }
 
@@ -214,14 +214,14 @@ impl<E: Executor + Send + Sync + Debug> Executor for CachedExecutor<E> {
 /// - Returns the cursor wrapped in an `Arc<RwLock<PipelineCursor>>` for safe concurrent access.
 pub async fn new_execution_cursor<O>(
     rollup_config: &SoonRollupConfig,
-    safe_header: Sealed<Header>,
+    safe_header: L2BlockInfo,
     l2_chain_provider: &mut OracleL2ChainProvider<O>,
 ) -> Result<Arc<RwLock<PipelineCursor>>, OracleProviderError>
 where
     O: CommsClient + FlushableCache + FlushableCache + Send + Sync + Debug,
 {
     let safe_head_info = l2_chain_provider
-        .l2_block_info_by_number(safe_header.number)
+        .l2_block_info_by_number(safe_header.block_info.number)
         .await?;
 
     // Walk back the starting L1 block by `channel_timeout` to ensure that the full channel is
@@ -464,7 +464,7 @@ pub fn exec_precondition_hash(executions: &[Arc<Execution>]) -> B256 {
                 attributes_hash(&e.attributes)
                     .expect("Unhashable attributes.")
                     .0,
-                e.artifacts.header.hash().0,
+                e.artifacts.header.block_info.hash.0,
                 e.claimed_output.0,
             ]
             .concat()

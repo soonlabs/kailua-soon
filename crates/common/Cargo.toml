@@ -18,6 +18,7 @@ lazy_static.workspace = true
 pot.workspace = true
 rkyv.workspace = true
 spin.workspace = true
+hex.workspace = true
 
 # Test feature dependencies
 copy_dir = { workspace = true, optional = true }
