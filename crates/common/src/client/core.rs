@@ -143,14 +143,16 @@ where
         // The claimed L2 block number must be greater than or equal to the L2 safe head.
         // Fetch the safe head's block header.
         client::log("SAFE HEAD");
-        let safe_head = l2_provider
-            .header_by_hash(safe_head_hash)?;
+        let safe_head = l2_provider.header_by_hash(safe_head_hash)?;
 
         if boot.claimed_l2_block_number < safe_head.block_info.number {
             bail!("Invalid claim");
         }
         let safe_head_number = safe_head.block_info.number;
-        info!("SAFE HEAD number: {}, claimed_l2_block_number: {}", safe_head_number, boot.claimed_l2_block_number);
+        info!(
+            "SAFE HEAD number: {}, claimed_l2_block_number: {}",
+            safe_head_number, boot.claimed_l2_block_number
+        );
         let expected_output_count = (boot.claimed_l2_block_number - safe_head_number) as usize;
 
         ////////////////////////////////////////////////////////////////
@@ -183,7 +185,13 @@ where
 
             // Validate terminating block number
             assert_eq!(
-                execution_cache.last().unwrap().artifacts.header.block_info.number,
+                execution_cache
+                    .last()
+                    .unwrap()
+                    .artifacts
+                    .header
+                    .block_info
+                    .number,
                 boot.claimed_l2_block_number
             );
 
@@ -387,11 +395,12 @@ pub fn recover_collected_executions(
 #[cfg_attr(coverage_nightly, coverage(off))]
 pub mod tests {
     use super::*;
-    use crate::client::soon_test::{soon_to_execution_cache};
+    use crate::client::soon_test::soon_to_execution_cache;
+    use crate::precondition::PreconditionValidationData;
     use crate::test::TestOracle;
-    use crate::{precondition::PreconditionValidationData};
     use alloy_primitives::{b256, B256};
     use kona_cli::init_tracing_subscriber;
+    use kona_executor::OffchainL2Builder;
     use kona_proof::l1::OracleBlobProvider;
     use kona_proof::BootInfo;
     use std::sync::{Arc, Mutex};
@@ -446,27 +455,38 @@ pub mod tests {
         boot_info: BootInfo,
         execution_cache: Vec<Arc<Execution>>,
     ) -> anyhow::Result<B256> {
-        test_execution_ex(
-            boot_info.clone(),
+        let oracle = Arc::new(TestOracle::new(boot_info.clone()));
+        test_execution_ex::<StatelessL2Builder<_, _>, _, _>(
+            boot_info,
             execution_cache,
-            Arc::new(TestOracle::new(boot_info)),
+            oracle.clone(),
+            OracleBlobProvider::new(oracle),
         )
     }
 
-    pub fn test_execution_ex<O: CommsClient + FlushableCache + Send + Sync + Debug>(
+    pub fn test_execution_ex<
+        E,
+        O: CommsClient + FlushableCache + Send + Sync + Debug,
+        B: BlobProvider + Send + Sync + Debug + Clone,
+    >(
         boot_info: BootInfo,
         execution_cache: Vec<Arc<Execution>>,
         oracle: Arc<O>,
-    ) -> anyhow::Result<B256> {
+        blob_provider: B,
+    ) -> anyhow::Result<B256>
+    where
+        <B as BlobProvider>::Error: Debug,
+        E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug,
+    {
         // Ensure boot info triggers execution only
         assert!(boot_info.l1_head.is_zero());
         let expected_precondition_hash = exec_precondition_hash(execution_cache.as_slice());
 
-        let (result_boot_info, precondition_hash) = run_core_client(
+        let (result_boot_info, precondition_hash) = run_core_client_ex::<E, O, B>(
             B256::ZERO,
             oracle.clone(),
             oracle.clone(),
-            OracleBlobProvider::new(oracle.clone()),
+            blob_provider,
             execution_cache,
             None,
         )
@@ -493,10 +513,15 @@ pub mod tests {
 
     #[test]
     pub fn test_core_client_from_soon_executor() -> anyhow::Result<()> {
-        init_tracing_subscriber(4, None::<EnvFilter>)?;
+        init_tracing_subscriber(3, None::<EnvFilter>)?;
         let (boot_info, executions, oracle) = soon_to_execution_cache()?;
 
-        test_execution_ex(boot_info, executions, Arc::new(oracle))?;
+        test_execution_ex::<OffchainL2Builder<_, _>, _, _>(
+            boot_info,
+            executions,
+            Arc::new(oracle.clone()),
+            OracleBlobProvider::new(Arc::new(oracle)),
+        )?;
         Ok(())
     }
 
