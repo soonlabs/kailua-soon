@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloy_consensus::Header;
 use alloy_eips::eip7685::Requests;
 use alloy_evm::block::BlockExecutionResult;
-use alloy_primitives::Sealable;
-use kona_executor::BlockBuildingOutcome;
+use fraud_executor::outcome::BlockBuildingOutcome;
 use op_alloy_consensus::OpReceiptEnvelope;
 use rkyv::rancor::Fallible;
-use rkyv::with::{ArchiveWith, DeserializeWith, SerializeWith, With};
+use rkyv::with::{ArchiveWith, DeserializeWith, SerializeWith};
 use rkyv::{Archive, Archived, Place, Resolver};
 use soon_primitives::blocks::L2BlockInfo;
 
@@ -35,12 +33,7 @@ impl ArchiveWith<BlockBuildingOutcome> for BlockBuildingOutcomeRkyv {
         out: Place<Self::Archived>,
     ) {
         let block_header = bincode::serialize(&field.header).unwrap();
-        let execution_result =
-            rkyv::to_bytes::<rkyv::rancor::Error>(With::<_, BlockExecutionResultRkyv>::cast(
-                &field.execution_result,
-            ))
-            .unwrap()
-            .to_vec();
+        let execution_result = bincode::serialize(&field.execution_result).unwrap();
         let field = (block_header, execution_result);
         <(Vec<u8>, Vec<u8>) as Archive>::resolve(&field, resolver, out);
     }
@@ -56,12 +49,7 @@ where
         serializer: &mut S,
     ) -> Result<Self::Resolver, S::Error> {
         let header = bincode::serialize(&field.header).unwrap();
-        let execution_result =
-            rkyv::to_bytes::<rkyv::rancor::Error>(With::<_, BlockExecutionResultRkyv>::cast(
-                &field.execution_result,
-            ))
-            .unwrap()
-            .to_vec();
+        let execution_result = bincode::serialize(&field.execution_result).unwrap();
         let field = (header, execution_result);
         <(Vec<u8>, Vec<u8>) as rkyv::Serialize<S>>::serialize(&field, serializer)
     }
@@ -78,12 +66,8 @@ where
         deserializer: &mut D,
     ) -> Result<BlockBuildingOutcome, D::Error> {
         let field: (Vec<u8>, Vec<u8>) = rkyv::Deserialize::deserialize(field, deserializer)?;
-        let header: L2BlockInfo = bincode::deserialize(field.0.as_slice())
-            .unwrap();
-        let execution_result = {
-            let access = rkyv::access(&field.1)?;
-            BlockExecutionResultRkyv::deserialize_with(access, deserializer)?
-        };
+        let header: L2BlockInfo = bincode::deserialize(field.0.as_slice()).unwrap();
+        let execution_result = bincode::deserialize(field.1.as_slice()).unwrap();
         Ok(BlockBuildingOutcome {
             header,
             execution_result,

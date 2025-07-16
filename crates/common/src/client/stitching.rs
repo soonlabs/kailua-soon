@@ -331,7 +331,7 @@ pub fn stitch_executions(
             //     )
             // );
             // Validate requests
-            assert!(execution.artifacts.execution_result.requests.is_empty());
+            assert!(execution.artifacts.execution_result.is_empty());
             // Validate gas used
             // assert_eq!(
             //     execution.artifacts.header.gas_used,

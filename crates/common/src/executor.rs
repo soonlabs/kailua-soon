@@ -22,8 +22,8 @@ use alloy_eips::eip4895::Withdrawal;
 use alloy_primitives::{Bytes, Sealed, B256, B64};
 use anyhow::Context;
 use async_trait::async_trait;
+use fraud_executor::outcome::BlockBuildingOutcome;
 use kona_driver::{Executor, PipelineCursor, TipCursor};
-use kona_executor::BlockBuildingOutcome;
 use kona_preimage::CommsClient;
 use kona_proof::errors::OracleProviderError;
 use kona_proof::l2::OracleL2ChainProvider;
@@ -159,8 +159,8 @@ impl<E: Executor + Send + Sync + Debug> Executor for CachedExecutor<E> {
     async fn execute_payload(
         &mut self,
         _attributes: OpPayloadAttributes,
-    ) -> Result<L2BlockInfo, Self::Error> {
-        Ok(L2BlockInfo::default())
+    ) -> Result<BlockBuildingOutcome, Self::Error> {
+        Ok(Default::default())
     }
 
     /// Computes the output root based on the current state of the executor.

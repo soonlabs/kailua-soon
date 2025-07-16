@@ -7,9 +7,8 @@ use anyhow::Result;
 use bridge::pda::{spl_token_mint_pubkey, spl_token_owner_pubkey};
 use crossbeam_channel::Receiver;
 use fraud_executor::accounts::{AccountPairs, SoonAccounts};
-use kona_executor::{
-    cal_extra_accounts_hash, cal_init_accounts_hash, cal_init_state_root_hash, BlockBuildingOutcome,
-};
+use fraud_executor::outcome::BlockBuildingOutcome;
+use kona_executor::{cal_extra_accounts_hash, cal_init_accounts_hash, cal_init_state_root_hash};
 use kona_preimage::PreimageKey;
 use kona_proof::BootInfo;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
@@ -301,11 +300,7 @@ pub(crate) fn tx_to_execution(
         },
         artifacts: BlockBuildingOutcome {
             header,
-            execution_result: BlockExecutionResult {
-                receipts: vec![],
-                requests: Requests::new(vec![]),
-                gas_used: 0,
-            },
+            execution_result: vec![],
         },
         claimed_output,
     })
@@ -352,7 +347,7 @@ pub(crate) fn new_soon(
         ),
     )?;
 
-    let (mut producer, _, complete_receiver) = new_producer(path, identity.clone())?;
+    let (producer, _, complete_receiver) = new_producer(path, identity.clone())?;
 
     let metadata = TokenMetadata::default();
     Ok((producer, identity, metadata, complete_receiver))

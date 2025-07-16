@@ -205,19 +205,33 @@ where
                 // Verify initial state
                 assert_eq!(execution.agreed_output, latest_output_root);
                 // Verify transition
-                let _executor_result = kona_executor
+                let executor_result = kona_executor
                     .execute_payload(execution.attributes.clone())
                     .await?;
                 latest_output_root = kona_executor
                     .compute_output_root()
                     .context("compute_output_root: Verify post state")?;
 
+                // check every items but hash and parent hash
+                // assert_eq!(execution.artifacts.header.l1_origin, executor_result.header.l1_origin);
+                // assert_eq!(
+                //     execution.artifacts.header.seq_num,
+                //     executor_result.header.seq_num
+                // );
+                // assert_eq!(
+                //     execution.artifacts.header.block_info.number,
+                //     executor_result.header.block_info.number
+                // );
+                // assert_eq!(
+                //     execution.artifacts.header.block_info.timestamp,
+                //     executor_result.header.block_info.timestamp
+                // );
                 //TODO check result
-                // assert_eq!(execution.artifacts.header, executor_result.header);
                 // assert_eq!(
                 //     execution.artifacts.execution_result,
                 //     executor_result.execution_result
                 // );
+
                 // Update state
                 kona_executor.update_safe_head(execution.artifacts.header.clone())?;
                 // Verify post state
