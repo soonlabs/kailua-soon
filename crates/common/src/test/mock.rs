@@ -1,20 +1,12 @@
-use alloy_primitives::B256;
+use crate::oracle::WitnessOracle;
 use async_trait::async_trait;
-use kona_host::KeyValueStore;
 use kona_preimage::errors::{PreimageOracleError, PreimageOracleResult};
 use kona_preimage::{HintWriterClient, PreimageKey, PreimageOracleClient};
 use kona_proof::boot::*;
 use kona_proof::{BootInfo, FlushableCache};
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::path::PathBuf;
-use std::sync::Arc;
-use tempfile::{tempdir, TempDir};
 use tracing::{debug, info, warn};
-
-use crate::oracle::offline::{OfflineKeyValueStore, OfflineOracle};
-use crate::oracle::WitnessOracle;
-use crate::precondition::PreconditionValidationData;
 
 #[derive(Debug)]
 pub struct MockOracle {
@@ -44,7 +36,11 @@ impl WitnessOracle for MockOracle {
     }
 
     fn insert_preimage(&mut self, key: PreimageKey, value: Vec<u8>) {
-        debug!("inserting preimage: {}, value: {}", key, hex::encode(&value));
+        debug!(
+            "inserting preimage: {}, value: {}",
+            key,
+            hex::encode(&value)
+        );
         self.map.insert(key, value);
     }
 
@@ -111,14 +107,18 @@ impl FlushableCache for MockOracle {
 impl PreimageOracleClient for MockOracle {
     async fn get(&self, key: PreimageKey) -> PreimageOracleResult<Vec<u8>> {
         self.get_value(key).map(|v| {
-            debug!("mock oracle get {} value: {}", key, hex::encode(&v));
+            debug!("mock oracle get {} value: {}", key, hex::encode(v));
             v.clone()
         })
     }
 
     async fn get_exact(&self, key: PreimageKey, buf: &mut [u8]) -> PreimageOracleResult<()> {
         let value = self.get_value(key)?;
-        debug!("mock oracle get exact {} value: {}", key, hex::encode(value));
+        debug!(
+            "mock oracle get exact {} value: {}",
+            key,
+            hex::encode(value)
+        );
         buf.copy_from_slice(value);
         Ok(())
     }

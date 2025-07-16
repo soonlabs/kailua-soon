@@ -43,6 +43,8 @@ kona-executor.workspace = true
 kona-mpt.workspace = true
 kona-preimage.workspace = true
 kona-proof.workspace = true
+fraud-executor.workspace = true
+bincode.workspace = true
 
 risc0-zkvm.workspace = true
 
@@ -60,9 +62,7 @@ solana-sdk = { workspace = true, optional = true }
 l1-block-info = { workspace = true, optional = true }
 bridge = { workspace = true, optional = true }
 spl-token = { workspace = true, optional = true }
-bincode = { workspace = true, optional = true }
 crossbeam-channel = { workspace = true, optional = true }
-fraud-executor = { workspace = true, optional = true }
 
 [dev-dependencies]
 copy_dir.workspace = true
@@ -87,9 +87,7 @@ __test = [
 	"l1-block-info",
 	"bridge",
 	"spl-token",
-	"bincode",
 	"crossbeam-channel",
-	"fraud-executor",
 ]
 
 [lints.rust]
