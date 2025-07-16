@@ -17,7 +17,9 @@ bincode.workspace = true
 bytemuck.workspace = true
 clap.workspace = true
 hashbrown = { workspace = true, features = ["rayon"] }
-rocksdb = { workspace = true, features = ["multi-threaded-cf"] }
+# comment out multi-threaded-cf to avoid build error
+# rocksdb = { workspace = true, features = ["multi-threaded-cf"] }
+rocksdb.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
@@ -54,18 +56,8 @@ bonsai-sdk.workspace = true
 risc0-zkvm.workspace = true
 
 [features]
-prove = [
-    "risc0-zkvm/prove"
-]
-cuda = [
-    "risc0-zkvm/cuda"
-]
-metal = [
-    "risc0-zkvm/metal"
-]
-disable-dev-mode = [
-    "risc0-zkvm/disable-dev-mode"
-]
-rebuild-fpvm = [
-    "kailua-build/rebuild-fpvm"
-]
+prove = ["risc0-zkvm/prove"]
+cuda = ["risc0-zkvm/cuda"]
+metal = ["risc0-zkvm/metal"]
+disable-dev-mode = ["risc0-zkvm/disable-dev-mode"]
+rebuild-fpvm = ["kailua-build/rebuild-fpvm"]

@@ -5943,6 +5943,7 @@ name = "fraud-executor"
 version = "0.1.0"
 dependencies = [
  "hex",
+ "l1-block-info",
  "litesvm",
  "serde",
  "solana-sdk",

@@ -25,9 +25,9 @@ use kailua_client::proving::ProvingError;
 use kailua_common::boot::StitchedBootInfo;
 use kailua_common::client::stitching::{split_executions, stitch_boot_info};
 use kailua_common::executor::{exec_precondition_hash, Execution};
-use soon_primitives::rollup_config::SoonRollupConfig;
 use kona_proof::BootInfo;
 use risc0_zkvm::Receipt;
+use soon_primitives::rollup_config::SoonRollupConfig;
 use std::collections::BinaryHeap;
 use std::convert::identity;
 use std::path::Path;
@@ -163,7 +163,7 @@ pub async fn compute_fpvm_proof(
         // Require additional proof
         num_proofs += 1;
         let executed_blocks = oneshot_result.cached.stitched_executions[0].clone();
-        let starting_block = executed_blocks[0].artifacts.header.number - 1;
+        let starting_block = executed_blocks[0].artifacts.header.block_info.number - 1;
         let num_blocks = oneshot_result.cached.args.kona.claimed_l2_block_number - starting_block;
         let force_attempt = num_blocks == 1;
         // divide or bail out on error
@@ -194,7 +194,7 @@ pub async fn compute_fpvm_proof(
         let mid_point = starting_block + num_blocks / 2;
         let mid_exec = executed_blocks
             .iter()
-            .find(|e| e.artifacts.header.number == mid_point)
+            .find(|e| e.artifacts.header.block_info.number == mid_point)
             .expect("Failed to find the midpoint of execution.");
         let mid_output = mid_exec.claimed_output;
 
@@ -218,7 +218,7 @@ pub async fn compute_fpvm_proof(
         // upper half workload starts after midpoint
         let mut upper_job_args = oneshot_result.cached.args;
         upper_job_args.kona.agreed_l2_output_root = mid_output;
-        upper_job_args.kona.agreed_l2_head_hash = mid_exec.artifacts.header.hash();
+        upper_job_args.kona.agreed_l2_head_hash = mid_exec.artifacts.header.block_info.hash;
         task_sender
             .send(Oneshot {
                 cached_task: create_cached_execution_task(
@@ -287,6 +287,7 @@ pub fn create_cached_execution_task(
         .expect("Failed to find the first execution.")
         .artifacts
         .header
+        .block_info
         .number
         - 1;
     let num_blocks = args.kona.claimed_l2_block_number - starting_block;
@@ -298,7 +299,7 @@ pub fn create_cached_execution_task(
     let executed_blocks = execution_cache
         .iter()
         .filter(|e| {
-            let executed_block_number = e.artifacts.header.number;
+            let executed_block_number = e.artifacts.header.block_info.number;
 
             starting_block < executed_block_number
                 && executed_block_number <= args.kona.claimed_l2_block_number
