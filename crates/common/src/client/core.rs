@@ -16,7 +16,7 @@ use crate::executor::{exec_precondition_hash, new_execution_cursor, CachedExecut
 use crate::kona::OracleL1ChainProvider;
 use crate::{client, precondition};
 // use alloy_op_evm::OpEvmFactory;
-use alloy_primitives::{Sealed, B256};
+use alloy_primitives::B256;
 use anyhow::{bail, Context};
 use kona_driver::{Driver, Executor};
 use kona_executor::{L2BlockBuilder, StatelessL2Builder, TrieDBProvider};
@@ -160,10 +160,9 @@ where
         ////////////////////////////////////////////////////////////////
         if boot.l1_head.is_zero() {
             client::log("EXECUTION ONLY");
-            let cursor =
-                new_execution_cursor(rollup_config.as_ref(), safe_head.clone(), &mut l2_provider)
-                    .await
-                    .context("new_execution_cursor")?;
+            let cursor = new_execution_cursor(rollup_config.as_ref(), safe_head, &mut l2_provider)
+                .await
+                .context("new_execution_cursor")?;
             l2_provider.set_cursor(cursor.clone());
 
             let mut kona_executor = KonaExecutor::<_, _, E>::new(
@@ -212,20 +211,8 @@ where
                     .compute_output_root()
                     .context("compute_output_root: Verify post state")?;
 
-                // check every items but hash and parent hash
-                // assert_eq!(execution.artifacts.header.l1_origin, executor_result.header.l1_origin);
-                // assert_eq!(
-                //     execution.artifacts.header.seq_num,
-                //     executor_result.header.seq_num
-                // );
-                // assert_eq!(
-                //     execution.artifacts.header.block_info.number,
-                //     executor_result.header.block_info.number
-                // );
-                // assert_eq!(
-                //     execution.artifacts.header.block_info.timestamp,
-                //     executor_result.header.block_info.timestamp
-                // );
+                // check l2 header
+                assert_eq!(execution.artifacts.header, executor_result.header);
                 //TODO check result
                 // assert_eq!(
                 //     execution.artifacts.execution_result,
@@ -233,7 +220,7 @@ where
                 // );
 
                 // Update state
-                kona_executor.update_safe_head(execution.artifacts.header.clone())?;
+                kona_executor.update_safe_head(execution.artifacts.header)?;
                 // Verify post state
                 assert_eq!(execution.claimed_output, latest_output_root);
                 client::log(&format!(

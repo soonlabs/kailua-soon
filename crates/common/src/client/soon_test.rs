@@ -1,20 +1,19 @@
 use crate::{executor::Execution, oracle::WitnessOracle, test::mock::MockOracle};
-use alloy_consensus::{Header, Sealed};
-use alloy_eips::eip7685::Requests;
-use alloy_evm::block::BlockExecutionResult;
 use alloy_primitives::{Address, Bytes, B256};
 use anyhow::Result;
 use bridge::pda::{spl_token_mint_pubkey, spl_token_owner_pubkey};
 use crossbeam_channel::Receiver;
 use fraud_executor::accounts::{AccountPairs, SoonAccounts};
 use fraud_executor::outcome::BlockBuildingOutcome;
-use kona_executor::{cal_extra_accounts_hash, cal_init_accounts_hash, cal_init_state_root_hash};
+use kona_executor::{
+    cal_extra_accounts_hash, cal_init_accounts_hash, cal_init_state_root_hash, slot_hash_pair_hash,
+};
 use kona_preimage::PreimageKey;
 use kona_proof::BootInfo;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use solana_sdk::{
-    account::ReadableAccount, program_pack::Pack, pubkey::Pubkey, signature::Keypair,
-    signer::Signer, transaction::VersionedTransaction,
+    account::ReadableAccount, program_pack::Pack, signature::Keypair, signer::Signer,
+    transaction::VersionedTransaction,
 };
 use soon_node::derive::driver::L2ChainProviderImmutable;
 use soon_node::{
@@ -48,6 +47,7 @@ pub struct OracleStorageItems {
     pub safe_head: L2BlockInfo,
     pub init_accounts: HashMap<u64, SoonAccounts>,
     pub sysvar_accounts: HashMap<u64, AccountPairs>,
+    pub slot_hash_pairs: HashMap<u64, (B256, B256)>,
 }
 
 pub(crate) struct TokenMetadata {
@@ -70,6 +70,7 @@ impl Default for TokenMetadata {
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn soon_to_execution_cache() -> Result<(BootInfo, Vec<Arc<Execution>>, MockOracle)> {
     let temp = tempfile::tempdir()?;
     let (mut producer, identity, metadata, complete_receiver) = new_soon(temp.path())?;
@@ -131,6 +132,39 @@ fn save_to_oracle(
         );
     }
 
+    // save slot hash pairs
+    for (slot, (hash, parent_hash)) in &storage_items.slot_hash_pairs {
+        oracle.insert_preimage(
+            PreimageKey::new_keccak256(slot_hash_pair_hash(*slot).0),
+            bincode::serialize(&(*hash, *parent_hash))?,
+        );
+    }
+
+    Ok(())
+}
+
+fn update_storage_items(
+    executor: &SharedExecutor,
+    storage_items: &mut OracleStorageItems,
+) -> Result<()> {
+    let slot = executor.latest_slot()?;
+    let l2_block_info = executor.l2_block_info_by_number_immut(slot)?;
+    executor.storage_query(|s| {
+        let soon_accounts = SoonAccounts::try_from(s)?;
+        storage_items.init_accounts.insert(slot, soon_accounts);
+        storage_items
+            .sysvar_accounts
+            .insert(slot, s.export_sysvars()?);
+
+        storage_items.slot_hash_pairs.insert(
+            slot,
+            (
+                l2_block_info.block_info.hash,
+                l2_block_info.block_info.parent_hash,
+            ),
+        );
+        Ok(())
+    })?;
     Ok(())
 }
 
@@ -174,16 +208,7 @@ pub(crate) fn blocks_to_execution_cache(
 
     let claimed_output = current_executor_state_root(&executor)?;
     info!("soon slot 1 state root: {:?}", claimed_output);
-    executor.storage_query(|s| {
-        let soon_accounts = SoonAccounts::try_from(s)?;
-        storage_items
-            .init_accounts
-            .insert(s.current_slot(), soon_accounts);
-        storage_items
-            .sysvar_accounts
-            .insert(s.current_slot(), s.export_sysvars()?);
-        Ok(())
-    })?;
+    update_storage_items(&executor, &mut storage_items)?;
 
     let slot_1_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
     let execution = to_execution(raw, agreed_output, claimed_output, slot_1_head)?;
@@ -220,16 +245,7 @@ pub(crate) fn blocks_to_execution_cache(
     );
     let claimed_output = current_executor_state_root(&executor)?;
     info!("soon slot 2 state root: {:?}", claimed_output);
-    executor.storage_query(|s| {
-        let soon_accounts = SoonAccounts::try_from(s)?;
-        storage_items
-            .init_accounts
-            .insert(s.current_slot(), soon_accounts);
-        storage_items
-            .sysvar_accounts
-            .insert(s.current_slot(), s.export_sysvars()?);
-        Ok(())
-    })?;
+    update_storage_items(&executor, &mut storage_items)?;
 
     let slot_2_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
     let l1_info_tx = new_attributed_deposit_tx(L1_NUMBER, 1);
@@ -264,16 +280,7 @@ pub(crate) fn blocks_to_execution_cache(
     boot_info.claimed_l2_output_root = claimed_output;
     boot_info.claimed_l2_block_number = producer.get_executor().latest_slot()?;
     info!("boot info: {:?}", boot_info);
-    executor.storage_query(|s| {
-        let soon_accounts = SoonAccounts::try_from(s)?;
-        storage_items
-            .init_accounts
-            .insert(s.current_slot(), soon_accounts);
-        storage_items
-            .sysvar_accounts
-            .insert(s.current_slot(), s.export_sysvars()?);
-        Ok(())
-    })?;
+    update_storage_items(&executor, &mut storage_items)?;
 
     let slot_3_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
     let execution = to_execution(raw, agreed_output, claimed_output, slot_3_head)?;
@@ -325,6 +332,7 @@ pub(crate) fn encode_tx(tx: VersionedTransaction) -> Result<Bytes> {
     Ok(Bytes::from(tx_bytes))
 }
 
+#[allow(clippy::type_complexity)]
 pub(crate) fn new_soon(
     path: &Path,
 ) -> Result<(
