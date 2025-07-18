@@ -574,42 +574,28 @@ pub mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_op_sepolia_16491249_16491349() {
-        let executions = test_derivation(
-            BootInfo {
-                l1_head: b256!(
-                    "0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"
-                ),
-                agreed_l2_output_root: b256!(
-                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
-                ),
-                claimed_l2_output_root: b256!(
-                    "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
-                ),
-                agreed_l2_block_number: 16491249,
-                claimed_l2_block_number: 16491349,
-                chain_id: 11155420,
-                rollup_config: Default::default(),
-            },
-            None,
-        )
-        .unwrap();
-        let _ = test_execution(
-            BootInfo {
-                l1_head: B256::ZERO,
-                agreed_l2_output_root: b256!(
-                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
-                ),
-                claimed_l2_output_root: b256!(
-                    "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
-                ),
-                agreed_l2_block_number: 16491249,
-                claimed_l2_block_number: 16491349,
-                chain_id: 11155420,
-                rollup_config: Default::default(),
-            },
+    pub async fn test_soon_execution_from_derivation() -> anyhow::Result<()> {
+        init_tracing_subscriber(3, None::<EnvFilter>)?;
+        let (mut boot_info, oracle) = soon_to_derivation().await?;
+        let oracle = Arc::new(oracle);
+
+        // step 1: derivation
+        let executions = test_derivation_ex::<OffchainL2Builder<_, _>, _, _, false>(
+            boot_info.clone(),
+            oracle.clone(),
+            OracleBlobProvider::new(oracle.clone()),
+            B256::ZERO,
+            B256::ZERO,
+        )?;
+
+        // step 2: execution
+        boot_info.l1_head = B256::ZERO; // Ensure boot info triggers execution only
+        test_execution_ex::<OffchainL2Builder<_, _>, _, _>(
+            boot_info,
             executions,
-        )
-        .unwrap();
+            oracle.clone(),
+            OracleBlobProvider::new(oracle.clone()),
+        )?;
+        Ok(())
     }
 }

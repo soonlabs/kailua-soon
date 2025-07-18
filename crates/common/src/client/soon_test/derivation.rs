@@ -1,7 +1,5 @@
-use crate::client::soon_test::{
-    current_executor_state_root, to_execution, tx_to_execution, L1_NUMBER,
-};
-use crate::{executor::Execution, oracle::WitnessOracle, test::mock::MockOracle};
+use crate::client::soon_test::{current_executor_state_root, L1_NUMBER};
+use crate::{oracle::WitnessOracle, test::mock::MockOracle};
 use alloy_consensus::Header;
 use alloy_primitives::B256;
 use alloy_rlp::Encodable;
@@ -21,10 +19,7 @@ use soon_node::{
     executor::{ExecutorOperator, SharedExecutor},
     node::{
         producer::Producer,
-        tests::{
-            create_derived_deposit_erc20_tx, create_spl_tx, new_attributed_deposit_tx,
-            new_derive_block, DEPOSIT_AMOUNT,
-        },
+        tests::{create_derived_deposit_erc20_tx, create_spl_tx, new_derive_block, DEPOSIT_AMOUNT},
     },
 };
 use soon_primitives::{
@@ -32,7 +27,6 @@ use soon_primitives::{
     rollup_config::SoonRollupConfig,
 };
 use spl_token::state::Mint;
-use std::sync::Arc;
 use tracing::info;
 
 use super::execution::{executions_save_to_oracle, update_execution_storage_items};
@@ -43,7 +37,7 @@ pub(crate) async fn soon_to_derivation() -> Result<(BootInfo, MockOracle)> {
     let temp = tempfile::tempdir()?;
     let (mut producer, identity, metadata, complete_receiver) = new_soon(temp.path())?;
 
-    let (boot_info, _, oracle_storage_items) =
+    let (boot_info, oracle_storage_items) =
         blocks_to_derivation_cache(&mut producer, &identity, &metadata, complete_receiver).await?;
     let mut oracle = MockOracle::new(boot_info.clone());
     derivations_save_to_oracle(&mut oracle, &boot_info, &oracle_storage_items)?;
@@ -80,8 +74,7 @@ pub(crate) async fn blocks_to_derivation_cache(
     identity: &Keypair,
     metadata: &TokenMetadata,
     complete_receiver: Receiver<(L2BlockInfo, Option<BlockInfo>)>,
-) -> Result<(BootInfo, Vec<Arc<Execution>>, DerivationStorageItems)> {
-    let mut executions = Vec::new();
+) -> Result<(BootInfo, DerivationStorageItems)> {
     let mut boot_info = BootInfo {
         l1_head: B256::ZERO,
         agreed_l2_output_root: B256::ZERO,
@@ -153,23 +146,7 @@ pub(crate) async fn blocks_to_derivation_cache(
     info!("soon slot 2 state root: {:?}", claimed_output);
     update_derivation_storage_items(&executor, &mut storage_items)?;
 
-    let slot_2_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
-    let l1_info_tx = new_attributed_deposit_tx(L1_NUMBER, 1);
-    let execution = tx_to_execution(
-        vec![
-            create_spl_tx.into(),
-            l1_info_tx
-                .to_sanitized_transaction(&Default::default())?
-                .to_versioned_transaction(),
-        ],
-        agreed_output,
-        claimed_output,
-        slot_2_head,
-    )?;
-    executions.push(Arc::new(execution));
-
     // === slot 3
-    let agreed_output = claimed_output;
     let mut derive_block_2 = new_derive_block(metadata.to.pubkey(), L1_NUMBER + 1);
     // deposit erc20 token
     derive_block_2
@@ -188,9 +165,5 @@ pub(crate) async fn blocks_to_derivation_cache(
     info!("boot info: {:?}", boot_info);
     update_derivation_storage_items(&executor, &mut storage_items)?;
 
-    let slot_3_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
-    let execution = to_execution(raw, agreed_output, claimed_output, slot_3_head)?;
-    executions.push(Arc::new(execution));
-
-    Ok((boot_info, executions, storage_items))
+    Ok((boot_info, storage_items))
 }
