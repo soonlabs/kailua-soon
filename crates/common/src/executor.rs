@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::client::log;
 // use crate::client::log;
 use crate::config::safe_default;
 use crate::rkyv::execution::BlockBuildingOutcomeRkyv;
@@ -157,9 +158,32 @@ impl<E: Executor + Send + Sync + Debug> Executor for CachedExecutor<E> {
     ///   - Payload execution via `self.executor` encounters an issue.
     async fn execute_payload(
         &mut self,
-        _attributes: OpPayloadAttributes,
+        attributes: OpPayloadAttributes,
     ) -> Result<BlockBuildingOutcome, Self::Error> {
-        Ok(Default::default())
+        let agreed_output = self.compute_output_root()?;
+        if self
+            .cache
+            .last()
+            .map(|e| Ok(agreed_output == e.agreed_output && attributes == e.attributes))
+            .unwrap_or(Ok(false))?
+        {
+            let artifacts = self.cache.pop().unwrap().artifacts.clone();
+            log(&format!("CACHE {}", artifacts.header.block_info.number));
+            self.update_safe_head(artifacts.header)?;
+            return Ok(artifacts);
+        }
+        if let Some(collection_target) = &self.collection_target {
+            let artifacts = self.executor.execute_payload(attributes.clone()).await?;
+            let mut collection_target = collection_target.lock().unwrap();
+            collection_target.push(Execution {
+                agreed_output,
+                attributes,
+                artifacts: artifacts.clone(),
+                claimed_output: Default::default(),
+            });
+            return Ok(artifacts);
+        }
+        self.executor.execute_payload(attributes).await
     }
 
     /// Computes the output root based on the current state of the executor.

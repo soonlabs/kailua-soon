@@ -104,7 +104,7 @@ where
 
     // Attempt to recompute the output hash at the target block number using kona
     log("RUN");
-    let (boot, precondition_hash) = crate::client::core::run_core_client_ex::<E, O, B>(
+    let (boot, precondition_hash) = crate::client::core::run_core_client_ex::<E, O, B, true>(
         precondition_validation_data_hash,
         oracle,
         stream,
@@ -631,6 +631,7 @@ pub mod tests {
             BootInfo {
                 l1_head: boot_info.l1_head,
                 agreed_l2_output_root: boot_info.agreed_l2_output_root,
+                agreed_l2_block_number: boot_info.agreed_l2_block_number,
                 claimed_l2_output_root: boot_info.agreed_l2_output_root,
                 claimed_l2_block_number: starting_block_number,
                 chain_id: boot_info.chain_id,
@@ -650,6 +651,7 @@ pub mod tests {
             BootInfo {
                 l1_head: boot_info.l1_head,
                 agreed_l2_output_root: boot_info.claimed_l2_output_root,
+                agreed_l2_block_number: boot_info.claimed_l2_block_number,
                 claimed_l2_output_root: boot_info.claimed_l2_output_root,
                 claimed_l2_block_number: ending_block_number,
                 chain_id: boot_info.chain_id,
@@ -671,6 +673,7 @@ pub mod tests {
                         BootInfo {
                             l1_head: boot_info.l1_head,
                             agreed_l2_output_root: boot_info.claimed_l2_output_root,
+                            agreed_l2_block_number: boot_info.claimed_l2_block_number,
                             claimed_l2_output_root: boot_info.claimed_l2_output_root,
                             claimed_l2_block_number: ending_block_number,
                             chain_id: boot_info.chain_id,
@@ -762,6 +765,7 @@ pub mod tests {
                 agreed_l2_output_root: b256!(
                     "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
                 ),
+                agreed_l2_block_number: 16491249,
                 claimed_l2_output_root: b256!(
                     "0xa130fbfa315391b28668609252e4c09c3df3b77562281b996af30bf056cbb2c1"
                 ),
@@ -789,6 +793,7 @@ pub mod tests {
                 agreed_l2_output_root: b256!(
                     "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
                 ),
+                agreed_l2_block_number: 16491249,
                 claimed_l2_output_root: b256!(
                     "0xa130fbfa315391b28668609252e4c09c3df3b77562281b996af30bf056cbb2c1"
                 ),
@@ -815,6 +820,7 @@ pub mod tests {
                 agreed_l2_output_root: b256!(
                     "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
                 ),
+                agreed_l2_block_number: 16491249,
                 claimed_l2_output_root: b256!(
                     "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
                 ),
@@ -847,6 +853,7 @@ pub mod tests {
                 agreed_l2_output_root: b256!(
                     "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
                 ),
+                agreed_l2_block_number: 16491249,
                 claimed_l2_output_root: b256!(
                     "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
                 ),
@@ -878,6 +885,7 @@ pub mod tests {
                 agreed_l2_output_root: b256!(
                     "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
                 ),
+                agreed_l2_block_number: 16491249,
                 claimed_l2_output_root: b256!(
                     "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
                 ),
@@ -905,6 +913,7 @@ pub mod tests {
                 agreed_l2_output_root: b256!(
                     "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
                 ),
+                agreed_l2_block_number: 16491249,
                 claimed_l2_output_root: b256!(
                     "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
                 ),
@@ -934,6 +943,7 @@ pub mod tests {
             agreed_l2_output_root: b256!(
                 "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
             ),
+            agreed_l2_block_number: 16491249,
             claimed_l2_output_root: b256!(
                 "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
             ),
@@ -996,6 +1006,7 @@ pub mod tests {
             agreed_l2_output_root: b256!(
                 "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
             ),
+            agreed_l2_block_number: 16491249,
             claimed_l2_output_root: b256!(
                 "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
             ),
@@ -1035,6 +1046,7 @@ pub mod tests {
             agreed_l2_output_root: b256!(
                 "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
             ),
+            agreed_l2_block_number: 16491249,
             claimed_l2_output_root: b256!(
                 "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
             ),

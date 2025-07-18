@@ -19,7 +19,7 @@ use crate::{client, precondition};
 use alloy_primitives::B256;
 use anyhow::{bail, Context};
 use kona_driver::{Driver, Executor};
-use kona_executor::{L2BlockBuilder, StatelessL2Builder, TrieDBProvider};
+use kona_executor::{L2BlockBuilder, StatelessL2Builder};
 use kona_preimage::{CommsClient, PreimageKey};
 use kona_proof::errors::OracleProviderError;
 use kona_proof::executor::KonaExecutor;
@@ -96,7 +96,12 @@ pub fn run_core_client<
 where
     <B as BlobProvider>::Error: Debug,
 {
-    run_core_client_ex::<StatelessL2Builder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>>, O, B>(
+    run_core_client_ex::<
+        StatelessL2Builder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>>,
+        O,
+        B,
+        true,
+    >(
         precondition_validation_data_hash,
         oracle,
         stream,
@@ -110,6 +115,7 @@ pub fn run_core_client_ex<
     E,
     O: CommsClient + FlushableCache + Send + Sync + Debug,
     B: BlobProvider + Send + Sync + Debug + Clone,
+    const ALLOW_CACHING: bool,
 >(
     precondition_validation_data_hash: B256,
     oracle: Arc<O>,
@@ -136,14 +142,18 @@ where
         let safe_head_hash =
             fetch_safe_head_hash(oracle.as_ref(), boot.agreed_l2_output_root).await?;
 
-        let mut l1_provider = OracleL1ChainProvider::new(boot.l1_head, stream).await?;
+        let mut l1_provider =
+            OracleL1ChainProvider::<_, ALLOW_CACHING>::new(boot.l1_head, stream).await?;
         let mut l2_provider =
             OracleL2ChainProvider::new(safe_head_hash, rollup_config.clone(), oracle.clone());
 
         // The claimed L2 block number must be greater than or equal to the L2 safe head.
         // Fetch the safe head's block header.
         client::log("SAFE HEAD");
-        let safe_head = l2_provider.header_by_hash(safe_head_hash)?;
+        let safe_head = l2_provider
+            .get_l2_block_info_by_number(boot.agreed_l2_block_number)
+            .await?;
+        client::log("SAFE HEAD done");
 
         if boot.claimed_l2_block_number < safe_head.block_info.number {
             bail!("Invalid claim");
@@ -158,7 +168,7 @@ where
         ////////////////////////////////////////////////////////////////
         //                     EXECUTION CACHING                      //
         ////////////////////////////////////////////////////////////////
-        if boot.l1_head.is_zero() {
+        if boot.l1_head.is_zero() && ALLOW_CACHING {
             client::log("EXECUTION ONLY");
             let cursor = new_execution_cursor(rollup_config.as_ref(), safe_head, &mut l2_provider)
                 .await
@@ -401,7 +411,7 @@ pub fn recover_collected_executions(
 #[cfg_attr(coverage_nightly, coverage(off))]
 pub mod tests {
     use super::*;
-    use crate::client::soon_test::soon_to_execution_cache;
+    use crate::client::soon_test::{soon_to_derivation, soon_to_execution_cache};
     use crate::precondition::PreconditionValidationData;
     use crate::test::TestOracle;
     use alloy_primitives::{b256, B256};
@@ -423,12 +433,37 @@ pub mod tests {
             } else {
                 Default::default()
             };
+        test_derivation_ex::<StatelessL2Builder<_, _>, _, _, true>(
+            boot_info,
+            oracle.clone(),
+            OracleBlobProvider::new(oracle),
+            precondition_validation_data_hash,
+            expected_precondition_hash,
+        )
+    }
+
+    pub fn test_derivation_ex<
+        E,
+        O: CommsClient + FlushableCache + Send + Sync + Debug,
+        B: BlobProvider + Send + Sync + Debug + Clone,
+        const ALLOW_CACHING: bool,
+    >(
+        boot_info: BootInfo,
+        oracle: Arc<O>,
+        blob_provider: B,
+        precondition_validation_data_hash: B256,
+        expected_precondition_hash: B256,
+    ) -> anyhow::Result<Vec<Arc<Execution>>>
+    where
+        <B as BlobProvider>::Error: Debug,
+        E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug,
+    {
         let collection_target = Arc::new(Mutex::new(Vec::new()));
-        let (result_boot_info, precondition_hash) = run_core_client(
+        let (result_boot_info, precondition_hash) = run_core_client_ex::<E, O, B, ALLOW_CACHING>(
             precondition_validation_data_hash,
             oracle.clone(),
             oracle.clone(),
-            OracleBlobProvider::new(oracle.clone()),
+            blob_provider,
             vec![],
             Some(collection_target.clone()),
         )
@@ -488,7 +523,7 @@ pub mod tests {
         assert!(boot_info.l1_head.is_zero());
         let expected_precondition_hash = exec_precondition_hash(execution_cache.as_slice());
 
-        let (result_boot_info, precondition_hash) = run_core_client_ex::<E, O, B>(
+        let (result_boot_info, precondition_hash) = run_core_client_ex::<E, O, B, true>(
             B256::ZERO,
             oracle.clone(),
             oracle.clone(),
@@ -517,16 +552,30 @@ pub mod tests {
         Ok(precondition_hash)
     }
 
-    #[test]
-    pub fn test_core_client_from_soon_executor() -> anyhow::Result<()> {
+    #[tokio::test(flavor = "multi_thread")]
+    pub async fn test_core_client_from_soon_executor() -> anyhow::Result<()> {
         init_tracing_subscriber(3, None::<EnvFilter>)?;
-        let (boot_info, executions, oracle) = soon_to_execution_cache()?;
+        let (boot_info, executions, oracle) = soon_to_execution_cache().await?;
 
         test_execution_ex::<OffchainL2Builder<_, _>, _, _>(
             boot_info,
             executions,
             Arc::new(oracle.clone()),
             OracleBlobProvider::new(Arc::new(oracle)),
+        )?;
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    pub async fn test_soon_executor_derivation() -> anyhow::Result<()> {
+        init_tracing_subscriber(3, None::<EnvFilter>)?;
+        let (boot_info, oracle) = soon_to_derivation().await?;
+        test_derivation_ex::<OffchainL2Builder<_, _>, _, _, false>(
+            boot_info,
+            Arc::new(oracle.clone()),
+            OracleBlobProvider::new(Arc::new(oracle)),
+            B256::ZERO,
+            B256::ZERO,
         )?;
         Ok(())
     }
@@ -544,6 +593,7 @@ pub mod tests {
                 claimed_l2_output_root: b256!(
                     "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
                 ),
+                agreed_l2_block_number: 16491249,
                 claimed_l2_block_number: 16491349,
                 chain_id: 11155420,
                 rollup_config: Default::default(),
@@ -560,6 +610,7 @@ pub mod tests {
                 claimed_l2_output_root: b256!(
                     "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
                 ),
+                agreed_l2_block_number: 16491249,
                 claimed_l2_block_number: 16491349,
                 chain_id: 11155420,
                 rollup_config: Default::default(),

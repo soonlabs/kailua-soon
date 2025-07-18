@@ -134,6 +134,7 @@ impl Default for OfflineOracle<OfflineKeyValueStore> {
                 agreed_l2_output_root: Default::default(),
                 claimed_l2_output_root: Default::default(),
                 claimed_l2_block_number: 0,
+                agreed_l2_block_number: 0,
                 chain_id: 0,
                 rollup_config: Default::default(),
             },

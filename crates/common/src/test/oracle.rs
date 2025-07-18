@@ -26,6 +26,7 @@ impl Default for TestOracle<OfflineKeyValueStore> {
             agreed_l2_output_root: Default::default(),
             claimed_l2_output_root: Default::default(),
             claimed_l2_block_number: 0,
+            agreed_l2_block_number: 0,
             chain_id: 0,
             rollup_config: Default::default(),
         })
@@ -140,6 +141,7 @@ mod tests {
                 "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
             ),
             claimed_l2_block_number: 16491349,
+            agreed_l2_block_number: 16491349,
             chain_id: 11155420,
             rollup_config: Default::default(),
         };
@@ -200,6 +202,7 @@ mod tests {
                 "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
             ),
             claimed_l2_block_number: 16491349,
+            agreed_l2_block_number: 16491349,
             chain_id: 11155420,
             rollup_config: Default::default(),
         };

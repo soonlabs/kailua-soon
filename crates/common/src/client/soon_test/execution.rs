@@ -1,20 +1,23 @@
+use super::{new_soon, ExecutionStorageItems, TokenMetadata};
+use crate::client::soon_test::{
+    current_executor_state_root, to_execution, tx_to_execution, L1_NUMBER,
+};
 use crate::{executor::Execution, oracle::WitnessOracle, test::mock::MockOracle};
-use alloy_primitives::{Address, Bytes, B256};
+use alloy_primitives::{keccak256, B256};
+use alloy_rlp::Encodable;
 use anyhow::Result;
 use bridge::pda::{spl_token_mint_pubkey, spl_token_owner_pubkey};
 use crossbeam_channel::Receiver;
-use fraud_executor::accounts::{AccountPairs, SoonAccounts};
-use fraud_executor::outcome::BlockBuildingOutcome;
+use fraud_executor::accounts::SoonAccounts;
 use kona_executor::{
     cal_extra_accounts_hash, cal_init_accounts_hash, cal_init_state_root_hash, slot_hash_pair_hash,
 };
 use kona_preimage::PreimageKey;
 use kona_proof::BootInfo;
-use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use solana_sdk::{
     account::ReadableAccount, program_pack::Pack, signature::Keypair, signer::Signer,
-    transaction::VersionedTransaction,
 };
+use soon_derive::traits::L2ChainProvider;
 use soon_node::derive::driver::L2ChainProviderImmutable;
 use soon_node::{
     derive::mock::MockInstant,
@@ -22,8 +25,8 @@ use soon_node::{
     node::{
         producer::Producer,
         tests::{
-            create_derived_deposit_erc20_tx, create_spl_tx, init_soon_genesis,
-            new_attributed_deposit_tx, new_derive_block, new_producer, DEPOSIT_AMOUNT,
+            create_derived_deposit_erc20_tx, create_spl_tx, new_attributed_deposit_tx,
+            new_derive_block, DEPOSIT_AMOUNT,
         },
     },
 };
@@ -32,68 +35,26 @@ use soon_primitives::{
     rollup_config::SoonRollupConfig,
 };
 use spl_token::state::Mint;
-use std::collections::HashMap;
-use std::{
-    env::{current_dir, var},
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::sync::Arc;
 use tracing::info;
 
-const L1_NUMBER: u64 = 100;
-
-#[derive(Debug, Default, Clone)]
-pub struct OracleStorageItems {
-    pub safe_head: L2BlockInfo,
-    pub init_accounts: HashMap<u64, SoonAccounts>,
-    pub sysvar_accounts: HashMap<u64, AccountPairs>,
-    pub slot_hash_pairs: HashMap<u64, (B256, B256)>,
-}
-
-pub(crate) struct TokenMetadata {
-    pub remote_token: Address,
-    pub to: Keypair,
-    pub token_name: String,
-    pub token_symbol: String,
-    pub uri: String,
-}
-
-impl Default for TokenMetadata {
-    fn default() -> Self {
-        Self {
-            remote_token: Address::random(),
-            to: Keypair::new(),
-            token_name: "Test".to_string(),
-            token_symbol: "TST".to_string(),
-            uri: "https://ipfs.io/ipfs/QmXRVXSRbH9nKYPgVfakXRhDhEaXWs6QYu3rToadXhtHPr".to_string(),
-        }
-    }
-}
-
 #[allow(dead_code)]
-pub(crate) fn soon_to_execution_cache() -> Result<(BootInfo, Vec<Arc<Execution>>, MockOracle)> {
+pub(crate) async fn soon_to_execution_cache() -> Result<(BootInfo, Vec<Arc<Execution>>, MockOracle)>
+{
     let temp = tempfile::tempdir()?;
     let (mut producer, identity, metadata, complete_receiver) = new_soon(temp.path())?;
 
     let (boot_info, executions, oracle_storage_items) =
-        blocks_to_execution_cache(&mut producer, &identity, &metadata, complete_receiver)?;
+        blocks_to_execution_cache(&mut producer, &identity, &metadata, complete_receiver).await?;
     let mut oracle = MockOracle::new(boot_info.clone());
-    save_to_oracle(&mut oracle, &boot_info, &oracle_storage_items)?;
+    executions_save_to_oracle(&mut oracle, &boot_info, &oracle_storage_items)?;
     Ok((boot_info, executions, oracle))
 }
 
-fn current_executor_state_root(executor: &SharedExecutor) -> Result<B256> {
-    let state_root = executor.storage_query(|s| {
-        let soon_accounts = SoonAccounts::try_from(s)?;
-        Ok(soon_accounts.state_root())
-    })?;
-    Ok(state_root)
-}
-
-fn save_to_oracle(
+pub(crate) fn executions_save_to_oracle(
     oracle: &mut MockOracle,
     boot_info: &BootInfo,
-    storage_items: &OracleStorageItems,
+    storage_items: &ExecutionStorageItems,
 ) -> Result<()> {
     info!("save to oracle details: {:?}", storage_items);
 
@@ -140,12 +101,22 @@ fn save_to_oracle(
         );
     }
 
+    // save l2 blocks
+    for (slot, block) in &storage_items.l2_blocks {
+        let mut buf = Vec::new();
+        block.encode(&mut buf);
+        oracle.insert_preimage(
+            PreimageKey::new_keccak256(*keccak256(slot.to_be_bytes().as_ref())),
+            buf,
+        );
+    }
+
     Ok(())
 }
 
-fn update_storage_items(
+pub(crate) fn update_execution_storage_items(
     executor: &SharedExecutor,
-    storage_items: &mut OracleStorageItems,
+    storage_items: &mut ExecutionStorageItems,
 ) -> Result<()> {
     let slot = executor.latest_slot()?;
     let l2_block_info = executor.l2_block_info_by_number_immut(slot)?;
@@ -168,23 +139,24 @@ fn update_storage_items(
     Ok(())
 }
 
-pub(crate) fn blocks_to_execution_cache(
+pub(crate) async fn blocks_to_execution_cache(
     producer: &mut Producer<SharedExecutor, MockInstant>,
     identity: &Keypair,
     metadata: &TokenMetadata,
     complete_receiver: Receiver<(L2BlockInfo, Option<BlockInfo>)>,
-) -> Result<(BootInfo, Vec<Arc<Execution>>, OracleStorageItems)> {
+) -> Result<(BootInfo, Vec<Arc<Execution>>, ExecutionStorageItems)> {
     let mut executions = Vec::new();
     let mut boot_info = BootInfo {
         l1_head: B256::ZERO,
         agreed_l2_output_root: B256::ZERO,
         claimed_l2_output_root: B256::ZERO,
-        claimed_l2_block_number: 0,
+        agreed_l2_block_number: 1,
+        claimed_l2_block_number: 3,
         chain_id: 0,
         rollup_config: SoonRollupConfig::default(),
     };
-    let mut storage_items = OracleStorageItems::default();
-    let executor = producer.get_executor().clone();
+    let mut storage_items = ExecutionStorageItems::default();
+    let mut executor = producer.get_executor().clone();
     executor.storage_query(|s| {
         let soon_accounts = SoonAccounts::try_from(s)?;
         storage_items
@@ -193,29 +165,20 @@ pub(crate) fn blocks_to_execution_cache(
         Ok(())
     })?;
     let agreed_output = current_executor_state_root(&executor)?;
-    let slot_1_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
+    let init_slot = executor.latest_slot()?;
+    let slot_1_head = executor.l2_block_info_by_number_immut(init_slot)?;
     storage_items.safe_head = slot_1_head;
-    info!("storage safe head: {:?}", storage_items.safe_head);
+    storage_items
+        .l2_blocks
+        .insert(init_slot, executor.block_by_number(init_slot).await?);
+    info!(
+        "storage safe head: {:?}, l2 block: {:?}",
+        storage_items.safe_head,
+        storage_items.l2_blocks.get(&init_slot).unwrap()
+    );
     boot_info.agreed_l2_output_root = agreed_output;
 
-    // === slot 1
-    let derive_block_1 = new_derive_block(metadata.to.pubkey(), L1_NUMBER);
-    let raw = RawBlock::try_init(derive_block_1, 0, &Default::default())?;
-    producer.mine_with_block(Some(raw.clone()))?;
-    complete_receiver.try_recv()?;
-    // assert l1 block info state
-    assert_eq!(executor.latest_slot()?, 1);
-
-    let claimed_output = current_executor_state_root(&executor)?;
-    info!("soon slot 1 state root: {:?}", claimed_output);
-    update_storage_items(&executor, &mut storage_items)?;
-
-    let slot_1_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
-    let execution = to_execution(raw, agreed_output, claimed_output, slot_1_head)?;
-    executions.push(Arc::new(execution));
-
     // === slot 2
-    let agreed_output = claimed_output;
     // append a `CreateSPL` tx into the block
     let last_blockhash = executor.storage_query(|s| Ok(s.current_bank().last_blockhash()))?;
     let create_spl_tx = create_spl_tx(
@@ -245,7 +208,7 @@ pub(crate) fn blocks_to_execution_cache(
     );
     let claimed_output = current_executor_state_root(&executor)?;
     info!("soon slot 2 state root: {:?}", claimed_output);
-    update_storage_items(&executor, &mut storage_items)?;
+    update_execution_storage_items(&executor, &mut storage_items)?;
 
     let slot_2_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
     let l1_info_tx = new_attributed_deposit_tx(L1_NUMBER, 1);
@@ -280,83 +243,11 @@ pub(crate) fn blocks_to_execution_cache(
     boot_info.claimed_l2_output_root = claimed_output;
     boot_info.claimed_l2_block_number = producer.get_executor().latest_slot()?;
     info!("boot info: {:?}", boot_info);
-    update_storage_items(&executor, &mut storage_items)?;
+    update_execution_storage_items(&executor, &mut storage_items)?;
 
     let slot_3_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
     let execution = to_execution(raw, agreed_output, claimed_output, slot_3_head)?;
     executions.push(Arc::new(execution));
 
     Ok((boot_info, executions, storage_items))
-}
-
-pub(crate) fn tx_to_execution(
-    txs: Vec<VersionedTransaction>,
-    agreed_output: B256,
-    claimed_output: B256,
-    header: L2BlockInfo,
-) -> Result<Execution> {
-    let txs = txs
-        .into_iter()
-        .map(encode_tx)
-        .collect::<Result<Vec<Bytes>>>()?;
-    Ok(Execution {
-        agreed_output,
-        attributes: OpPayloadAttributes {
-            transactions: Some(txs),
-            ..Default::default()
-        },
-        artifacts: BlockBuildingOutcome {
-            header,
-            execution_result: vec![],
-        },
-        claimed_output,
-    })
-}
-
-pub(crate) fn to_execution(
-    block: RawBlock,
-    agreed_output: B256,
-    claimed_output: B256,
-    header: L2BlockInfo,
-) -> Result<Execution> {
-    let txs = block
-        .transactions
-        .iter()
-        .map(|tx| tx.to_versioned_transaction())
-        .collect::<Vec<_>>();
-    tx_to_execution(txs, agreed_output, claimed_output, header)
-}
-
-pub(crate) fn encode_tx(tx: VersionedTransaction) -> Result<Bytes> {
-    let tx_bytes = bincode::serialize(&tx)?;
-    Ok(Bytes::from(tx_bytes))
-}
-
-#[allow(clippy::type_complexity)]
-pub(crate) fn new_soon(
-    path: &Path,
-) -> Result<(
-    Producer<SharedExecutor, MockInstant>,
-    Arc<Keypair>,
-    TokenMetadata,
-    Receiver<(L2BlockInfo, Option<BlockInfo>)>,
-)> {
-    let identity = Arc::new(Keypair::new());
-    init_soon_genesis(
-        path,
-        &identity,
-        true,
-        Some(
-            var("CARGO_MANIFEST_DIR")
-                .ok()
-                .map_or_else(|| current_dir().ok(), |s| Some(PathBuf::from(s)))
-                .unwrap()
-                .join("../../../soon/node/programs/target/deploy"),
-        ),
-    )?;
-
-    let (producer, _, complete_receiver) = new_producer(path, identity.clone())?;
-
-    let metadata = TokenMetadata::default();
-    Ok((producer, identity, metadata, complete_receiver))
 }

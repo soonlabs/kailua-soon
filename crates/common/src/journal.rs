@@ -174,8 +174,8 @@ pub mod tests {
     use super::*;
     use crate::boot::tests::gen_boot_infos;
     use alloy_primitives::{keccak256, Address, B256};
-    use soon_primitives::rollup_config::SoonRollupConfig;
     use risc0_zkvm::{FakeReceipt, InnerReceipt, ReceiptClaim};
+    use soon_primitives::rollup_config::SoonRollupConfig;
 
     pub fn gen_proof_journals(count: usize, gap: u64, config_hash: B256) -> Vec<ProofJournal> {
         let payout_recipient = Address::from([0xb0; 20]);
@@ -220,7 +220,8 @@ pub mod tests {
 
     #[test]
     fn test_proof_journal_constructor() {
-        let config_hash = B256::from(crate::config::config_hash(&SoonRollupConfig::default()).unwrap());
+        let config_hash =
+            B256::from(crate::config::config_hash(&SoonRollupConfig::default()).unwrap());
         let proof_journals = gen_proof_journals(512, 64, config_hash);
         // Test constructor
         for journal in proof_journals {
@@ -228,6 +229,7 @@ pub mod tests {
                 l1_head: journal.l1_head,
                 agreed_l2_output_root: journal.agreed_l2_output_root,
                 claimed_l2_output_root: journal.claimed_l2_output_root,
+                agreed_l2_block_number: 0, // TODO: init from journal
                 claimed_l2_block_number: journal.claimed_l2_block_number,
                 chain_id: 0,
                 rollup_config: Default::default(),

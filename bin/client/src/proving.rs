@@ -246,8 +246,7 @@ pub async fn seek_fpvm_proof(
     //     }
     // };
     let proof = if bonsai::should_use_bonsai() {
-        bonsai::run_bonsai_client(witness_frames, stitched_proofs, prove_snark, proving)
-            .await?
+        bonsai::run_bonsai_client(witness_frames, stitched_proofs, prove_snark, proving).await?
     } else {
         zkvm::run_zkvm_client(
             witness_frames,
@@ -255,7 +254,7 @@ pub async fn seek_fpvm_proof(
             prove_snark,
             proving.segment_limit,
         )
-            .await?
+        .await?
     };
 
     // Save proof file to disk

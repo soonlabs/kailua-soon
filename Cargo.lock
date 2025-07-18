@@ -3152,6 +3152,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d86b93f97252c47b41663388e6d155714a9d0c398b99f1005cbc5f978b29f445"
 
 [[package]]
+name = "beef"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3a8241f3ebb85c056b509d4327ad0358fbbba6ffb340bf388f26350aeda225b1"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "bimap"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7449,6 +7458,69 @@ dependencies = [
 ]
 
 [[package]]
+name = "jsonrpsee"
+version = "0.22.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfdb12a2381ea5b2e68c3469ec604a007b367778cdb14d09612c8069ebd616ad"
+dependencies = [
+ "jsonrpsee-core",
+ "jsonrpsee-http-client",
+ "jsonrpsee-types",
+]
+
+[[package]]
+name = "jsonrpsee-core"
+version = "0.22.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4b257e1ec385e07b0255dde0b933f948b5c8b8c28d42afda9587c3a967b896d"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "beef",
+ "futures-util",
+ "hyper 0.14.32",
+ "jsonrpsee-types",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "jsonrpsee-http-client"
+version = "0.22.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ccf93fc4a0bfe05d851d37d7c32b7f370fe94336b52a2f0efc5f1981895c2e5"
+dependencies = [
+ "async-trait",
+ "hyper 0.14.32",
+ "hyper-rustls 0.24.2",
+ "jsonrpsee-core",
+ "jsonrpsee-types",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tower 0.4.13",
+ "tracing",
+ "url 2.5.4",
+]
+
+[[package]]
+name = "jsonrpsee-types"
+version = "0.22.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "150d6168405890a7a3231a3c74843f58b8959471f6df76078db2619ddee1d07d"
+dependencies = [
+ "anyhow",
+ "beef",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "jsonwebtoken"
 version = "8.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7850,6 +7922,7 @@ dependencies = [
  "serde",
  "serde_json",
  "soon-derive",
+ "soon-l2-chain-provider",
  "soon-primitives",
  "thiserror 2.0.12",
  "tokio",
@@ -7902,6 +7975,7 @@ dependencies = [
  "kona-executor",
  "kona-mpt",
  "kona-preimage",
+ "l1-block-info",
  "lazy_static",
  "lru 0.14.0",
  "op-alloy-consensus 0.15.4",
@@ -14465,6 +14539,8 @@ dependencies = [
  "async-trait",
  "chrono",
  "futures 0.3.31",
+ "jsonrpsee",
+ "l1-block-info",
  "lru 0.12.5",
  "reqwest 0.11.27",
  "serde",
@@ -14476,6 +14552,7 @@ dependencies = [
  "soon-derive",
  "soon-mpt-primitives",
  "soon-primitives",
+ "soon-rpc",
  "thiserror 1.0.69",
  "tokio",
  "tracing",
@@ -14802,6 +14879,7 @@ dependencies = [
  "alloy-consensus 0.15.11",
  "alloy-eips 0.15.11",
  "alloy-primitives 1.2.1",
+ "alloy-rlp",
  "alloy-sol-types",
  "bincode",
  "bridge",

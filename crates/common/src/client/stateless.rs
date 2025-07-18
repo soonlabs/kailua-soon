@@ -112,6 +112,7 @@ pub mod tests {
             claimed_l2_output_root: b256!(
                 "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
             ),
+            agreed_l2_block_number: 16491249,
             claimed_l2_block_number: 16491349,
             chain_id: 11155420,
             rollup_config: Default::default(),
