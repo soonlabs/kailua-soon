@@ -104,7 +104,7 @@ where
 
     // Attempt to recompute the output hash at the target block number using kona
     log("RUN");
-    let (boot, precondition_hash) = crate::client::core::run_core_client_ex::<E, O, B, true>(
+    let (boot, precondition_hash) = crate::client::core::run_core_client_ex::<E, O, B>(
         precondition_validation_data_hash,
         oracle,
         stream,

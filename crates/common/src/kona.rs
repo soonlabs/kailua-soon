@@ -26,12 +26,11 @@ use kona_proof::HintType;
 use soon_derive::traits::ChainProvider;
 use soon_primitives::blocks::{BlockInfo, L1Header, L1Transaction};
 use std::sync::Arc;
-use tracing::info;
 
 /// The oracle-backed L1 chain provider for the client program.
 /// Forked from [kona_proof::l1::OracleL1ChainProvider]
 #[derive(Debug, Clone)]
-pub struct OracleL1ChainProvider<T: CommsClient, const ALLOW_CACHING: bool> {
+pub struct OracleL1ChainProvider<T: CommsClient> {
     /// The preimage oracle client.
     pub oracle: Arc<T>,
     /// The chain of block headers traversed
@@ -40,10 +39,10 @@ pub struct OracleL1ChainProvider<T: CommsClient, const ALLOW_CACHING: bool> {
     pub headers_map: B256Map<usize>,
 }
 
-impl<T: CommsClient, const ALLOW_CACHING: bool> OracleL1ChainProvider<T, ALLOW_CACHING> {
+impl<T: CommsClient> OracleL1ChainProvider<T> {
     /// Creates a new [OracleL1ChainProvider] with the given boot information and oracle client.
     pub async fn new(l1_head: B256, oracle: Arc<T>) -> Result<Self, OracleProviderError> {
-        let (headers, headers_map) = if l1_head.is_zero() && ALLOW_CACHING {
+        let (headers, headers_map) = if l1_head.is_zero() {
             Default::default()
         } else {
             // Fetch the header RLP from the oracle.
@@ -70,9 +69,7 @@ impl<T: CommsClient, const ALLOW_CACHING: bool> OracleL1ChainProvider<T, ALLOW_C
 }
 
 #[async_trait]
-impl<T: CommsClient + Sync + Send, const ALLOW_CACHING: bool> ChainProvider
-    for OracleL1ChainProvider<T, ALLOW_CACHING>
-{
+impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
     type Error = OracleProviderError;
 
     /// Retrieves and returns a block header by its hash.
@@ -272,9 +269,7 @@ impl<T: CommsClient + Sync + Send, const ALLOW_CACHING: bool> ChainProvider
     }
 }
 
-impl<T: CommsClient, const ALLOW_CACHING: bool> TrieProvider
-    for OracleL1ChainProvider<T, ALLOW_CACHING>
-{
+impl<T: CommsClient> TrieProvider for OracleL1ChainProvider<T> {
     type Error = OracleProviderError;
 
     fn trie_node_by_hash(&self, key: B256) -> Result<TrieNode, Self::Error> {
