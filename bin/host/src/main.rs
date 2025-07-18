@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloy::providers::{Provider, RootProvider};
-use alloy_eips::BlockNumberOrTag;
+use alloy::providers::RootProvider;
 use alloy_primitives::B256;
 use anyhow::{anyhow, bail, Context};
 use clap::Parser;
@@ -39,11 +38,6 @@ async fn main() -> anyhow::Result<()> {
     set_var("KAILUA_VERBOSITY", args.v.to_string());
 
     // fetch starting block number
-    let l2_provider = if args.kona.is_offline() {
-        None
-    } else {
-        Some(args.kona.create_providers().await?.l2)
-    };
     let op_node_provider = args.op_node_address.as_ref().map(|addr| {
         OpNodeProvider(RootProvider::new_http(
             addr.as_str()
@@ -122,16 +116,7 @@ async fn main() -> anyhow::Result<()> {
                 .recv()
                 .await
                 .expect("Failed to recv prover task");
-            let starting_block = if let Some(l2_provider) = l2_provider.as_ref() {
-                l2_provider
-                    .get_block_by_hash(job_args.kona.agreed_l2_head_hash)
-                    .await?
-                    .unwrap()
-                    .header
-                    .number
-            } else {
-                0
-            };
+            let starting_block = job_args.kona.agreed_l2_block_number;
 
             let num_blocks = job_args.kona.claimed_l2_block_number - starting_block;
             if starting_block > 0 {
@@ -247,12 +232,6 @@ async fn main() -> anyhow::Result<()> {
                     .expect("Missing op_node_provider")
                     .output_at_block(mid_point)
                     .await?;
-                let mid_block = l2_provider
-                    .as_ref()
-                    .expect("Missing l2_provider")
-                    .get_block_by_number(BlockNumberOrTag::Number(mid_point))
-                    .await?
-                    .unwrap_or_else(|| panic!("Block {mid_point} not found"));
                 // Lower half workload ends at midpoint (inclusive)
                 let mut lower_job_args = job_args.clone();
                 lower_job_args.kona.claimed_l2_output_root = mid_output;
@@ -265,7 +244,7 @@ async fn main() -> anyhow::Result<()> {
                 // upper half workload starts after midpoint
                 let mut upper_job_args = job_args;
                 upper_job_args.kona.agreed_l2_output_root = mid_output;
-                upper_job_args.kona.agreed_l2_head_hash = mid_block.header.hash;
+                upper_job_args.kona.agreed_l2_block_number = mid_point;
                 prover_channel
                     .0
                     .send((true, upper_job_args))
@@ -290,18 +269,7 @@ async fn main() -> anyhow::Result<()> {
         {
             // set last block as starting point
             base_args.kona.agreed_l2_output_root = base_args.kona.claimed_l2_output_root;
-            base_args.kona.agreed_l2_head_hash = l2_provider
-                .as_ref()
-                .unwrap()
-                .get_block_by_number(BlockNumberOrTag::Number(
-                    base_args.kona.claimed_l2_block_number,
-                ))
-                .await?
-                .unwrap_or_else(|| {
-                    panic!("Block {} not found", base_args.kona.claimed_l2_block_number)
-                })
-                .header
-                .hash;
+            base_args.kona.agreed_l2_block_number = base_args.kona.claimed_l2_block_number;
         }
         // construct a list of boot info to backward stitch
         let stitched_boot_info = proofs

@@ -17,7 +17,6 @@ use crate::kv::RWLKeyValueStore;
 use alloy::consensus::Transaction;
 use alloy::providers::{Provider, RootProvider};
 use alloy_eips::eip4844::IndexedBlobHash;
-use alloy_eips::BlockNumberOrTag;
 use alloy_primitives::B256;
 use anyhow::bail;
 use kailua_client::provider::OpNodeProvider;
@@ -139,14 +138,8 @@ pub async fn concurrent_execution_preflight(
     op_node_provider: &OpNodeProvider,
     disk_kv_store: Option<RWLKeyValueStore>,
 ) -> anyhow::Result<()> {
-    let l2_provider = args.kona.create_providers().await?.l2;
-    let starting_block = l2_provider
-        .get_block_by_hash(args.kona.agreed_l2_head_hash)
-        .await?
-        .unwrap()
-        .header
-        .number;
-    let mut num_blocks = args.kona.claimed_l2_block_number - starting_block;
+    // let l2_provider = args.kona.create_providers().await?.l2;
+    let mut num_blocks = args.kona.claimed_l2_block_number - args.kona.agreed_l2_block_number;
     if num_blocks == 0 {
         return Ok(());
     }
@@ -164,12 +157,7 @@ pub async fn concurrent_execution_preflight(
         num_blocks = num_blocks.saturating_sub(processed_blocks);
 
         // update ending block
-        args.kona.claimed_l2_block_number = l2_provider
-            .get_block_by_hash(args.kona.agreed_l2_head_hash)
-            .await?
-            .unwrap()
-            .header
-            .number
+        args.kona.claimed_l2_block_number = args.kona.claimed_l2_block_number
             + processed_blocks;
         args.kona.claimed_l2_output_root = op_node_provider
             .output_at_block(args.kona.claimed_l2_block_number)
@@ -191,12 +179,7 @@ pub async fn concurrent_execution_preflight(
         // jobs.push(args.clone());
         // update starting block for next job
         if num_blocks > 0 {
-            args.kona.agreed_l2_head_hash = l2_provider
-                .get_block_by_number(BlockNumberOrTag::Number(args.kona.claimed_l2_block_number))
-                .await?
-                .unwrap()
-                .header
-                .hash;
+            args.kona.agreed_l2_block_number = args.kona.claimed_l2_block_number;
             args.kona.agreed_l2_output_root = args.kona.claimed_l2_output_root;
         }
     }

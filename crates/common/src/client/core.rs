@@ -24,12 +24,11 @@ use kona_preimage::{CommsClient, PreimageKey};
 use kona_proof::errors::OracleProviderError;
 use kona_proof::executor::KonaExecutor;
 use kona_proof::l1::OraclePipeline;
-// use kona_proof::l1::OraclePipeline;
+use kona_proof::l1::OracleDaProvider;
 use kona_proof::l2::OracleL2ChainProvider;
 use kona_proof::sync::new_oracle_pipeline_cursor;
 use kona_proof::{BootInfo, FlushableCache, HintType};
-use soon_derive::sources::EthereumDataSource;
-// use soon_derive::sources::EthereumDataSource;
+use soon_derive::sources::DAServerSource;
 use soon_derive::traits::BlobProvider;
 use std::fmt::Debug;
 use std::mem::take;
@@ -139,6 +138,7 @@ where
         let mut l1_provider = OracleL1ChainProvider::new(boot.l1_head, stream).await?;
         let mut l2_provider =
             OracleL2ChainProvider::new(safe_head_hash, rollup_config.clone(), oracle.clone());
+        let da_provider = OracleDaProvider::new(oracle.clone());
 
         // The claimed L2 block number must be greater than or equal to the L2 safe head.
         // Fetch the safe head's block header.
@@ -260,7 +260,7 @@ where
         .context("new_oracle_pipeline_cursor")?;
         l2_provider.set_cursor(cursor.clone());
 
-        let da_provider = EthereumDataSource::new(l1_provider.clone(), &rollup_config);
+        let da_provider = DAServerSource::new(l1_provider.clone(), da_provider, rollup_config.batch_inbox_address);
         let pipeline = OraclePipeline::new(
             rollup_config.clone(),
             cursor.clone(),

@@ -27,7 +27,6 @@ use kona_host::{
 use kona_preimage::{
     BidirectionalChannel, Channel, HintReader, HintWriter, OracleReader, OracleServer,
 };
-use kona_proof::HintType;
 use risc0_zkvm::Receipt;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -142,8 +141,7 @@ where
             kv_store.clone(),
             providers,
             SingleChainHintHandler,
-        )
-        .with_proactive_hint(HintType::L2PayloadWitness);
+        );
 
         task::spawn(
             PreimageServer::new(
