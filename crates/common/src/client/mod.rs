@@ -14,7 +14,7 @@
 
 pub mod core;
 #[cfg(feature = "__test")]
-mod soon_test;
+pub mod soon_test;
 pub mod stateless;
 pub mod stitching;
 

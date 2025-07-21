@@ -83,28 +83,18 @@ impl MockOracle {
         boot_info: BootInfo,
         source_db_path: PathBuf,
         target_db_path: Option<PathBuf>,
-    ) -> Self {
+    ) -> io::Result<Self> {
         let dest = if let Some(target_db_path) = target_db_path {
             let dest = target_db_path.join("testdata");
-            copy_dir(source_db_path.clone(), &dest).unwrap_or_else(|_| {
-                panic!(
-                    "Failed to copy testdata from {} to {}",
-                    source_db_path.display(),
-                    dest.display()
-                )
-            });
+            copy_dir(source_db_path.clone(), &dest)?;
             dest
         } else {
             source_db_path
         };
 
         let mut oracle = Self::new(boot_info);
-        if dest.exists() {
-            if let Err(e) = oracle.read_from_disk(dest) {
-                warn!("Failed to read from disk: {}", e);
-            }
-        }
-        oracle
+        oracle.read_from_disk(dest)?;
+        Ok(oracle)
     }
 
     pub fn write_to_disk(&self, path: impl AsRef<Path>) -> io::Result<()> {

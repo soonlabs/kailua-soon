@@ -39,8 +39,7 @@ use std::sync::Arc;
 use tracing::info;
 
 #[allow(dead_code)]
-pub(crate) async fn soon_to_execution_cache() -> Result<(BootInfo, Vec<Arc<Execution>>, MockOracle)>
-{
+pub async fn soon_to_execution_cache() -> Result<(BootInfo, Vec<Arc<Execution>>, MockOracle)> {
     let temp = tempfile::tempdir()?;
     let (mut producer, identity, metadata, complete_receiver) = new_soon(temp.path())?;
 

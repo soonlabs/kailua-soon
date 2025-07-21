@@ -27,9 +27,9 @@ pub(crate) mod derivation;
 pub(crate) mod execution;
 
 #[allow(unused_imports)]
-pub(crate) use derivation::soon_to_derivation;
+pub use derivation::soon_to_derivation;
 #[allow(unused_imports)]
-pub(crate) use execution::soon_to_execution_cache;
+pub use execution::soon_to_execution_cache;
 
 #[derive(Debug, Default, Clone)]
 pub struct ExecutionStorageItems {
