@@ -1,19 +1,17 @@
 use anyhow::Result;
-use kailua_common::{
-    oracle::offline::{OfflineKeyValueStore, OfflineOracle},
-    precondition::PreconditionValidationData,
-};
-use soon_primitives::rollup_config::SoonRollupConfig;
+use kailua_common::precondition::PreconditionValidationData;
 use kona_proof::BootInfo;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
+use soon_primitives::rollup_config::SoonRollupConfig;
 use std::{path::PathBuf, sync::Arc};
 use tracing::{debug, info};
 
-mod client;
+mod offchain;
+mod stateless;
 
-pub use client::OfflineClient;
-pub type OfflineOracleShared = Arc<OfflineOracle<OfflineKeyValueStore>>;
+pub use offchain::OffchainClient;
+pub use stateless::StatelessClient;
 
 // Custom deserializer for BootInfo that handles missing or incomplete rollup_config
 fn deserialize_boot_info_with_default_rollup_config<'de, D>(
@@ -28,8 +26,8 @@ where
     if let Some(rollup_config) = value.get_mut("rollup_config") {
         if rollup_config.is_null() || rollup_config == &Value::Object(serde_json::Map::new()) {
             debug!("rollup_config is empty or null, using default");
-            *rollup_config =
-                serde_json::to_value(SoonRollupConfig::default()).map_err(serde::de::Error::custom)?;
+            *rollup_config = serde_json::to_value(SoonRollupConfig::default())
+                .map_err(serde::de::Error::custom)?;
         } else {
             // Check if it's missing required fields like genesis
             if rollup_config.get("genesis").is_none() {
@@ -43,7 +41,8 @@ where
         if let Some(obj) = value.as_object_mut() {
             obj.insert(
                 "rollup_config".to_string(),
-                serde_json::to_value(SoonRollupConfig::default()).map_err(serde::de::Error::custom)?,
+                serde_json::to_value(SoonRollupConfig::default())
+                    .map_err(serde::de::Error::custom)?,
             );
         }
     }
@@ -60,24 +59,31 @@ pub struct OfflineConfig {
     pub precondition_validation_data: Option<PreconditionValidationData>,
     pub analysis: bool,
     pub native_client: bool,
+    pub offchain_oracle: bool,
+}
+
+pub trait OfflineClient {
+    fn run(&self);
 }
 
 pub fn run_offline_client(cfg_path: PathBuf) -> Result<()> {
     let cfg = OfflineConfig::load(cfg_path)?;
-    let mut oracle = OfflineOracle::new(
-        cfg.boot_info.clone(),
-        cfg.source_db_path.clone(),
-        cfg.target_db_path.clone(),
-    );
-    if cfg.analysis {
-        oracle.enable_analysis();
-    }
-    if let Some(precondition_validation_data) = cfg.precondition_validation_data.as_ref() {
-        oracle.add_precondition_data(precondition_validation_data.clone());
-    }
-    let client = OfflineClient::new(Arc::new(oracle), cfg);
+
+    let client = get_offline_client(cfg);
     client.run();
     Ok(())
+}
+
+fn get_offline_client(cfg: OfflineConfig) -> Arc<dyn OfflineClient> {
+    if cfg.offchain_oracle {
+        let client = OffchainClient::new(cfg);
+        if let Err(e) = client {
+            panic!("Offchain client failed: {}", e);
+        }
+        Arc::new(client.unwrap())
+    } else {
+        Arc::new(StatelessClient::new(cfg))
+    }
 }
 
 impl OfflineConfig {

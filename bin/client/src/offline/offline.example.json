@@ -19,5 +19,6 @@
     }
   },
   "analysis": true,
-  "native_client": true
-} 
+  "native_client": true,
+  "offchain_oracle": true
+}
