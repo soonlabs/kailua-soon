@@ -23,8 +23,8 @@ use kona_executor::{L2BlockBuilder, StatelessL2Builder};
 use kona_preimage::{CommsClient, PreimageKey};
 use kona_proof::errors::OracleProviderError;
 use kona_proof::executor::KonaExecutor;
-use kona_proof::l1::OraclePipeline;
 use kona_proof::l1::OracleDaProvider;
+use kona_proof::l1::OraclePipeline;
 use kona_proof::l2::OracleL2ChainProvider;
 use kona_proof::sync::new_oracle_pipeline_cursor;
 use kona_proof::{BootInfo, FlushableCache, HintType};
@@ -260,7 +260,11 @@ where
         .context("new_oracle_pipeline_cursor")?;
         l2_provider.set_cursor(cursor.clone());
 
-        let da_provider = DAServerSource::new(l1_provider.clone(), da_provider, rollup_config.batch_inbox_address);
+        let da_provider = DAServerSource::new(
+            l1_provider.clone(),
+            da_provider,
+            rollup_config.batch_inbox_address,
+        );
         let pipeline = OraclePipeline::new(
             rollup_config.clone(),
             cursor.clone(),
@@ -547,7 +551,7 @@ pub mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     pub async fn test_core_client_from_soon_executor() -> anyhow::Result<()> {
-        init_tracing_subscriber(3, None::<EnvFilter>)?;
+        init_tracing_subscriber(4, None::<EnvFilter>)?;
         let (boot_info, executions, oracle) = soon_to_execution_cache().await?;
 
         test_execution_ex::<OffchainL2Builder<_, _>, _, _>(

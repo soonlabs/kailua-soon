@@ -8,6 +8,9 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use tracing::{debug, info, warn};
 
+const FULL_PRINT_SIZE: usize = 64;
+const SHORT_PRINT_SIZE: usize = 8;
+
 #[derive(Debug)]
 pub struct MockOracle {
     pub map: HashMap<PreimageKey, Vec<u8>>,
@@ -37,11 +40,7 @@ impl WitnessOracle for MockOracle {
     }
 
     fn insert_preimage(&mut self, key: PreimageKey, value: Vec<u8>) {
-        debug!(
-            "inserting preimage: {}, value: {}",
-            key,
-            hex::encode(&value)
-        );
+        Self::print_value("inserting", key, &value);
         self.map.insert(key, value);
     }
 
@@ -100,6 +99,27 @@ impl MockOracle {
             boot_info.agreed_l2_block_number.to_be_bytes().to_vec(),
         );
     }
+
+    fn print_value(operation: &str, key: PreimageKey, value: &Vec<u8>) {
+        if value.len() > FULL_PRINT_SIZE {
+            debug!(
+                "{} preimage: {}, value (len {}): {}..{}",
+                operation,
+                key,
+                value.len(),
+                hex::encode(&value[..SHORT_PRINT_SIZE]),
+                hex::encode(&value[value.len() - SHORT_PRINT_SIZE..])
+            );
+        } else {
+            debug!(
+                "{} preimage: {}, value (len {}): {}",
+                operation,
+                key,
+                value.len(),
+                hex::encode(value)
+            );
+        }
+    }
 }
 
 impl FlushableCache for MockOracle {
@@ -112,18 +132,14 @@ impl FlushableCache for MockOracle {
 impl PreimageOracleClient for MockOracle {
     async fn get(&self, key: PreimageKey) -> PreimageOracleResult<Vec<u8>> {
         self.get_value(key).map(|v| {
-            debug!("mock oracle get {} value: {}", key, hex::encode(v));
+            Self::print_value("get", key, v);
             v.clone()
         })
     }
 
     async fn get_exact(&self, key: PreimageKey, buf: &mut [u8]) -> PreimageOracleResult<()> {
         let value = self.get_value(key)?;
-        debug!(
-            "mock oracle get exact {} value: {}",
-            key,
-            hex::encode(value)
-        );
+        Self::print_value("get exact", key, value);
         buf.copy_from_slice(value);
         Ok(())
     }

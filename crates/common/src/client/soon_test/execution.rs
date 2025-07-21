@@ -56,8 +56,6 @@ pub(crate) fn executions_save_to_oracle(
     boot_info: &BootInfo,
     storage_items: &ExecutionStorageItems,
 ) -> Result<()> {
-    info!("save to oracle details: {:?}", storage_items);
-
     // save safe head
     let mut agreed_output_data = [0u8; 128];
     agreed_output_data[96..].copy_from_slice(&storage_items.safe_head.block_info.hash[..]);
