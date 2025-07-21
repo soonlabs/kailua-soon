@@ -565,7 +565,7 @@ pub mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     pub async fn test_soon_executor_derivation() -> anyhow::Result<()> {
-        init_tracing_subscriber(3, None::<EnvFilter>)?;
+        init_tracing_subscriber(4, None::<EnvFilter>)?;
         let (boot_info, oracle) = soon_to_derivation().await?;
         test_derivation_ex::<OffchainL2Builder<_, _>, _, _, false>(
             boot_info,

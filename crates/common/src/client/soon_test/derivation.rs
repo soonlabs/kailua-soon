@@ -110,9 +110,13 @@ pub(crate) async fn blocks_to_derivation_cache(
     boot_info.agreed_l2_output_root = agreed_output;
     // set l1 origin head
     boot_info.l1_head = slot_1_head.l1_origin.hash;
-    storage_items
-        .l1_heads
-        .insert(slot_1_head.l1_origin.hash, Header::default());
+    storage_items.l1_heads.insert(
+        slot_1_head.l1_origin.hash,
+        Header {
+            number: slot_1_head.l1_origin.number,
+            ..Default::default()
+        },
+    );
 
     // === slot 2
     // append a `CreateSPL` tx into the block
