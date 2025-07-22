@@ -33,9 +33,10 @@ use super::execution::{executions_save_to_oracle, update_execution_storage_items
 use super::{new_soon, DerivationStorageItems, TokenMetadata};
 
 #[allow(dead_code)]
-pub async fn soon_to_derivation() -> Result<(BootInfo, MockOracle)> {
+pub async fn soon_to_derivation(relative_to_soon: Option<&str>) -> Result<(BootInfo, MockOracle)> {
     let temp = tempfile::tempdir()?;
-    let (mut producer, identity, metadata, complete_receiver) = new_soon(temp.path())?;
+    let (mut producer, identity, metadata, complete_receiver) =
+        new_soon(temp.path(), relative_to_soon)?;
 
     let (boot_info, oracle_storage_items) =
         blocks_to_derivation_cache(&mut producer, &identity, &metadata, complete_receiver).await?;

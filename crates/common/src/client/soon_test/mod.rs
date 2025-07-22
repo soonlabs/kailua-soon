@@ -114,6 +114,7 @@ pub(crate) fn encode_tx(tx: VersionedTransaction) -> Result<Bytes> {
 #[allow(clippy::type_complexity)]
 pub(crate) fn new_soon(
     path: &Path,
+    relative_to_soon: Option<&str>,
 ) -> Result<(
     Producer<SharedExecutor, MockInstant>,
     Arc<Keypair>,
@@ -133,7 +134,8 @@ pub(crate) fn new_soon(
                     |s| Some(std::path::PathBuf::from(s)),
                 )
                 .unwrap()
-                .join("../../../soon/node/programs/target/deploy"),
+                .join(relative_to_soon.unwrap_or("../../.."))
+                .join("soon/node/programs/target/deploy"),
         ),
     )?;
 

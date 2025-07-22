@@ -552,11 +552,11 @@ pub mod tests {
     #[tokio::test(flavor = "multi_thread")]
     pub async fn test_core_client_from_soon_executor() -> anyhow::Result<()> {
         init_tracing_subscriber(4, None::<EnvFilter>)?;
-        let (boot_info, executions, oracle) = soon_to_execution_cache().await?;
+        let (boot_info, oracle) = soon_to_execution_cache(None).await?;
 
         test_execution_ex::<OffchainL2Builder<_, _>, _, _>(
             boot_info,
-            executions,
+            oracle.executions.clone(),
             Arc::new(oracle.clone()),
             OracleBlobProvider::new(Arc::new(oracle)),
         )?;
@@ -566,7 +566,7 @@ pub mod tests {
     #[tokio::test(flavor = "multi_thread")]
     pub async fn test_soon_executor_derivation() -> anyhow::Result<()> {
         init_tracing_subscriber(4, None::<EnvFilter>)?;
-        let (boot_info, oracle) = soon_to_derivation().await?;
+        let (boot_info, oracle) = soon_to_derivation(None).await?;
         test_derivation_ex::<OffchainL2Builder<_, _>, _, _, false>(
             boot_info,
             Arc::new(oracle.clone()),
@@ -580,7 +580,7 @@ pub mod tests {
     #[tokio::test(flavor = "multi_thread")]
     pub async fn test_soon_execution_from_derivation() -> anyhow::Result<()> {
         init_tracing_subscriber(3, None::<EnvFilter>)?;
-        let (mut boot_info, oracle) = soon_to_derivation().await?;
+        let (mut boot_info, oracle) = soon_to_derivation(None).await?;
         let oracle = Arc::new(oracle);
 
         // step 1: derivation

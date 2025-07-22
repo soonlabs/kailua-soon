@@ -39,15 +39,18 @@ use std::sync::Arc;
 use tracing::info;
 
 #[allow(dead_code)]
-pub async fn soon_to_execution_cache() -> Result<(BootInfo, Vec<Arc<Execution>>, MockOracle)> {
+pub async fn soon_to_execution_cache(
+    relative_to_soon: Option<&str>,
+) -> Result<(BootInfo, MockOracle)> {
     let temp = tempfile::tempdir()?;
-    let (mut producer, identity, metadata, complete_receiver) = new_soon(temp.path())?;
+    let (mut producer, identity, metadata, complete_receiver) =
+        new_soon(temp.path(), relative_to_soon)?;
 
     let (boot_info, executions, oracle_storage_items) =
         blocks_to_execution_cache(&mut producer, &identity, &metadata, complete_receiver).await?;
-    let mut oracle = MockOracle::new(boot_info.clone());
+    let mut oracle = MockOracle::new_with_executions(boot_info.clone(), executions);
     executions_save_to_oracle(&mut oracle, &boot_info, &oracle_storage_items)?;
-    Ok((boot_info, executions, oracle))
+    Ok((boot_info, oracle))
 }
 
 pub(crate) fn executions_save_to_oracle(

@@ -1,7 +1,11 @@
+## run offline generator
+
+```bash
+cargo run --bin soon-offline-generator -- -o oracle_data -c offline.json execution-cache -v
+```
+
 ## run offline client
 
 ```bash
-cargo build --bin kailua-offline
-cp bin/client/src/offline/offline.example.json offline.json
-RUST_LOG="debug" target/debug/kailua-offline --offline-cfg offline.json
+cargo run --bin kailua-offline -- --offline-cfg offline.json
 ```

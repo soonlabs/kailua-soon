@@ -36,6 +36,26 @@ impl OffchainClient {
             .precondition_validation_data
             .as_ref()
             .map_or_else(|| B256::ZERO, |data| data.hash());
+
+        // Convert stored executions to the format expected by run_stitching_client
+        // stitched_executions is Vec<Vec<Execution>>, where each inner Vec represents a batch of executions
+        let stitched_executions = if self.oracle.executions.is_empty() {
+            info!("No executions found in oracle");
+            vec![]
+        } else {
+            info!(
+                "Found {} executions in oracle, converting to stitched format",
+                self.oracle.executions.len()
+            );
+            // All executions in a single batch
+            vec![self
+                .oracle
+                .executions
+                .iter()
+                .map(|e| e.as_ref().clone())
+                .collect()]
+        };
+
         let proof_journal = run_stitching_client::<OffchainL2Builder<_, _>, _, _>(
             precondition_validation_data_hash,
             self.oracle.clone(),
@@ -43,9 +63,22 @@ impl OffchainClient {
             OracleBlobProvider::new(self.oracle.clone()),
             B256::ZERO,
             Address::ZERO,
-            vec![],
+            stitched_executions,
             vec![],
         );
+        assert_eq!(
+            self.cfg.boot_info.agreed_l2_output_root,
+            proof_journal.agreed_l2_output_root
+        );
+        assert_eq!(
+            self.cfg.boot_info.claimed_l2_block_number,
+            proof_journal.claimed_l2_block_number
+        );
+        assert_eq!(
+            self.cfg.boot_info.claimed_l2_output_root,
+            proof_journal.claimed_l2_output_root
+        );
+
         info!("Proof journal: {:?}", proof_journal);
     }
 

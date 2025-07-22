@@ -1,5 +1,5 @@
+use crate::executor::Execution;
 use crate::oracle::WitnessOracle;
-use alloy_primitives::B256;
 use async_trait::async_trait;
 use copy_dir::copy_dir;
 use kona_preimage::errors::{PreimageOracleError, PreimageOracleResult};
@@ -9,8 +9,10 @@ use kona_proof::{BootInfo, FlushableCache};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fs::{self, File};
-use std::io::{self, BufReader, BufWriter, Read, Write};
+use std::io::{self, BufReader, Read};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
+
 use tracing::{debug, info, warn};
 
 const FULL_PRINT_SIZE: usize = 64;
@@ -24,9 +26,21 @@ pub struct StorageStats {
     pub estimated_memory_usage: usize,
 }
 
+/// Serializable data structure for MockOracle
+#[derive(Clone, Debug, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+pub struct MockOracleData {
+    /// Version identifier  
+    pub version: String,
+    /// Preimage map data as Vec instead of HashMap for easier serialization
+    pub map: Vec<(PreimageKey, Vec<u8>)>,
+    /// Executions data
+    pub executions: Vec<Execution>,
+}
+
 #[derive(Debug)]
 pub struct MockOracle {
     pub map: HashMap<PreimageKey, Vec<u8>>,
+    pub executions: Vec<Arc<Execution>>,
 }
 
 impl Default for MockOracle {
@@ -66,6 +80,7 @@ impl Clone for MockOracle {
     fn clone(&self) -> Self {
         Self {
             map: self.map.clone(),
+            executions: self.executions.clone(),
         }
     }
 }
@@ -74,8 +89,15 @@ impl MockOracle {
     pub fn new(boot_info: BootInfo) -> Self {
         let mut oracle = Self {
             map: Default::default(),
+            executions: Vec::new(),
         };
         Self::save_boot_info(&boot_info, &mut oracle);
+        oracle
+    }
+
+    pub fn new_with_executions(boot_info: BootInfo, executions: Vec<Arc<Execution>>) -> Self {
+        let mut oracle = Self::new(boot_info);
+        oracle.executions = executions;
         oracle
     }
 
@@ -86,6 +108,15 @@ impl MockOracle {
     ) -> io::Result<Self> {
         let dest = if let Some(target_db_path) = target_db_path {
             let dest = target_db_path.join("testdata");
+            info!(
+                "copying from {} to {}",
+                source_db_path.display(),
+                dest.display()
+            );
+            if dest.exists() {
+                info!("removing existing directory {}", dest.display());
+                fs::remove_file(&dest)?;
+            }
             copy_dir(source_db_path.clone(), &dest)?;
             dest
         } else {
@@ -105,76 +136,67 @@ impl MockOracle {
             fs::create_dir_all(parent)?;
         }
 
-        let file = File::create(path)?;
-        let mut writer = BufWriter::new(file);
+        // Convert Arc<Execution> to Execution for serialization
+        let executions: Vec<Execution> = self
+            .executions
+            .iter()
+            .map(|arc_exec| (**arc_exec).clone())
+            .collect();
 
-        // write version
-        writer.write_all(b"MOCK_V01")?;
+        // Convert HashMap to Vec for serialization
+        let map: Vec<(PreimageKey, Vec<u8>)> =
+            self.map.iter().map(|(k, v)| (*k, v.clone())).collect();
 
-        // write entry count
-        let count = self.map.len() as u32;
-        writer.write_all(&count.to_le_bytes())?;
+        let data = MockOracleData {
+            version: "MOCK_V02_RKYV".to_string(),
+            map,
+            executions,
+        };
 
-        // write each key-value pair
-        for (key, value) in &self.map {
-            // write key (directly convert to 32 bytes)
-            let key_b256: B256 = (*key).into();
-            writer.write_all(key_b256.as_slice())?;
+        let serialized = rkyv::to_bytes::<rkyv::rancor::Error>(&data).map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                format!("Failed to serialize with rkyv: {}", e),
+            )
+        })?;
 
-            // write value length and data
-            let value_len = value.len() as u32;
-            writer.write_all(&value_len.to_le_bytes())?;
-            writer.write_all(value)?;
-        }
-
-        writer.flush()?;
-        info!("Saved {} preimages to {}", count, path.display());
+        fs::write(path, &serialized)?;
+        info!(
+            "Saved {} preimages to {} using rkyv",
+            self.map.len(),
+            path.display()
+        );
         Ok(())
     }
 
     pub fn read_from_disk(&mut self, path: impl AsRef<Path>) -> io::Result<()> {
         let path = path.as_ref();
-        let file = File::open(path)?;
-        let mut reader = BufReader::new(file);
+        let bytes = fs::read(path)?;
 
-        // read version
-        let mut version = [0u8; 8];
-        reader.read_exact(&mut version)?;
-        if &version != b"MOCK_V01" {
+        // Try to deserialize with rkyv first (new format)
+        let data =
+            rkyv::from_bytes::<MockOracleData, rkyv::rancor::Error>(&bytes).map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("Failed to deserialize with rkyv: {}", e),
+                )
+            })?;
+
+        if data.version.starts_with("MOCK_V02_RKYV") {
+            self.map = data.map.into_iter().collect();
+            self.executions = data.executions.into_iter().map(Arc::new).collect();
+            info!(
+                "Loaded {} preimages from {} using rkyv",
+                self.map.len(),
+                path.display()
+            );
+        } else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                "Invalid file format or version",
+                format!("Unsupported rkyv version: {}", data.version),
             ));
         }
 
-        // read entry count
-        let mut count_bytes = [0u8; 4];
-        reader.read_exact(&mut count_bytes)?;
-        let count = u32::from_le_bytes(count_bytes);
-
-        self.map.clear();
-        self.map.reserve(count as usize);
-
-        // read each key-value pair
-        for _ in 0..count {
-            // read key (32 bytes)
-            let mut key_bytes = [0u8; 32];
-            reader.read_exact(&mut key_bytes)?;
-            let key = PreimageKey::try_from(key_bytes)
-                .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid preimage key"))?;
-
-            // read value
-            let mut value_len_bytes = [0u8; 4];
-            reader.read_exact(&mut value_len_bytes)?;
-            let value_len = u32::from_le_bytes(value_len_bytes) as usize;
-
-            let mut value = vec![0u8; value_len];
-            reader.read_exact(&mut value)?;
-
-            self.map.insert(key, value);
-        }
-
-        info!("Loaded {} preimages from {}", count, path.display());
         Ok(())
     }
 
@@ -299,6 +321,7 @@ impl HintWriterClient for MockOracle {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::client::soon_test::soon_to_execution_cache;
     use anyhow;
     use kona_preimage::PreimageKeyType;
     use tempfile::tempdir;
@@ -363,6 +386,7 @@ mod tests {
         // create new oracle and load data
         let mut new_oracle = MockOracle {
             map: HashMap::new(),
+            executions: Vec::new(),
         };
 
         let loaded_count = new_oracle.load(&file_path)?;
@@ -396,6 +420,7 @@ mod tests {
         // create new oracle and read
         let mut new_oracle = MockOracle {
             map: HashMap::new(),
+            executions: Vec::new(),
         };
         new_oracle.read_from_disk(&file_path)?;
 
@@ -406,6 +431,46 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_execution_serialization() -> anyhow::Result<()> {
+        let temp_dir = tempdir()?;
+        let file_path = temp_dir.path().join("oracle.db");
+
+        let (_, oracle) = soon_to_execution_cache(None).await?;
+
+        oracle.write_to_disk(&file_path)?;
+
+        let mut new_oracle = MockOracle {
+            map: HashMap::new(),
+            executions: Vec::new(),
+        };
+        new_oracle.read_from_disk(&file_path)?;
+
+        assert_eq!(oracle.executions.len(), new_oracle.executions.len());
+
+        for (i, execution) in oracle.executions.iter().enumerate() {
+            assert_eq!(
+                execution.agreed_output,
+                new_oracle.executions[i].agreed_output
+            );
+            assert_eq!(execution.attributes, new_oracle.executions[i].attributes);
+            assert_eq!(
+                execution.claimed_output,
+                new_oracle.executions[i].claimed_output
+            );
+
+            assert_eq!(
+                execution.artifacts.header,
+                new_oracle.executions[i].artifacts.header
+            );
+            assert_eq!(
+                execution.artifacts.execution_result.len(),
+                new_oracle.executions[i].artifacts.execution_result.len()
+            );
+        }
+        Ok(())
+    }
+
     #[test]
     fn test_different_key_types() -> std::io::Result<()> {
         let temp_dir = tempdir()?;
@@ -413,6 +478,7 @@ mod tests {
 
         let mut oracle = MockOracle {
             map: HashMap::new(),
+            executions: Vec::new(),
         };
 
         // test different key types
@@ -433,6 +499,7 @@ mod tests {
 
         let mut new_oracle = MockOracle {
             map: HashMap::new(),
+            executions: Vec::new(),
         };
         new_oracle.read_from_disk(&file_path)?;
 
@@ -475,6 +542,7 @@ mod tests {
 
         let mut oracle = MockOracle {
             map: HashMap::new(),
+            executions: Vec::new(),
         };
 
         // 尝试读取应该失败

@@ -16,6 +16,7 @@ optimism/
 profiling/*
 kailua-elf
 kailua-input
-offline.json
+*.json
 .cursor/
 CLAUDE.md
+oracle_data
