@@ -8,8 +8,8 @@ use kona_proof::boot::*;
 use kona_proof::{BootInfo, FlushableCache};
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::fs::{self, File};
-use std::io::{self, BufReader, Read};
+use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 

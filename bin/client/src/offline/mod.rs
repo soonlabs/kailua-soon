@@ -63,14 +63,14 @@ pub struct OfflineConfig {
 }
 
 pub trait OfflineClient {
-    fn run(&self);
+    fn run(&self) -> anyhow::Result<()>;
 }
 
 pub fn run_offline_client(cfg_path: PathBuf) -> Result<()> {
     let cfg = OfflineConfig::load(cfg_path)?;
 
     let client = get_offline_client(cfg);
-    client.run();
+    client.run()?;
     Ok(())
 }
 

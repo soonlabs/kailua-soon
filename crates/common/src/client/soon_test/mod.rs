@@ -1,14 +1,21 @@
-use crate::executor::Execution;
+use crate::{
+    client::core::{recover_collected_executions, run_core_client_ex},
+    executor::Execution,
+};
 use alloy_consensus::Header;
 use alloy_primitives::{Address, Bytes, B256};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use crossbeam_channel::Receiver;
 use fraud_executor::{
     accounts::{AccountPairs, SoonAccounts},
     outcome::BlockBuildingOutcome,
 };
+use kona_executor::L2BlockBuilder;
+use kona_preimage::CommsClient;
+use kona_proof::{l2::OracleL2ChainProvider, BootInfo, FlushableCache};
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use solana_sdk::{signature::Keypair, signer::Signer, transaction::VersionedTransaction};
+use soon_derive::traits::BlobProvider;
 use soon_node::{
     derive::mock::MockInstant,
     executor::{ExecutorOperator, SharedExecutor},
@@ -21,7 +28,12 @@ use soon_primitives::{
     blocks::{BlockInfo, L2BlockInfo, RawBlock},
     l2blocks::L2Block,
 };
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::fmt::Debug;
+use std::{
+    collections::HashMap,
+    path::Path,
+    sync::{Arc, Mutex},
+};
 
 pub(crate) mod derivation;
 pub(crate) mod execution;
@@ -66,6 +78,55 @@ impl Default for TokenMetadata {
             uri: "https://ipfs.io/ipfs/QmXRVXSRbH9nKYPgVfakXRhDhEaXWs6QYu3rToadXhtHPr".to_string(),
         }
     }
+}
+
+pub fn derive_to_execution<
+    E,
+    O: CommsClient + FlushableCache + Send + Sync + Debug,
+    B: BlobProvider + Send + Sync + Debug + Clone,
+>(
+    boot_info: BootInfo,
+    oracle: Arc<O>,
+    blob_provider: B,
+    precondition_validation_data_hash: B256,
+    expected_precondition_hash: B256,
+) -> anyhow::Result<Vec<Arc<Execution>>>
+where
+    <B as BlobProvider>::Error: Debug,
+    E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug,
+{
+    let collection_target = Arc::new(Mutex::new(Vec::new()));
+    let (result_boot_info, precondition_hash) = run_core_client_ex::<E, O, B>(
+        precondition_validation_data_hash,
+        oracle.clone(),
+        oracle.clone(),
+        blob_provider,
+        vec![],
+        Some(collection_target.clone()),
+    )
+    .context("run_core_client")?;
+
+    assert_eq!(result_boot_info.l1_head, boot_info.l1_head);
+    assert_eq!(
+        result_boot_info.agreed_l2_output_root,
+        boot_info.agreed_l2_output_root
+    );
+    assert_eq!(
+        result_boot_info.claimed_l2_output_root,
+        boot_info.claimed_l2_output_root
+    );
+    assert_eq!(
+        result_boot_info.claimed_l2_block_number,
+        boot_info.claimed_l2_block_number
+    );
+    assert_eq!(result_boot_info.chain_id, boot_info.chain_id);
+
+    assert_eq!(expected_precondition_hash, precondition_hash);
+
+    let execution_cache =
+        recover_collected_executions(collection_target, boot_info.claimed_l2_output_root);
+
+    Ok(execution_cache)
 }
 
 pub(crate) fn tx_to_execution(

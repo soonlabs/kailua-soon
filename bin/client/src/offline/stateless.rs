@@ -57,11 +57,12 @@ impl StatelessClient {
 }
 
 impl OfflineClient for StatelessClient {
-    fn run(&self) {
+    fn run(&self) -> anyhow::Result<()> {
         if self.cfg.native_client {
             self.run_native();
         } else {
             self.run_zkvm();
         }
+        Ok(())
     }
 }

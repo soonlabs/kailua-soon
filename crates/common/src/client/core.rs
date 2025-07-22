@@ -408,15 +408,17 @@ pub fn recover_collected_executions(
 #[cfg_attr(coverage_nightly, coverage(off))]
 pub mod tests {
     use super::*;
-    use crate::client::soon_test::{soon_to_derivation, soon_to_execution_cache};
+    use crate::client::soon_test::{
+        derive_to_execution, soon_to_derivation, soon_to_execution_cache,
+    };
     use crate::precondition::PreconditionValidationData;
     use crate::test::TestOracle;
-    use alloy_primitives::{b256, B256};
+    use alloy_primitives::B256;
     use kona_cli::init_tracing_subscriber;
     use kona_executor::OffchainL2Builder;
     use kona_proof::l1::OracleBlobProvider;
     use kona_proof::BootInfo;
-    use std::sync::{Arc, Mutex};
+    use std::sync::Arc;
     use tracing_subscriber::EnvFilter;
 
     pub fn test_derivation(
@@ -430,63 +432,13 @@ pub mod tests {
             } else {
                 Default::default()
             };
-        test_derivation_ex::<StatelessL2Builder<_, _>, _, _, true>(
+        derive_to_execution::<StatelessL2Builder<_, _>, _, _>(
             boot_info,
             oracle.clone(),
             OracleBlobProvider::new(oracle),
             precondition_validation_data_hash,
             expected_precondition_hash,
         )
-    }
-
-    pub fn test_derivation_ex<
-        E,
-        O: CommsClient + FlushableCache + Send + Sync + Debug,
-        B: BlobProvider + Send + Sync + Debug + Clone,
-        const ALLOW_CACHING: bool,
-    >(
-        boot_info: BootInfo,
-        oracle: Arc<O>,
-        blob_provider: B,
-        precondition_validation_data_hash: B256,
-        expected_precondition_hash: B256,
-    ) -> anyhow::Result<Vec<Arc<Execution>>>
-    where
-        <B as BlobProvider>::Error: Debug,
-        E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug,
-    {
-        let collection_target = Arc::new(Mutex::new(Vec::new()));
-        let (result_boot_info, precondition_hash) = run_core_client_ex::<E, O, B>(
-            precondition_validation_data_hash,
-            oracle.clone(),
-            oracle.clone(),
-            blob_provider,
-            vec![],
-            Some(collection_target.clone()),
-        )
-        .context("run_core_client")?;
-
-        assert_eq!(result_boot_info.l1_head, boot_info.l1_head);
-        assert_eq!(
-            result_boot_info.agreed_l2_output_root,
-            boot_info.agreed_l2_output_root
-        );
-        assert_eq!(
-            result_boot_info.claimed_l2_output_root,
-            boot_info.claimed_l2_output_root
-        );
-        assert_eq!(
-            result_boot_info.claimed_l2_block_number,
-            boot_info.claimed_l2_block_number
-        );
-        assert_eq!(result_boot_info.chain_id, boot_info.chain_id);
-
-        assert_eq!(expected_precondition_hash, precondition_hash);
-
-        let execution_cache =
-            recover_collected_executions(collection_target, boot_info.claimed_l2_output_root);
-
-        Ok(execution_cache)
     }
 
     pub fn test_execution(
@@ -567,7 +519,7 @@ pub mod tests {
     pub async fn test_soon_executor_derivation() -> anyhow::Result<()> {
         init_tracing_subscriber(4, None::<EnvFilter>)?;
         let (boot_info, oracle) = soon_to_derivation(None).await?;
-        test_derivation_ex::<OffchainL2Builder<_, _>, _, _, false>(
+        derive_to_execution::<OffchainL2Builder<_, _>, _, _>(
             boot_info,
             Arc::new(oracle.clone()),
             OracleBlobProvider::new(Arc::new(oracle)),
@@ -584,7 +536,7 @@ pub mod tests {
         let oracle = Arc::new(oracle);
 
         // step 1: derivation
-        let executions = test_derivation_ex::<OffchainL2Builder<_, _>, _, _, false>(
+        let executions = derive_to_execution::<OffchainL2Builder<_, _>, _, _>(
             boot_info.clone(),
             oracle.clone(),
             OracleBlobProvider::new(oracle.clone()),

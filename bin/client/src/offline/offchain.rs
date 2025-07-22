@@ -1,10 +1,13 @@
 use crate::offline::{OfflineClient, OfflineConfig};
 use alloy_primitives::{Address, B256};
 use anyhow::Result;
-use kailua_common::{client::stitching::run_stitching_client, test::mock::MockOracle};
+use kailua_common::{
+    client::{soon_test::derive_to_execution, stitching::run_stitching_client},
+    test::mock::MockOracle,
+};
 use kona_proof::{executor::OffchainL2Builder, l1::OracleBlobProvider};
 use std::sync::Arc;
-use tracing::{error, info};
+use tracing::info;
 
 pub type MockOracleShared = Arc<MockOracle>;
 
@@ -30,32 +33,32 @@ impl OffchainClient {
         })
     }
 
-    pub fn run_native(&self) {
+    pub fn run_native(&self) -> anyhow::Result<()> {
         let precondition_validation_data_hash = self
             .cfg
             .precondition_validation_data
             .as_ref()
             .map_or_else(|| B256::ZERO, |data| data.hash());
 
-        // Convert stored executions to the format expected by run_stitching_client
-        // stitched_executions is Vec<Vec<Execution>>, where each inner Vec represents a batch of executions
-        let stitched_executions = if self.oracle.executions.is_empty() {
+        let executions = if self.oracle.executions.is_empty() {
             info!("No executions found in oracle");
-            vec![]
+            derive_to_execution::<OffchainL2Builder<_, _>, _, _>(
+                self.cfg.boot_info.clone(),
+                self.oracle.clone(),
+                OracleBlobProvider::new(self.oracle.clone()),
+                // TODO: correct precondition data hash later
+                precondition_validation_data_hash,
+                precondition_validation_data_hash,
+            )?
         } else {
             info!(
                 "Found {} executions in oracle, converting to stitched format",
                 self.oracle.executions.len()
             );
-            // All executions in a single batch
-            vec![self
-                .oracle
-                .executions
-                .iter()
-                .map(|e| e.as_ref().clone())
-                .collect()]
+            self.oracle.executions.clone()
         };
 
+        let stitched_executions = vec![executions.iter().map(|e| e.as_ref().clone()).collect()];
         let proof_journal = run_stitching_client::<OffchainL2Builder<_, _>, _, _>(
             precondition_validation_data_hash,
             self.oracle.clone(),
@@ -80,17 +83,19 @@ impl OffchainClient {
         );
 
         info!("Proof journal: {:?}", proof_journal);
+        Ok(())
     }
 
     pub fn run_zkvm(&self) {}
 }
 
 impl OfflineClient for OffchainClient {
-    fn run(&self) {
+    fn run(&self) -> anyhow::Result<()> {
         if self.cfg.native_client {
-            self.run_native();
+            self.run_native()?;
         } else {
             self.run_zkvm();
         }
+        Ok(())
     }
 }
