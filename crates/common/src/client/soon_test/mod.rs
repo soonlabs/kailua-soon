@@ -28,20 +28,22 @@ use soon_primitives::{
     blocks::{BlockInfo, L2BlockInfo, RawBlock},
     l2blocks::L2Block,
 };
+use std::{collections::HashMap, path::Path, sync::Arc};
 use std::fmt::Debug;
-use std::{
-    collections::HashMap,
-    path::Path,
-    sync::{Arc, Mutex},
-};
+use std::sync::Mutex;
+use soon_node::node::tests::{MockEthL1Node, new_derive_block_with_mock_l1};
+use soon_primitives::blocks::L1Transaction;
 
 pub(crate) mod derivation;
 pub(crate) mod execution;
+pub(crate) mod providers;
 
 #[allow(unused_imports)]
 pub use derivation::soon_to_derivation;
 #[allow(unused_imports)]
 pub use execution::soon_to_execution_cache;
+#[allow(unused_imports)]
+pub(crate) use providers::{TestOracleL1ChainProvider, TestOracleL2ChainProvider, TestDaProvider};
 
 #[derive(Debug, Default, Clone)]
 pub struct ExecutionStorageItems {
@@ -56,6 +58,8 @@ pub struct ExecutionStorageItems {
 pub struct DerivationStorageItems {
     pub execution: ExecutionStorageItems,
     pub l1_heads: HashMap<B256, Header>,
+    pub l1_transactions: HashMap<B256, Vec<L1Transaction>>,
+    pub da_data: HashMap<B256, Vec<u8>>,
 }
 
 const L1_NUMBER: u64 = 100;
@@ -93,14 +97,20 @@ pub fn derive_to_execution<
 ) -> anyhow::Result<Vec<Arc<Execution>>>
 where
     <B as BlobProvider>::Error: Debug,
-    E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug,
+    E: L2BlockBuilder<TestOracleL2ChainProvider<O>, TestOracleL2ChainProvider<O>> + Send + Sync + Debug,
 {
+    let clone_oracle = oracle.clone();
+    let (l1_provider, l2_provider, da_provider) = kona_proof::block_on(async move {
+        initialize_test_providers(clone_oracle).await
+    })?;
     let collection_target = Arc::new(Mutex::new(Vec::new()));
-    let (result_boot_info, precondition_hash) = run_core_client_ex::<E, O, B>(
+    let (result_boot_info, precondition_hash) = run_core_client_ex::<E, O, B, TestOracleL1ChainProvider<O>, TestOracleL2ChainProvider<O>, TestDaProvider<O>>(
         precondition_validation_data_hash,
         oracle.clone(),
-        oracle.clone(),
         blob_provider,
+        l1_provider,
+        l2_provider,
+        da_provider,
         vec![],
         Some(collection_target.clone()),
     )
@@ -176,6 +186,7 @@ pub(crate) fn encode_tx(tx: VersionedTransaction) -> Result<Bytes> {
 pub(crate) fn new_soon(
     path: &Path,
     relative_to_soon: Option<&str>,
+    l1_node: &mut MockEthL1Node,
 ) -> Result<(
     Producer<SharedExecutor, MockInstant>,
     Arc<Keypair>,
@@ -204,7 +215,7 @@ pub(crate) fn new_soon(
     let metadata = TokenMetadata::default();
 
     // === slot 1
-    let derive_block_1 = new_derive_block(metadata.to.pubkey(), L1_NUMBER);
+    let derive_block_1 = new_derive_block_with_mock_l1(l1_node, metadata.to.pubkey());
     let raw = RawBlock::try_init(derive_block_1, 0, &Default::default())?;
     producer.mine_with_block(Some(raw.clone()))?;
     complete_receiver.try_recv()?;
@@ -220,4 +231,21 @@ pub(crate) fn current_executor_state_root(executor: &SharedExecutor) -> Result<B
         Ok(soon_accounts.state_root())
     })?;
     Ok(state_root)
+}
+
+pub(crate) async fn initialize_test_providers<O>(
+    oracle: Arc<O>,
+) -> Result<(
+    TestOracleL1ChainProvider<O>,
+    TestOracleL2ChainProvider<O>,
+    TestDaProvider<O>,
+)>
+where
+    O: CommsClient + FlushableCache + Send + Sync + Debug,
+{
+    let l1_provider = TestOracleL1ChainProvider::new(oracle.clone());
+    let l2_provider = TestOracleL2ChainProvider::new(oracle.clone());
+    let da_provider = TestDaProvider::new(oracle);
+
+    Ok((l1_provider, l2_provider, da_provider))
 }

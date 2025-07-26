@@ -1,10 +1,10 @@
-use super::{new_soon, ExecutionStorageItems, TokenMetadata};
+use super::{new_soon, ExecutionStorageItems, TokenMetadata, initialize_test_providers};
 use crate::client::soon_test::{
     current_executor_state_root, to_execution, tx_to_execution, L1_NUMBER,
 };
 use crate::{executor::Execution, oracle::WitnessOracle, test::mock::MockOracle};
 use alloy_primitives::{keccak256, B256};
-use alloy_rlp::Encodable;
+use alloy_rlp::{BytesMut, Decodable, Encodable};
 use anyhow::Result;
 use bridge::pda::{spl_token_mint_pubkey, spl_token_owner_pubkey};
 use crossbeam_channel::Receiver;
@@ -36,18 +36,20 @@ use soon_primitives::{
 };
 use spl_token::state::Mint;
 use std::sync::Arc;
+use soon_node::node::tests::{MockEthL1Node, new_derive_block_with_mock_l1};
 use tracing::info;
 
 #[allow(dead_code)]
 pub async fn soon_to_execution_cache(
     relative_to_soon: Option<&str>,
 ) -> Result<(BootInfo, MockOracle)> {
+    let mut mock_l1_node = MockEthL1Node::new(L1_NUMBER, 12);
     let temp = tempfile::tempdir()?;
     let (mut producer, identity, metadata, complete_receiver) =
-        new_soon(temp.path(), relative_to_soon)?;
+        new_soon(temp.path(), relative_to_soon, &mut mock_l1_node)?;
 
     let (boot_info, executions, oracle_storage_items) =
-        blocks_to_execution_cache(&mut producer, &identity, &metadata, complete_receiver).await?;
+        blocks_to_execution_cache(&mut producer, &identity, &metadata, complete_receiver, &mut mock_l1_node).await?;
     let mut oracle = MockOracle::new_with_executions(boot_info.clone(), executions);
     executions_save_to_oracle(&mut oracle, &boot_info, &oracle_storage_items)?;
     Ok((boot_info, oracle))
@@ -103,11 +105,11 @@ pub(crate) fn executions_save_to_oracle(
 
     // save l2 blocks
     for (slot, block) in &storage_items.l2_blocks {
-        let mut buf = Vec::new();
-        block.encode(&mut buf);
+        let mut buf = BytesMut::default();
+        Encodable::encode(block, &mut buf);
         oracle.insert_preimage(
             PreimageKey::new_keccak256(*keccak256(slot.to_be_bytes().as_ref())),
-            buf,
+            buf.into(),
         );
     }
 
@@ -144,6 +146,7 @@ pub(crate) async fn blocks_to_execution_cache(
     identity: &Keypair,
     metadata: &TokenMetadata,
     complete_receiver: Receiver<(L2BlockInfo, Option<BlockInfo>)>,
+    l1_node: &mut MockEthL1Node,
 ) -> Result<(BootInfo, Vec<Arc<Execution>>, ExecutionStorageItems)> {
     let mut executions = Vec::new();
     let mut boot_info = BootInfo {
@@ -227,14 +230,15 @@ pub(crate) async fn blocks_to_execution_cache(
 
     // === slot 3
     let agreed_output = claimed_output;
-    let mut derive_block_2 = new_derive_block(metadata.to.pubkey(), L1_NUMBER + 1);
+    let mut derive_block_2 = new_derive_block_with_mock_l1(l1_node, metadata.to.pubkey());
+    // let mut derive_block_2 = new_derive_block(metadata.to.pubkey(), L1_NUMBER + 1);
     // deposit erc20 token
-    derive_block_2
-        .deposit_txs
-        .push(create_derived_deposit_erc20_tx(
-            metadata.remote_token,
-            metadata.to.pubkey(),
-        ));
+    // derive_block_2
+    //     .deposit_txs
+    //     .push(create_derived_deposit_erc20_tx(
+    //         metadata.remote_token,
+    //         metadata.to.pubkey(),
+    //     ));
     let raw = RawBlock::try_init(derive_block_2, 0, &Default::default())?;
     producer.mine_with_block(Some(raw.clone()))?;
     complete_receiver.try_recv()?;

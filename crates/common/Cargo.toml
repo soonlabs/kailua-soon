@@ -58,6 +58,7 @@ soon-derive.workspace = true
 # for testing
 soon-node = { workspace = true, optional = true }
 soon-storage = { workspace = true, optional = true }
+batcher = { workspace = true }
 solana-sdk = { workspace = true, optional = true }
 l1-block-info = { workspace = true, optional = true }
 bridge = { workspace = true, optional = true }
@@ -96,10 +97,3 @@ unexpected_cfgs = { level = "warn", check-cfg = [
 ] }
 
 # Examples
-[[example]]
-name = "test_witness_extractor"
-path = "examples/test_witness_extractor.rs"
-
-[[example]]
-name = "risc_zero_verify"
-path = "examples/risc_zero_verify.rs"

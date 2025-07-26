@@ -120,6 +120,7 @@ soon-derive = { path = '../soon/node/derive' }
 # only for testing
 soon-storage = { path = '../soon/node/storage' }
 soon-node = { path = '../soon/node/node' }
+batcher = { path = '../soon/batcher' }
 
 # Bonsai
 bonsai-sdk = { version = "1.4.0", features = ["non_blocking"] }

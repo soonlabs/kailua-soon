@@ -36,6 +36,8 @@ use soon_primitives::rollup_config::SoonRollupConfig;
 use spin::RwLock;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
+use kona_executor::TrieDBProvider;
+use kona_mpt::TrieHinter;
 
 /// Represents a block execution process and its results.
 ///
@@ -235,13 +237,14 @@ impl<E: Executor + Send + Sync + Debug> Executor for CachedExecutor<E> {
 /// - Creates a new `PipelineCursor` using the computed `channel_timeout`.
 /// - Advances the cursor to the proper state based on default `BlockInfo` and the L2 tip.
 /// - Returns the cursor wrapped in an `Arc<RwLock<PipelineCursor>>` for safe concurrent access.
-pub async fn new_execution_cursor<O>(
+pub async fn new_execution_cursor<L2>(
     rollup_config: &SoonRollupConfig,
     safe_header: L2BlockInfo,
-    l2_chain_provider: &mut OracleL2ChainProvider<O>,
+    l2_chain_provider: &mut L2,
 ) -> Result<Arc<RwLock<PipelineCursor>>, OracleProviderError>
 where
-    O: CommsClient + FlushableCache + FlushableCache + Send + Sync + Debug,
+    L2: TrieDBProvider + TrieHinter + L2ChainProvider + Send + Sync + Debug,
+    L2: L2ChainProvider<Error = OracleProviderError>,
 {
     let safe_head_info = l2_chain_provider
         .l2_block_info_by_number(safe_header.block_info.number)

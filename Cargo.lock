@@ -3146,6 +3146,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "batcher"
+version = "0.1.0"
+dependencies = [
+ "alloy 0.15.11",
+ "alloy-rlp",
+ "anyhow",
+ "async-trait",
+ "bincode",
+ "clap 4.5.41",
+ "ctrlc",
+ "dirs 4.0.0",
+ "env_logger 0.11.8",
+ "ethers",
+ "futures 0.3.31",
+ "hex",
+ "l1-block-info",
+ "log",
+ "op-alloy-consensus 0.15.4",
+ "op-alloy-rpc-types-engine",
+ "rand 0.8.5",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "solana-client",
+ "solana-sdk",
+ "solana-transaction-status",
+ "soon-da-provider",
+ "soon-derive",
+ "soon-miniz-oxide",
+ "soon-primitives",
+ "soon-rpc",
+ "soon-verifier",
+ "thiserror 1.0.69",
+ "time",
+ "tokio",
+ "tokio-retry",
+]
+
+[[package]]
 name = "bech32"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7676,6 +7715,7 @@ dependencies = [
  "alloy-rpc-types-engine",
  "anyhow",
  "async-trait",
+ "batcher",
  "bincode",
  "bonsai-sdk",
  "bridge",
