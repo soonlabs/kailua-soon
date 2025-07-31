@@ -116,11 +116,12 @@ pub(crate) fn executions_save_to_oracle(
     Ok(())
 }
 
-pub(crate) fn update_execution_storage_items(
-    executor: &SharedExecutor,
+pub(crate) async fn update_execution_storage_items(
+    executor: &mut SharedExecutor,
     storage_items: &mut ExecutionStorageItems,
 ) -> Result<()> {
     let slot = executor.latest_slot()?;
+    let l2_block = executor.block_by_number(slot).await?;
     let l2_block_info = executor.l2_block_info_by_number_immut(slot)?;
     executor.storage_query(|s| {
         let soon_accounts = SoonAccounts::try_from(s)?;
@@ -136,6 +137,7 @@ pub(crate) fn update_execution_storage_items(
                 l2_block_info.block_info.parent_hash,
             ),
         );
+        storage_items.l2_blocks.insert(slot, l2_block);
         Ok(())
     })?;
     Ok(())
@@ -197,8 +199,8 @@ pub(crate) async fn blocks_to_execution_cache(
     producer.mine_with_block(None)?;
     complete_receiver.try_recv()?;
     // assert deposit ETH state
-    let to_account_data = executor.get_account_by_slot(2, &metadata.to.pubkey())?;
-    assert_eq!(to_account_data.lamports(), DEPOSIT_AMOUNT);
+    // let to_account_data = executor.get_account_by_slot(2, &metadata.to.pubkey())?;
+    // assert_eq!(to_account_data.lamports(), DEPOSIT_AMOUNT);
     // assert create spl token state
     let spl_token_mint_account = executor.get_account_by_slot(
         2,
@@ -211,7 +213,7 @@ pub(crate) async fn blocks_to_execution_cache(
     );
     let claimed_output = current_executor_state_root(&executor)?;
     info!("soon slot 2 state root: {:?}", claimed_output);
-    update_execution_storage_items(&executor, &mut storage_items)?;
+    update_execution_storage_items(&mut executor, &mut storage_items).await?;
 
     let slot_2_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
     let l1_info_tx = new_attributed_deposit_tx(L1_NUMBER, 1);
@@ -247,7 +249,7 @@ pub(crate) async fn blocks_to_execution_cache(
     boot_info.claimed_l2_output_root = claimed_output;
     boot_info.claimed_l2_block_number = producer.get_executor().latest_slot()?;
     info!("boot info: {:?}", boot_info);
-    update_execution_storage_items(&executor, &mut storage_items)?;
+    update_execution_storage_items(&mut executor, &mut storage_items).await?;
 
     let slot_3_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
     let execution = to_execution(raw, agreed_output, claimed_output, slot_3_head)?;

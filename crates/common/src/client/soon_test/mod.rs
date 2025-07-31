@@ -94,7 +94,7 @@ pub fn derive_to_execution<
     blob_provider: B,
     precondition_validation_data_hash: B256,
     expected_precondition_hash: B256,
-) -> anyhow::Result<Vec<Arc<Execution>>>
+) -> Result<Vec<Arc<Execution>>>
 where
     <B as BlobProvider>::Error: Debug,
     E: L2BlockBuilder<TestOracleL2ChainProvider<O>, TestOracleL2ChainProvider<O>> + Send + Sync + Debug,

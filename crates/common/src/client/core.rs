@@ -499,6 +499,7 @@ pub mod tests {
     use kona_proof::BootInfo;
     use std::sync::Arc;
     use tracing_subscriber::EnvFilter;
+    use crate::test::mock::MockOracle;
 
     pub fn test_derivation(
         boot_info: BootInfo,
@@ -689,6 +690,9 @@ pub mod tests {
 
         // step 2: execution
         boot_info.l1_head = B256::ZERO; // Ensure boot info triggers execution only
+        let mut oracle = Arc::try_unwrap(oracle).unwrap();
+        MockOracle::save_boot_info(&boot_info, &mut oracle);
+        let oracle = Arc::new(oracle);
         test_execution_ex::<OffchainL2Builder<_, _>, _, _>(
             boot_info,
             executions,

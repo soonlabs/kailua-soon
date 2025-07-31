@@ -64,6 +64,7 @@ l1-block-info = { workspace = true, optional = true }
 bridge = { workspace = true, optional = true }
 spl-token = { workspace = true, optional = true }
 crossbeam-channel = { workspace = true, optional = true }
+serde_json = { workspace = true }
 
 [dev-dependencies]
 copy_dir.workspace = true

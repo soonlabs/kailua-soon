@@ -5569,6 +5569,7 @@ dependencies = [
  "risc0-zkvm",
  "rkyv",
  "serde",
+ "serde_json",
  "soon-derive",
  "soon-primitives",
  "spin 0.10.0",

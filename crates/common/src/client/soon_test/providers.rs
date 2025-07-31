@@ -1,6 +1,6 @@
 use alloy_consensus::{Header, Receipt};
 use alloy_eips::{BlockNumberOrTag, BlockNumHash};
-use alloy_primitives::{Address, B256, Bytes, keccak256, U160, U256};
+use alloy_primitives::{Address, B256, BlockHash, Bytes, keccak256, U160, U256};
 use async_trait::async_trait;
 use kona_driver::PipelineCursor;
 use kona_executor::TrieDBProvider;
@@ -18,6 +18,7 @@ use std::sync::Arc;
 use alloy_rlp::Decodable;
 use l1_block_info::instruction::L1BlockInfoInstruction;
 use spin::RwLock;
+use tracing::info;
 
 /// Test L1 Chain Provider for testing purposes
 #[derive(Debug, Clone)]
@@ -49,7 +50,15 @@ where
         // Decode the header RLP into a Header.
         let header =
             Header::decode(&mut header_bytes.as_slice()).map_err(OracleProviderError::Rlp)?;
-        Ok(header.into())
+        let mut header: L1Header = header.into();
+
+        // reset mock block hash
+        let mut block_hash = BlockHash::default();
+        let number_bytes = header.number.to_be_bytes();
+        block_hash[0..8].copy_from_slice(number_bytes.as_ref());
+        header.hash = block_hash.into();
+
+        Ok(header)
     }
 
     async fn block_info_by_hash(&self, hash: B256) -> Result<BlockInfo, Self::Error> {
@@ -71,8 +80,11 @@ where
         let header_bytes = self.oracle.get(PreimageKey::new_keccak256(*number_hash)).await?;
 
         let header: L1Header = Header::decode(&mut header_bytes.as_slice()).map_err(OracleProviderError::Rlp)?.into();
+        // reset mock block hash
+        let mut block_hash = BlockHash::default();
+        block_hash[0..8].copy_from_slice(number_bytes.as_ref());
         Ok(BlockInfo {
-            hash: header.hash,
+            hash: block_hash.into(),
             number: header.number,
             parent_hash: header.parent_hash,
             timestamp: header.timestamp,
@@ -84,9 +96,19 @@ where
         Ok(vec![])
     }
 
-    async fn get_block_transactions_by_hash(&self, _hash: B256) -> Result<Vec<L1Transaction>, Self::Error> {
-        // Return empty transactions for testing
-        Ok(vec![])
+    async fn get_block_transactions_by_hash(&self, hash: B256) -> Result<Vec<L1Transaction>, Self::Error> {
+        let mut key_data = "l1_transaction".to_string().into_bytes();
+        let mut hash_data = hash.0.to_vec();
+        key_data.append(&mut hash_data);
+        match self.oracle.get(PreimageKey::new_keccak256(keccak256(key_data.as_slice()).0)).await {
+            Ok(txs_bytes) => {
+                // Decode the transactions RLP into Vec<L1Transaction>
+                let txs: Vec<L1Transaction> = Vec::<L1Transaction>::decode(&mut txs_bytes.as_slice()).map_err(OracleProviderError::Rlp)?;
+                println!("get_block_transactions_by_hash-----hash:{}, tx len:{}", hash, txs.len());
+                Ok(txs)
+            },
+            Err(_) => Ok(vec![])
+        }
     }
 }
 
@@ -147,18 +169,23 @@ where
                 number,
                 timestamp: _,
                 base_fee: _,
-                hash,
+                hash: _,
                 sequence_number,
                 batcher_hash: _,
                 fee_overhead: _,
                 fee_scalar: _,
                 gas: _,
                 is_system_tx: _,
-            } => Ok(L2BlockInfo {
-                block_info,
-                l1_origin: BlockNumHash { number, hash: B256::from(hash) },
-                seq_num: sequence_number,
-            }),
+            } => {
+                let mut block_hash = BlockHash::default();
+                let number_bytes = number.to_be_bytes();
+                block_hash[0..8].copy_from_slice(number_bytes.as_ref());
+                Ok(L2BlockInfo {
+                    block_info,
+                    l1_origin: BlockNumHash { number, hash: block_hash.into() },
+                    seq_num: sequence_number,
+                })
+            },
             _ => Err(OracleProviderError::FetchBlockInfoFailed(
                 "Invalid l1 block info instruction".to_string(),
             )),
@@ -298,8 +325,9 @@ where
         Ok(vec![])
     }
 
-    async fn get_input(&self, _data: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
-        // Return empty data for testing
-        Ok(vec![])
+    async fn get_input(&self, data: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
+        Ok(self.oracle
+            .get(PreimageKey::new(<[u8; 32]>::try_from(data.as_slice()).unwrap(), PreimageKeyType::Keccak256))
+            .await?)
     }
 } 

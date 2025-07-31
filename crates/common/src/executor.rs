@@ -258,7 +258,7 @@ where
     let mut cursor = PipelineCursor::new(channel_timeout, BlockInfo::default());
     // `l2_safe_head_output_root` can be zero because it is not used. The executor is always
     // instructed to recompute the output root.
-    let tip = TipCursor::new(safe_head_info, safe_header, B256::ZERO);
+    let tip = TipCursor::new(safe_head_info, B256::ZERO);
     cursor.advance(BlockInfo::default(), tip);
 
     // Wrap the cursor in a shared read-write lock

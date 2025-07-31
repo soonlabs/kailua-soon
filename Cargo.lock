@@ -7741,6 +7741,7 @@ dependencies = [
  "risc0-zkvm",
  "rkyv",
  "serde",
+ "serde_json",
  "solana-sdk",
  "soon-derive",
  "soon-node",

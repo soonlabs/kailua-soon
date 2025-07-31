@@ -238,7 +238,7 @@ impl MockOracle {
         })
     }
 
-    fn save_boot_info(boot_info: &BootInfo, oracle: &mut MockOracle) {
+    pub(crate) fn save_boot_info(boot_info: &BootInfo, oracle: &mut MockOracle) {
         oracle.insert_preimage(
             PreimageKey::new_local(L1_HEAD_KEY.to()),
             boot_info.l1_head.to_vec(),
@@ -262,6 +262,10 @@ impl MockOracle {
         oracle.insert_preimage(
             PreimageKey::new_local(L2_AGREED_BLOCK_NUMBER_KEY.to()),
             boot_info.agreed_l2_block_number.to_be_bytes().to_vec(),
+        );
+        oracle.insert_preimage(
+            PreimageKey::new_local(L2_ROLLUP_CONFIG_KEY.to()),
+            serde_json::to_vec(&boot_info.rollup_config).unwrap(),
         );
     }
 
