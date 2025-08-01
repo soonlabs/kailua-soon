@@ -19,11 +19,11 @@ use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use kona_proof::errors::OracleProviderError;
 use risc0_zkvm::sha::{Impl as SHA2, Sha256};
 use serde::{Deserialize, Serialize};
+use soon_derive::traits::BlobProvider;
 use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::iter::once;
 use std::sync::Arc;
-use soon_derive::traits::BlobProvider;
 
 /// Represents the data required to validate the output roots published in a proposal.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

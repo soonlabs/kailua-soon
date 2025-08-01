@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 use kailua_common::client::soon_test::{soon_to_derivation, soon_to_execution_cache};
 use kona_cli::init_tracing_subscriber;
 use kona_proof::BootInfo;
-use serde_json::{json, Value};
+use serde_json::json;
 use std::fs;
 use std::path::PathBuf;
 use tracing::info;

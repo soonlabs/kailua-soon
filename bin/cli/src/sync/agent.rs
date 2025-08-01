@@ -33,11 +33,11 @@ use kailua_contracts::{
     *,
 };
 use kailua_host::config::fetch_rollup_config;
-use soon_primitives::rollup_config::SoonRollupConfig;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::FutureExt;
 use opentelemetry::trace::{TraceContextExt, Tracer};
 use opentelemetry::KeyValue;
+use soon_primitives::rollup_config::SoonRollupConfig;
 use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;

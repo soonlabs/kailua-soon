@@ -16,10 +16,10 @@ use crate::args::KailuaHostArgs;
 use alloy::providers::{Provider, ProviderBuilder, RootProvider};
 use anyhow::Context;
 use kailua_client::provider::OpNodeProvider;
-use soon_primitives::rollup_config::SoonRollupConfig;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::{FutureExt, TraceContextExt, Tracer};
 use serde_json::{json, Value};
+use soon_primitives::rollup_config::SoonRollupConfig;
 use std::path::PathBuf;
 use tempfile::TempDir;
 use tokio::fs;
@@ -44,7 +44,7 @@ pub async fn generate_rollup_config(
                     .as_str(),
                 Some(&tmp_cfg_file),
             )
-                .await?;
+            .await?;
             cfg.kona.rollup_config_path = Some(tmp_cfg_file);
             debug!("{:?}", cfg.kona.rollup_config_path);
             cfg.kona.read_rollup_config()?

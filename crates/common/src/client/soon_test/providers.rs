@@ -1,6 +1,7 @@
 use alloy_consensus::{Header, Receipt};
-use alloy_eips::{BlockNumberOrTag, BlockNumHash};
-use alloy_primitives::{Address, B256, BlockHash, Bytes, keccak256, U160, U256};
+use alloy_eips::{BlockNumHash, BlockNumberOrTag};
+use alloy_primitives::{keccak256, Address, BlockHash, Bytes, B256, U160, U256};
+use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use kona_driver::PipelineCursor;
 use kona_executor::TrieDBProvider;
@@ -8,17 +9,14 @@ use kona_mpt::{TrieHinter, TrieNode, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use kona_proof::errors::OracleProviderError;
 use kona_proof::l2::CursorSetter;
+use l1_block_info::instruction::L1BlockInfoInstruction;
 use soon_derive::traits::{ChainProvider, L2ChainProvider};
-use soon_primitives::blocks::{BlockInfo, L1Header, L1Transaction, L2BlockInfo, str_block_hash_to};
+use soon_primitives::blocks::{str_block_hash_to, BlockInfo, L1Header, L1Transaction, L2BlockInfo};
 use soon_primitives::l2blocks::L2Block;
-use alloy_eips::NumHash;
 use soon_primitives::system::SystemConfig;
+use spin::RwLock;
 use std::fmt::Debug;
 use std::sync::Arc;
-use alloy_rlp::Decodable;
-use l1_block_info::instruction::L1BlockInfoInstruction;
-use spin::RwLock;
-use tracing::info;
 
 /// Test L1 Chain Provider for testing purposes
 #[derive(Debug, Clone)]
@@ -43,7 +41,8 @@ where
     type Error = OracleProviderError;
 
     async fn header_by_hash(&self, hash: B256) -> Result<L1Header, Self::Error> {
-        let header_bytes = self.oracle
+        let header_bytes = self
+            .oracle
             .get(PreimageKey::new(*hash, PreimageKeyType::Keccak256))
             .await?;
 
@@ -77,9 +76,14 @@ where
     ) -> Result<BlockInfo, Self::Error> {
         let number_bytes = block_number.as_number().unwrap().to_be_bytes();
         let number_hash = keccak256(number_bytes.as_ref());
-        let header_bytes = self.oracle.get(PreimageKey::new_keccak256(*number_hash)).await?;
+        let header_bytes = self
+            .oracle
+            .get(PreimageKey::new_keccak256(*number_hash))
+            .await?;
 
-        let header: L1Header = Header::decode(&mut header_bytes.as_slice()).map_err(OracleProviderError::Rlp)?.into();
+        let header: L1Header = Header::decode(&mut header_bytes.as_slice())
+            .map_err(OracleProviderError::Rlp)?
+            .into();
         // reset mock block hash
         let mut block_hash = BlockHash::default();
         block_hash[0..8].copy_from_slice(number_bytes.as_ref());
@@ -96,18 +100,31 @@ where
         Ok(vec![])
     }
 
-    async fn get_block_transactions_by_hash(&self, hash: B256) -> Result<Vec<L1Transaction>, Self::Error> {
+    async fn get_block_transactions_by_hash(
+        &self,
+        hash: B256,
+    ) -> Result<Vec<L1Transaction>, Self::Error> {
         let mut key_data = "l1_transaction".to_string().into_bytes();
         let mut hash_data = hash.0.to_vec();
         key_data.append(&mut hash_data);
-        match self.oracle.get(PreimageKey::new_keccak256(keccak256(key_data.as_slice()).0)).await {
+        match self
+            .oracle
+            .get(PreimageKey::new_keccak256(keccak256(key_data.as_slice()).0))
+            .await
+        {
             Ok(txs_bytes) => {
                 // Decode the transactions RLP into Vec<L1Transaction>
-                let txs: Vec<L1Transaction> = Vec::<L1Transaction>::decode(&mut txs_bytes.as_slice()).map_err(OracleProviderError::Rlp)?;
-                println!("get_block_transactions_by_hash-----hash:{}, tx len:{}", hash, txs.len());
+                let txs: Vec<L1Transaction> =
+                    Vec::<L1Transaction>::decode(&mut txs_bytes.as_slice())
+                        .map_err(OracleProviderError::Rlp)?;
+                println!(
+                    "get_block_transactions_by_hash-----hash:{}, tx len:{}",
+                    hash,
+                    txs.len()
+                );
                 Ok(txs)
-            },
-            Err(_) => Ok(vec![])
+            }
+            Err(_) => Ok(vec![]),
         }
     }
 }
@@ -134,13 +151,16 @@ where
         &self,
         block: L2Block,
     ) -> Result<L1BlockInfoInstruction, OracleProviderError> {
-        let l1_block_info_tx = block.transactions.first().ok_or(
-            OracleProviderError::FetchBlockInfoFailed("No l1 block info tx found".to_string()),
+        let l1_block_info_tx =
+            block
+                .transactions
+                .first()
+                .ok_or(OracleProviderError::FetchBlockInfoFailed(
+                    "No l1 block info tx found".to_string(),
+                ))?;
+        let l1_block_info_tx_data = l1_block_info_tx.0.message.instructions().first().ok_or(
+            OracleProviderError::FetchBlockInfoFailed("No instruction found".to_string()),
         )?;
-        let l1_block_info_tx_data =
-            l1_block_info_tx.0.message.instructions().first().ok_or(
-                OracleProviderError::FetchBlockInfoFailed("No instruction found".to_string()),
-            )?;
         let l1_block_info_instruction =
             L1BlockInfoInstruction::unpack(l1_block_info_tx_data.data.as_slice())
                 .map_err(|err| OracleProviderError::FetchBlockInfoFailed(err.to_string()))?;
@@ -182,10 +202,13 @@ where
                 block_hash[0..8].copy_from_slice(number_bytes.as_ref());
                 Ok(L2BlockInfo {
                     block_info,
-                    l1_origin: BlockNumHash { number, hash: block_hash.into() },
+                    l1_origin: BlockNumHash {
+                        number,
+                        hash: block_hash.into(),
+                    },
                     seq_num: sequence_number,
                 })
-            },
+            }
             _ => Err(OracleProviderError::FetchBlockInfoFailed(
                 "Invalid l1 block info instruction".to_string(),
             )),
@@ -195,7 +218,10 @@ where
     async fn block_by_number(&mut self, number: u64) -> Result<L2Block, Self::Error> {
         let number_bytes = number.to_be_bytes();
         let number_hash = keccak256(number_bytes.as_ref());
-        let block_bytes = self.oracle.get(PreimageKey::new_keccak256(*number_hash)).await?;
+        let block_bytes = self
+            .oracle
+            .get(PreimageKey::new_keccak256(*number_hash))
+            .await?;
 
         Decodable::decode(&mut block_bytes.as_slice()).map_err(OracleProviderError::Rlp)
     }
@@ -247,7 +273,7 @@ where
                     .map_err(OracleProviderError::Preimage)?
                     .as_ref(),
             )
-                .map_err(OracleProviderError::Rlp)
+            .map_err(OracleProviderError::Rlp)
         })
     }
 }
@@ -283,7 +309,12 @@ where
         Ok(())
     }
 
-    fn hint_storage_proof(&self, _address: Address, _index: U256, _block_number: u64) -> Result<(), Self::Error> {
+    fn hint_storage_proof(
+        &self,
+        _address: Address,
+        _index: U256,
+        _block_number: u64,
+    ) -> Result<(), Self::Error> {
         // No-op for testing
         Ok(())
     }
@@ -326,8 +357,12 @@ where
     }
 
     async fn get_input(&self, data: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
-        Ok(self.oracle
-            .get(PreimageKey::new(<[u8; 32]>::try_from(data.as_slice()).unwrap(), PreimageKeyType::Keccak256))
+        Ok(self
+            .oracle
+            .get(PreimageKey::new(
+                <[u8; 32]>::try_from(data.as_slice()).unwrap(),
+                PreimageKeyType::Keccak256,
+            ))
             .await?)
     }
-} 
+}

@@ -17,10 +17,10 @@ use crate::sync::provider::SyncProvider;
 use crate::KAILUA_GAME_TYPE;
 use alloy::primitives::{Address, B256};
 use kailua_contracts::*;
-use soon_primitives::rollup_config::SoonRollupConfig;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::{TraceContextExt, Tracer};
 use opentelemetry::Context;
+use soon_primitives::rollup_config::SoonRollupConfig;
 use std::process::exit;
 use tracing::{error, info, warn};
 

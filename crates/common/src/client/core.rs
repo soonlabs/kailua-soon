@@ -20,6 +20,7 @@ use alloy_primitives::B256;
 use anyhow::{bail, Context};
 use kona_driver::{Driver, Executor};
 use kona_executor::{L2BlockBuilder, StatelessL2Builder, TrieDBProvider};
+use kona_mpt::TrieHinter;
 use kona_preimage::{CommsClient, PreimageKey};
 use kona_proof::errors::OracleProviderError;
 use kona_proof::executor::KonaExecutor;
@@ -28,14 +29,13 @@ use kona_proof::l1::OraclePipeline;
 use kona_proof::l2::{CursorSetter, OracleL2ChainProvider};
 use kona_proof::sync::new_oracle_pipeline_cursor;
 use kona_proof::{BootInfo, FlushableCache, HintType};
+use serde::de::StdError;
+use soon_derive::prelude::{ChainProvider, DAProvider};
 use soon_derive::sources::DAServerSource;
 use soon_derive::traits::{BlobProvider, L2ChainProvider};
 use std::fmt::Debug;
 use std::mem::take;
 use std::sync::{Arc, Mutex};
-use kona_mpt::TrieHinter;
-use serde::de::StdError;
-use soon_derive::prelude::{ChainProvider, DAProvider};
 use tracing::info;
 
 /// Initializes the L1, L2, and DA providers for the core client.
@@ -66,13 +66,13 @@ where
     let rollup_config = Arc::new(boot.rollup_config.clone());
 
     client::log("SAFE HEAD HASH");
-    let safe_head_hash = fetch_safe_head_hash(oracle.as_ref(), boot.agreed_l2_output_root)
-        .await?;
+    let safe_head_hash = fetch_safe_head_hash(oracle.as_ref(), boot.agreed_l2_output_root).await?;
 
     let l1_provider = OracleL1ChainProvider::new(B256::ZERO, stream)
         .await
         .context("new oracle l1 chain provider failed")?;
-    let l2_provider = OracleL2ChainProvider::new(safe_head_hash, rollup_config.clone(), oracle.clone());
+    let l2_provider =
+        OracleL2ChainProvider::new(safe_head_hash, rollup_config.clone(), oracle.clone());
     let da_provider = OracleDaProvider::new(oracle);
 
     Ok((l1_provider, l2_provider, da_provider))
@@ -139,11 +139,17 @@ where
     <B as BlobProvider>::Error: Debug,
 {
     let clone_oracle = oracle.clone();
-    let (l1_provider, l2_provider, da_provider) = kona_proof::block_on(async move {
-        initialize_providers(clone_oracle, stream).await
-    })?;
+    let (l1_provider, l2_provider, da_provider) =
+        kona_proof::block_on(async move { initialize_providers(clone_oracle, stream).await })?;
 
-    run_core_client_ex::<StatelessL2Builder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>>, O, B, OracleL1ChainProvider<O>, OracleL2ChainProvider<O>, OracleDaProvider<O>>(
+    run_core_client_ex::<
+        StatelessL2Builder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>>,
+        O,
+        B,
+        OracleL1ChainProvider<O>,
+        OracleL2ChainProvider<O>,
+        OracleDaProvider<O>,
+    >(
         precondition_validation_data_hash,
         oracle,
         beacon,
@@ -172,11 +178,17 @@ where
     E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug,
 {
     let clone_oracle = oracle.clone();
-    let (l1_provider, l2_provider, da_provider) = kona_proof::block_on(async move {
-        initialize_providers(clone_oracle, stream).await
-    })?;
+    let (l1_provider, l2_provider, da_provider) =
+        kona_proof::block_on(async move { initialize_providers(clone_oracle, stream).await })?;
 
-    run_core_client_ex::<E, O, B, OracleL1ChainProvider<O>, OracleL2ChainProvider<O>, OracleDaProvider<O>>(
+    run_core_client_ex::<
+        E,
+        O,
+        B,
+        OracleL1ChainProvider<O>,
+        OracleL2ChainProvider<O>,
+        OracleDaProvider<O>,
+    >(
         precondition_validation_data_hash,
         oracle,
         beacon,
@@ -489,8 +501,13 @@ pub fn recover_collected_executions(
 #[cfg_attr(coverage_nightly, coverage(off))]
 pub mod tests {
     use super::*;
-    use crate::client::soon_test::{initialize_test_providers, derive_to_execution, soon_to_derivation, soon_to_execution_cache, TestDaProvider, TestOracleL1ChainProvider, TestOracleL2ChainProvider};
+    use crate::client::soon_test::{
+        derive_to_execution, initialize_test_providers, soon_to_derivation,
+        soon_to_execution_cache, TestDaProvider, TestOracleL1ChainProvider,
+        TestOracleL2ChainProvider,
+    };
     use crate::precondition::PreconditionValidationData;
+    use crate::test::mock::MockOracle;
     use crate::test::TestOracle;
     use alloy_primitives::B256;
     use kona_cli::init_tracing_subscriber;
@@ -499,7 +516,6 @@ pub mod tests {
     use kona_proof::BootInfo;
     use std::sync::Arc;
     use tracing_subscriber::EnvFilter;
-    use crate::test::mock::MockOracle;
 
     pub fn test_derivation(
         boot_info: BootInfo,
@@ -535,15 +551,24 @@ pub mod tests {
     ) -> anyhow::Result<Vec<Arc<Execution>>>
     where
         <B as BlobProvider>::Error: Debug,
-        E: L2BlockBuilder<TestOracleL2ChainProvider<O>, TestOracleL2ChainProvider<O>> + Send + Sync + Debug,
+        E: L2BlockBuilder<TestOracleL2ChainProvider<O>, TestOracleL2ChainProvider<O>>
+            + Send
+            + Sync
+            + Debug,
     {
         let collection_target = Arc::new(Mutex::new(Vec::new()));
         let clone_oracle = oracle.clone();
-        let (l1_provider, l2_provider, da_provider) = kona_proof::block_on(async move {
-            initialize_test_providers(clone_oracle).await
-        })?;
+        let (l1_provider, l2_provider, da_provider) =
+            kona_proof::block_on(async move { initialize_test_providers(clone_oracle).await })?;
 
-        let (result_boot_info, precondition_hash) = run_core_client_ex::<E, O, B, TestOracleL1ChainProvider<O>, TestOracleL2ChainProvider<O>, TestDaProvider<O>>(
+        let (result_boot_info, precondition_hash) = run_core_client_ex::<
+            E,
+            O,
+            B,
+            TestOracleL1ChainProvider<O>,
+            TestOracleL2ChainProvider<O>,
+            TestDaProvider<O>,
+        >(
             precondition_validation_data_hash,
             oracle.clone(),
             blob_provider,
@@ -603,18 +628,27 @@ pub mod tests {
     ) -> anyhow::Result<B256>
     where
         <B as BlobProvider>::Error: Debug,
-        E: L2BlockBuilder<TestOracleL2ChainProvider<O>, TestOracleL2ChainProvider<O>> + Send + Sync + Debug,
+        E: L2BlockBuilder<TestOracleL2ChainProvider<O>, TestOracleL2ChainProvider<O>>
+            + Send
+            + Sync
+            + Debug,
     {
         // Ensure boot info triggers execution only
         assert!(boot_info.l1_head.is_zero());
         let expected_precondition_hash = exec_precondition_hash(execution_cache.as_slice());
 
         let clone_oracle = oracle.clone();
-        let (l1_provider, l2_provider, da_provider) = kona_proof::block_on(async move {
-            initialize_test_providers(clone_oracle).await
-        })?;
+        let (l1_provider, l2_provider, da_provider) =
+            kona_proof::block_on(async move { initialize_test_providers(clone_oracle).await })?;
 
-        let (result_boot_info, precondition_hash) = run_core_client_ex::<E, O, B, TestOracleL1ChainProvider<O>, TestOracleL2ChainProvider<O>, TestDaProvider<O>>(
+        let (result_boot_info, precondition_hash) = run_core_client_ex::<
+            E,
+            O,
+            B,
+            TestOracleL1ChainProvider<O>,
+            TestOracleL2ChainProvider<O>,
+            TestDaProvider<O>,
+        >(
             B256::ZERO,
             oracle.clone(),
             blob_provider,

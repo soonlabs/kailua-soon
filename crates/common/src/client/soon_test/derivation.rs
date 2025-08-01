@@ -1,12 +1,11 @@
 use crate::client::soon_test::{current_executor_state_root, L1_NUMBER};
 use crate::{oracle::WitnessOracle, test::mock::MockOracle};
-use alloy_consensus::Header;
-use alloy_primitives::{Address, address, B256, keccak256};
 use alloy_primitives::bytes::BytesMut;
+use alloy_primitives::{address, keccak256, Address, B256};
 use alloy_rlp::Encodable;
 use anyhow::Result;
-use batcher::{ChannelOut, FrameData, SingularChannelOut, TransactionData};
 use batcher::driver::types::FrameID;
+use batcher::{ChannelOut, FrameData, SingularChannelOut, TransactionData};
 use bridge::pda::{spl_token_mint_pubkey, spl_token_owner_pubkey};
 use crossbeam_channel::Receiver;
 use fraud_executor::accounts::SoonAccounts;
@@ -17,20 +16,17 @@ use solana_sdk::{
 };
 use soon_derive::traits::L2ChainProvider;
 use soon_node::derive::driver::L2ChainProviderImmutable;
+use soon_node::node::tests::{new_derive_block_with_mock_l1, MockEthL1Node};
 use soon_node::{
     derive::mock::MockInstant,
     executor::{ExecutorOperator, SharedExecutor},
-    node::{
-        producer::Producer,
-        tests::{create_derived_deposit_erc20_tx, create_spl_tx, new_derive_block, DEPOSIT_AMOUNT},
-    },
+    node::{producer::Producer, tests::create_spl_tx},
 };
-use soon_node::node::tests::{MockEthL1Node, new_derive_block_with_mock_l1};
+use soon_primitives::blocks::L1Transaction;
 use soon_primitives::{
     blocks::{BlockInfo, L2BlockInfo, RawBlock},
     rollup_config::SoonRollupConfig,
 };
-use soon_primitives::blocks::L1Transaction;
 use spl_token::state::Mint;
 use tracing::info;
 
@@ -44,8 +40,14 @@ pub async fn soon_to_derivation(relative_to_soon: Option<&str>) -> Result<(BootI
     let (mut producer, identity, metadata, complete_receiver) =
         new_soon(temp.path(), relative_to_soon, &mut mock_l1_node)?;
 
-    let (boot_info, oracle_storage_items) =
-        blocks_to_derivation_cache(&mut producer, &identity, &metadata, complete_receiver, &mut mock_l1_node).await?;
+    let (boot_info, oracle_storage_items) = blocks_to_derivation_cache(
+        &mut producer,
+        &identity,
+        &metadata,
+        complete_receiver,
+        &mut mock_l1_node,
+    )
+    .await?;
     let mut oracle = MockOracle::new(boot_info.clone());
     derivations_save_to_oracle(&mut oracle, &boot_info, &oracle_storage_items)?;
     Ok((boot_info, oracle))
@@ -79,7 +81,10 @@ fn derivations_save_to_oracle(
         let mut buf = BytesMut::default();
         Encodable::encode(l1_txs, &mut buf);
 
-        oracle.insert_preimage(PreimageKey::new_keccak256(keccak256(key_data.as_slice()).0), buf.clone().into());
+        oracle.insert_preimage(
+            PreimageKey::new_keccak256(keccak256(key_data.as_slice()).0),
+            buf.clone().into(),
+        );
     }
 
     // save da data
@@ -106,10 +111,10 @@ pub(crate) async fn blocks_to_derivation_cache(
 ) -> Result<(BootInfo, DerivationStorageItems)> {
     let batch_inbox_address = address!("0xfF000000000000000000000000000000000000FF");
     let rollup_config = SoonRollupConfig {
-        seq_window_size: 1000,//prevent generating empty batch
+        seq_window_size: 1000, //prevent generating empty batch
         batch_inbox_address,
-        channel_size: 100_000_000,//prevent batch size exceeding channel_size
-        max_sequencer_drift: 10_000_000_000,////prevent batch exceeding sequencer time drift
+        channel_size: 100_000_000, //prevent batch size exceeding channel_size
+        max_sequencer_drift: 10_000_000_000, ////prevent batch exceeding sequencer time drift
         ..Default::default()
     };
     let mut boot_info = BootInfo {
@@ -147,12 +152,13 @@ pub(crate) async fn blocks_to_derivation_cache(
     boot_info.agreed_l2_output_root = agreed_output;
     // set l1 origin head
     boot_info.l1_head = slot_1_head.l1_origin.hash;
-    let header = l1_node.get_block_header(slot_1_head.l1_origin.number).unwrap().clone();
-    storage_items.l1_heads.insert(
-        slot_1_head.l1_origin.hash,
-        header,
-    );
-
+    let header = l1_node
+        .get_block_header(slot_1_head.l1_origin.number)
+        .unwrap()
+        .clone();
+    storage_items
+        .l1_heads
+        .insert(slot_1_head.l1_origin.hash, header);
 
     // === slot 2
     // append a `CreateSPL` tx into the block
@@ -206,22 +212,24 @@ pub(crate) async fn blocks_to_derivation_cache(
     info!("boot info: {:?}", boot_info);
     update_derivation_storage_items(&mut executor, &mut storage_items).await?;
     let slot_3_head = executor.l2_block_info_by_number_immut(3)?;
-    let header = l1_node.get_block_header(slot_3_head.l1_origin.number).unwrap().clone();
-    storage_items.l1_heads.insert(
-        slot_3_head.l1_origin.hash,
-        header,
-    );
+    let header = l1_node
+        .get_block_header(slot_3_head.l1_origin.number)
+        .unwrap()
+        .clone();
+    storage_items
+        .l1_heads
+        .insert(slot_3_head.l1_origin.hash, header);
 
     // save slot 2-3 to batch data
     let mut channel_out = SingularChannelOut::new(1_000_000_000, 9);
     for i in 2..=3 {
         let block = executor.block_by_number(i).await.unwrap();
-        let l2_info = executor.l2_block_info_by_number(i).await.unwrap();
         ChannelOut::add_block(&mut channel_out, block).unwrap();
     }
     channel_out.close().unwrap();
     let mut buf: Vec<u8> = Vec::new();
-    let (frame_number, is_last) = ChannelOut::output_frame(&mut channel_out, &mut buf, 1_000_000_000).unwrap();
+    let (frame_number, is_last) =
+        ChannelOut::output_frame(&mut channel_out, &mut buf, 1_000_000_000).unwrap();
     assert!(is_last);
     assert_eq!(frame_number, 0);
     let frame = FrameData {
@@ -250,12 +258,14 @@ pub(crate) async fn blocks_to_derivation_cache(
     // save l1 transaction for l1 block
     let new_l1_block = l1_node.mine_block_with_transactions();
     assert_eq!(new_l1_block.number, 102);
-    let header = l1_node.get_block_header(new_l1_block.number).unwrap().clone();
-    storage_items.l1_heads.insert(
-        new_l1_block.hash,
-        header,
-    );
-    storage_items.l1_transactions.insert(new_l1_block.hash, vec![tx]);
+    let header = l1_node
+        .get_block_header(new_l1_block.number)
+        .unwrap()
+        .clone();
+    storage_items.l1_heads.insert(new_l1_block.hash, header);
+    storage_items
+        .l1_transactions
+        .insert(new_l1_block.hash, vec![tx]);
 
     Ok((boot_info, storage_items))
 }

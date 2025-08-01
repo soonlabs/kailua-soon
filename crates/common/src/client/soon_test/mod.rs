@@ -12,27 +12,27 @@ use fraud_executor::{
 };
 use kona_executor::L2BlockBuilder;
 use kona_preimage::CommsClient;
-use kona_proof::{l2::OracleL2ChainProvider, BootInfo, FlushableCache};
+use kona_proof::{BootInfo, FlushableCache};
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use solana_sdk::{signature::Keypair, signer::Signer, transaction::VersionedTransaction};
 use soon_derive::traits::BlobProvider;
+use soon_node::node::tests::{new_derive_block_with_mock_l1, MockEthL1Node};
 use soon_node::{
     derive::mock::MockInstant,
     executor::{ExecutorOperator, SharedExecutor},
     node::{
         producer::Producer,
-        tests::{init_soon_genesis, new_derive_block, new_producer},
+        tests::{init_soon_genesis, new_producer},
     },
 };
+use soon_primitives::blocks::L1Transaction;
 use soon_primitives::{
     blocks::{BlockInfo, L2BlockInfo, RawBlock},
     l2blocks::L2Block,
 };
-use std::{collections::HashMap, path::Path, sync::Arc};
 use std::fmt::Debug;
 use std::sync::Mutex;
-use soon_node::node::tests::{MockEthL1Node, new_derive_block_with_mock_l1};
-use soon_primitives::blocks::L1Transaction;
+use std::{collections::HashMap, path::Path, sync::Arc};
 
 pub(crate) mod derivation;
 pub(crate) mod execution;
@@ -43,7 +43,7 @@ pub use derivation::soon_to_derivation;
 #[allow(unused_imports)]
 pub use execution::soon_to_execution_cache;
 #[allow(unused_imports)]
-pub(crate) use providers::{TestOracleL1ChainProvider, TestOracleL2ChainProvider, TestDaProvider};
+pub(crate) use providers::{TestDaProvider, TestOracleL1ChainProvider, TestOracleL2ChainProvider};
 
 #[derive(Debug, Default, Clone)]
 pub struct ExecutionStorageItems {
@@ -97,14 +97,23 @@ pub fn derive_to_execution<
 ) -> Result<Vec<Arc<Execution>>>
 where
     <B as BlobProvider>::Error: Debug,
-    E: L2BlockBuilder<TestOracleL2ChainProvider<O>, TestOracleL2ChainProvider<O>> + Send + Sync + Debug,
+    E: L2BlockBuilder<TestOracleL2ChainProvider<O>, TestOracleL2ChainProvider<O>>
+        + Send
+        + Sync
+        + Debug,
 {
     let clone_oracle = oracle.clone();
-    let (l1_provider, l2_provider, da_provider) = kona_proof::block_on(async move {
-        initialize_test_providers(clone_oracle).await
-    })?;
+    let (l1_provider, l2_provider, da_provider) =
+        kona_proof::block_on(async move { initialize_test_providers(clone_oracle).await })?;
     let collection_target = Arc::new(Mutex::new(Vec::new()));
-    let (result_boot_info, precondition_hash) = run_core_client_ex::<E, O, B, TestOracleL1ChainProvider<O>, TestOracleL2ChainProvider<O>, TestDaProvider<O>>(
+    let (result_boot_info, precondition_hash) = run_core_client_ex::<
+        E,
+        O,
+        B,
+        TestOracleL1ChainProvider<O>,
+        TestOracleL2ChainProvider<O>,
+        TestDaProvider<O>,
+    >(
         precondition_validation_data_hash,
         oracle.clone(),
         blob_provider,

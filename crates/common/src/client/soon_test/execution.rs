@@ -1,10 +1,10 @@
-use super::{new_soon, ExecutionStorageItems, TokenMetadata, initialize_test_providers};
+use super::{new_soon, ExecutionStorageItems, TokenMetadata};
 use crate::client::soon_test::{
     current_executor_state_root, to_execution, tx_to_execution, L1_NUMBER,
 };
 use crate::{executor::Execution, oracle::WitnessOracle, test::mock::MockOracle};
 use alloy_primitives::{keccak256, B256};
-use alloy_rlp::{BytesMut, Decodable, Encodable};
+use alloy_rlp::{BytesMut, Encodable};
 use anyhow::Result;
 use bridge::pda::{spl_token_mint_pubkey, spl_token_owner_pubkey};
 use crossbeam_channel::Receiver;
@@ -19,15 +19,13 @@ use solana_sdk::{
 };
 use soon_derive::traits::L2ChainProvider;
 use soon_node::derive::driver::L2ChainProviderImmutable;
+use soon_node::node::tests::{new_derive_block_with_mock_l1, MockEthL1Node};
 use soon_node::{
     derive::mock::MockInstant,
     executor::{ExecutorOperator, SharedExecutor},
     node::{
         producer::Producer,
-        tests::{
-            create_derived_deposit_erc20_tx, create_spl_tx, new_attributed_deposit_tx,
-            new_derive_block, DEPOSIT_AMOUNT,
-        },
+        tests::{create_spl_tx, new_attributed_deposit_tx},
     },
 };
 use soon_primitives::{
@@ -36,7 +34,6 @@ use soon_primitives::{
 };
 use spl_token::state::Mint;
 use std::sync::Arc;
-use soon_node::node::tests::{MockEthL1Node, new_derive_block_with_mock_l1};
 use tracing::info;
 
 #[allow(dead_code)]
@@ -48,8 +45,14 @@ pub async fn soon_to_execution_cache(
     let (mut producer, identity, metadata, complete_receiver) =
         new_soon(temp.path(), relative_to_soon, &mut mock_l1_node)?;
 
-    let (boot_info, executions, oracle_storage_items) =
-        blocks_to_execution_cache(&mut producer, &identity, &metadata, complete_receiver, &mut mock_l1_node).await?;
+    let (boot_info, executions, oracle_storage_items) = blocks_to_execution_cache(
+        &mut producer,
+        &identity,
+        &metadata,
+        complete_receiver,
+        &mut mock_l1_node,
+    )
+    .await?;
     let mut oracle = MockOracle::new_with_executions(boot_info.clone(), executions);
     executions_save_to_oracle(&mut oracle, &boot_info, &oracle_storage_items)?;
     Ok((boot_info, oracle))
@@ -232,7 +235,7 @@ pub(crate) async fn blocks_to_execution_cache(
 
     // === slot 3
     let agreed_output = claimed_output;
-    let mut derive_block_2 = new_derive_block_with_mock_l1(l1_node, metadata.to.pubkey());
+    let derive_block_2 = new_derive_block_with_mock_l1(l1_node, metadata.to.pubkey());
     // let mut derive_block_2 = new_derive_block(metadata.to.pubkey(), L1_NUMBER + 1);
     // deposit erc20 token
     // derive_block_2

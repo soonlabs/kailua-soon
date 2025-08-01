@@ -24,10 +24,9 @@ use anyhow::Context;
 use async_trait::async_trait;
 use fraud_executor::outcome::BlockBuildingOutcome;
 use kona_driver::{Executor, PipelineCursor, TipCursor};
-use kona_preimage::CommsClient;
+use kona_executor::TrieDBProvider;
+use kona_mpt::TrieHinter;
 use kona_proof::errors::OracleProviderError;
-use kona_proof::l2::OracleL2ChainProvider;
-use kona_proof::FlushableCache;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use risc0_zkvm::sha::{Impl as SHA2, Sha256};
 use soon_derive::prelude::L2ChainProvider;
@@ -36,8 +35,6 @@ use soon_primitives::rollup_config::SoonRollupConfig;
 use spin::RwLock;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
-use kona_executor::TrieDBProvider;
-use kona_mpt::TrieHinter;
 
 /// Represents a block execution process and its results.
 ///

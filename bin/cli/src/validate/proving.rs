@@ -25,12 +25,12 @@ use anyhow::{bail, Context};
 use kailua_client::await_tel;
 use kailua_common::blobs::BlobFetchRequest;
 use kailua_common::precondition::PreconditionValidationData;
-use soon_primitives::blocks::BlockInfo;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::FutureExt;
 use opentelemetry::trace::{TraceContextExt, Tracer};
 use risc0_zkvm::sha::Digestible;
 use risc0_zkvm::InnerReceipt;
+use soon_primitives::blocks::BlockInfo;
 use std::path::PathBuf;
 use tracing::{debug, info};
 

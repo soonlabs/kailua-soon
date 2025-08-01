@@ -23,9 +23,9 @@ use kailua_client::provider::OpNodeProvider;
 use kailua_client::proving::ProvingError;
 use kailua_common::blobs::BlobFetchRequest;
 use kailua_common::precondition::PreconditionValidationData;
-use soon_primitives::rollup_config::SoonRollupConfig;
 use kona_preimage::{PreimageKey, PreimageKeyType};
 use soon_primitives::blocks::BlockInfo;
+use soon_primitives::rollup_config::SoonRollupConfig;
 use std::env::set_var;
 use std::iter::zip;
 use tracing::{error, info, warn};
@@ -157,8 +157,7 @@ pub async fn concurrent_execution_preflight(
         num_blocks = num_blocks.saturating_sub(processed_blocks);
 
         // update ending block
-        args.kona.claimed_l2_block_number = args.kona.claimed_l2_block_number
-            + processed_blocks;
+        args.kona.claimed_l2_block_number = args.kona.claimed_l2_block_number + processed_blocks;
         args.kona.claimed_l2_output_root = op_node_provider
             .output_at_block(args.kona.claimed_l2_block_number)
             .await?;

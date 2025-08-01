@@ -21,8 +21,8 @@ use async_channel::{Receiver, Sender};
 use kailua_client::proving::ProvingError;
 use kailua_common::boot::StitchedBootInfo;
 use kailua_common::executor::Execution;
-use soon_primitives::rollup_config::SoonRollupConfig;
 use risc0_zkvm::Receipt;
+use soon_primitives::rollup_config::SoonRollupConfig;
 use std::cmp::Ordering;
 use tracing::error;
 
