@@ -5999,6 +5999,7 @@ dependencies = [
  "soon-mpt-trie",
  "soon-primitives",
  "thiserror 2.0.12",
+ "tracing",
 ]
 
 [[package]]
@@ -7922,6 +7923,7 @@ dependencies = [
  "op-alloy-rpc-types-engine",
  "op-revm",
  "revm",
+ "serde",
  "solana-sdk",
  "soon-primitives",
  "thiserror 2.0.12",

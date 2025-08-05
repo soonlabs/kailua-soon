@@ -18,6 +18,7 @@ use crate::{client, precondition};
 // use alloy_op_evm::OpEvmFactory;
 use alloy_primitives::B256;
 use anyhow::{bail, Context};
+use fraud_executor::executor::MemoryAccountsCallback;
 use kona_driver::{Driver, Executor};
 use kona_executor::{L2BlockBuilder, StatelessL2Builder, TrieDBProvider};
 use kona_mpt::TrieHinter;
@@ -29,7 +30,6 @@ use kona_proof::l1::OraclePipeline;
 use kona_proof::l2::{CursorSetter, OracleL2ChainProvider};
 use kona_proof::sync::new_oracle_pipeline_cursor;
 use kona_proof::{BootInfo, FlushableCache, HintType};
-use serde::de::StdError;
 use soon_derive::prelude::{ChainProvider, DAProvider};
 use soon_derive::sources::DAServerSource;
 use soon_derive::traits::{BlobProvider, L2ChainProvider};
@@ -143,7 +143,11 @@ where
         kona_proof::block_on(async move { initialize_providers(clone_oracle, stream).await })?;
 
     run_core_client_ex::<
-        StatelessL2Builder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>>,
+        StatelessL2Builder<
+            OracleL2ChainProvider<O>,
+            OracleL2ChainProvider<O>,
+            MemoryAccountsCallback,
+        >,
         O,
         B,
         OracleL1ChainProvider<O>,
@@ -528,7 +532,7 @@ pub mod tests {
             } else {
                 Default::default()
             };
-        derive_to_execution::<StatelessL2Builder<_, _>, _, _>(
+        derive_to_execution::<StatelessL2Builder<_, _, MemoryAccountsCallback>, _, _>(
             boot_info,
             oracle.clone(),
             OracleBlobProvider::new(oracle),
@@ -608,7 +612,7 @@ pub mod tests {
         execution_cache: Vec<Arc<Execution>>,
     ) -> anyhow::Result<B256> {
         let oracle = Arc::new(TestOracle::new(boot_info.clone()));
-        test_execution_ex::<StatelessL2Builder<_, _>, _, _>(
+        test_execution_ex::<StatelessL2Builder<_, _, MemoryAccountsCallback>, _, _>(
             boot_info,
             execution_cache,
             oracle.clone(),
@@ -684,7 +688,7 @@ pub mod tests {
         init_tracing_subscriber(4, None::<EnvFilter>)?;
         let (boot_info, oracle) = soon_to_execution_cache(None).await?;
 
-        test_execution_ex::<OffchainL2Builder<_, _>, _, _>(
+        test_execution_ex::<OffchainL2Builder<_, _, MemoryAccountsCallback>, _, _>(
             boot_info,
             oracle.executions.clone(),
             Arc::new(oracle.clone()),
@@ -697,7 +701,7 @@ pub mod tests {
     pub async fn test_soon_executor_derivation() -> anyhow::Result<()> {
         init_tracing_subscriber(4, None::<EnvFilter>)?;
         let (boot_info, oracle) = soon_to_derivation(None).await?;
-        derive_to_execution::<OffchainL2Builder<_, _>, _, _>(
+        derive_to_execution::<OffchainL2Builder<_, _, MemoryAccountsCallback>, _, _>(
             boot_info,
             Arc::new(oracle.clone()),
             OracleBlobProvider::new(Arc::new(oracle)),
@@ -714,20 +718,21 @@ pub mod tests {
         let oracle = Arc::new(oracle);
 
         // step 1: derivation
-        let executions = derive_to_execution::<OffchainL2Builder<_, _>, _, _>(
-            boot_info.clone(),
-            oracle.clone(),
-            OracleBlobProvider::new(oracle.clone()),
-            B256::ZERO,
-            B256::ZERO,
-        )?;
+        let executions =
+            derive_to_execution::<OffchainL2Builder<_, _, MemoryAccountsCallback>, _, _>(
+                boot_info.clone(),
+                oracle.clone(),
+                OracleBlobProvider::new(oracle.clone()),
+                B256::ZERO,
+                B256::ZERO,
+            )?;
 
         // step 2: execution
         boot_info.l1_head = B256::ZERO; // Ensure boot info triggers execution only
         let mut oracle = Arc::try_unwrap(oracle).unwrap();
         MockOracle::save_boot_info(&boot_info, &mut oracle);
         let oracle = Arc::new(oracle);
-        test_execution_ex::<OffchainL2Builder<_, _>, _, _>(
+        test_execution_ex::<OffchainL2Builder<_, _, MemoryAccountsCallback>, _, _>(
             boot_info,
             executions,
             oracle.clone(),

@@ -99,6 +99,7 @@ pub mod tests {
     use crate::test::TestOracle;
     use alloy_primitives::{b256, B256};
     use anyhow::Context;
+    use fraud_executor::executor::MemoryAccountsCallback;
     use kona_executor::StatelessL2Builder;
     use kona_proof::BootInfo;
 
@@ -136,7 +137,7 @@ pub mod tests {
             fpvm_image_id: Default::default(),
         };
 
-        run_stateless_client::<_, StatelessL2Builder<_, _>>(witness);
+        run_stateless_client::<_, StatelessL2Builder<_, _, MemoryAccountsCallback>>(witness);
 
         Ok(())
     }
