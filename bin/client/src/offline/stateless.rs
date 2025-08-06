@@ -1,5 +1,6 @@
 use crate::offline::{OfflineClient, OfflineConfig};
 use alloy_primitives::{Address, B256};
+use fraud_executor::executor::MemoryAccountsCallback;
 use kailua_common::{
     client::stitching::run_stitching_client,
     oracle::offline::{OfflineKeyValueStore, OfflineOracle},
@@ -40,16 +41,17 @@ impl StatelessClient {
             .precondition_validation_data
             .as_ref()
             .map_or_else(|| B256::ZERO, |data| data.hash());
-        let proof_journal = run_stitching_client::<StatelessL2Builder<_, _>, _, _>(
-            precondition_validation_data_hash,
-            self.oracle.clone(),
-            self.oracle.clone(),
-            OracleBlobProvider::new(self.oracle.clone()),
-            B256::ZERO,
-            Address::ZERO,
-            vec![],
-            vec![],
-        );
+        let proof_journal =
+            run_stitching_client::<StatelessL2Builder<_, _, MemoryAccountsCallback>, _, _>(
+                precondition_validation_data_hash,
+                self.oracle.clone(),
+                self.oracle.clone(),
+                OracleBlobProvider::new(self.oracle.clone()),
+                B256::ZERO,
+                Address::ZERO,
+                vec![],
+                vec![],
+            );
         info!("Proof journal: {:?}", proof_journal);
     }
 

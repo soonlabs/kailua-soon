@@ -7675,6 +7675,7 @@ dependencies = [
  "bytemuck",
  "c-kzg",
  "clap 4.5.41",
+ "fraud-executor",
  "hex",
  "human_bytes",
  "kailua-build",
@@ -15036,6 +15037,7 @@ name = "soon-storage"
 version = "0.7.4"
 dependencies = [
  "assert_matches",
+ "bincode",
  "chrono",
  "chrono-humanize",
  "crossbeam-channel",
