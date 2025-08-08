@@ -9,15 +9,28 @@ GENESIS_FILE_PATH="${GENESIS_FILE_PATH:-/genesis.json}"
 RPC_PORT="${RPC_PORT:-8545}"
 WS_PORT="${WS_PORT:-8546}"
 
-if [ ! -d "$GETH_CHAINDATA_DIR" ]; then
-	echo "$GETH_CHAINDATA_DIR missing, running init"
-	echo "Initializing genesis."
-	geth --verbosity="$VERBOSITY" init \
-		--datadir="$GETH_DATA_DIR" \
-		--state.scheme=hash \
-		"$GENESIS_FILE_PATH"
+# Optional auto-mining controls
+# If AUTO_MINE=true, start geth with mining flags. This helps private devnets auto-produce blocks.
+AUTO_MINE=${AUTO_MINE:-false}
+MINER_COINBASE=${MINER_COINBASE:-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266}
+
+# Optional dev chain (instant sealing, no beacon, ignores custom genesis)
+GETH_DEV=${GETH_DEV:-false}
+GETH_DEV_PERIOD=${GETH_DEV_PERIOD:-1}
+
+if [ "$GETH_DEV" != "true" ]; then
+    if [ ! -d "$GETH_CHAINDATA_DIR" ]; then
+        echo "$GETH_CHAINDATA_DIR missing, running init"
+        echo "Initializing genesis."
+        geth --verbosity="$VERBOSITY" init \
+            --datadir="$GETH_DATA_DIR" \
+            --state.scheme=hash \
+            "$GENESIS_FILE_PATH"
+    else
+        echo "$GETH_CHAINDATA_DIR exists."
+    fi
 else
-	echo "$GETH_CHAINDATA_DIR exists."
+    echo "GETH_DEV=true -> skipping custom genesis init (using --dev chain)"
 fi
 
 # Warning: Archive mode is required, otherwise old trie nodes will be
@@ -26,6 +39,7 @@ fi
 exec geth \
 	--datadir="$GETH_DATA_DIR" \
 	--verbosity="$VERBOSITY" \
+    $(if [ "$GETH_DEV" = "true" ]; then echo --dev --dev.period "$GETH_DEV_PERIOD"; fi) \
 	--http \
 	--http.corsdomain="*" \
 	--http.vhosts="*" \
@@ -50,4 +64,5 @@ exec geth \
 	--metrics \
 	--metrics.addr=0.0.0.0 \
 	--metrics.port=6060 \
+	$(if [ "$AUTO_MINE" = "true" ]; then echo --mine --miner.etherbase "$MINER_COINBASE" --miner.threads 1 --miner.gasprice 0; fi) \
 	"$@"

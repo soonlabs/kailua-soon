@@ -22,6 +22,11 @@ services:
       - "${PWD}/test-jwt-secret.txt:/config/jwt-secret.txt"
     environment:
       GETH_MINER_RECOMMIT: 1000ms
+      AUTO_MINE: "true"
+      MINER_COINBASE: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+      # enable dev chain (no beacon, instant sealing)
+      GETH_DEV: "true"
+      GETH_DEV_PERIOD: "1"
 
   # Soon L2 services
   node:
