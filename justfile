@@ -26,21 +26,37 @@ coverage:
 coverage-open:
   cargo +nightly llvm-cov -p kailua-common --branch --open
 
-devnet-fetch:
-  git clone --depth 1 --branch v1.9.1 --recursive https://github.com/ethereum-optimism/optimism.git
+devnet-build CONTRACTS_DIR="../soon/contracts/dump" +ARGS="-F devnet -F prove":
+  cargo build {{ARGS}}
 
-devnet-build +ARGS="-F devnet -F prove": (build ARGS)
+  echo "🔧 generate keys..."
+  make -C {{CONTRACTS_DIR}} keys
+
+  echo "🔧 dump state for genesis..."
+  make -C {{CONTRACTS_DIR}} allocs
+
+  echo "🔧 generate genesis file..."
+  make -C {{CONTRACTS_DIR}} genesis
+
+  echo "🔧 copy files to e2e directory..."
+  cp {{CONTRACTS_DIR}}/genesis.json {{CONTRACTS_DIR}}/addresses.json {{CONTRACTS_DIR}}/genesis-keys.json e2e/
+  echo "✅ copy done!"
 
 devnet-build-fpvm +ARGS="-F devnet -F prove -F rebuild-fpvm": (build ARGS)
 
 devnet-up:
-  make -C optimism devnet-up > devnet.log
+  cd e2e && docker compose up -d
+  cd e2e && ./verify-contracts.sh
 
 devnet-down:
-  make -C optimism devnet-down
+  cd e2e && docker compose down
 
 devnet-clean: devnet-down
-  make -C optimism devnet-clean
+  docker volume rm e2e_l1_data 2>/dev/null || echo "⚠️  Docker volume e2e_l1_data not found or delete failed"
+  rm -rf e2e/*.json
+
+devnet-verify:
+  cd e2e && ./verify-contracts.sh
 
 devnet-config target="debug" verbosity="" l1_rpc="http://127.0.0.1:8545" l2_rpc="http://127.0.0.1:9545" rollup_node_rpc="http://127.0.0.1:7545":
   ./target/{{target}}/kailua-cli config \
