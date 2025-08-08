@@ -23,121 +23,121 @@ services:
     environment:
       GETH_MINER_RECOMMIT: 1000ms
 
-  # # Soon L2 services
-  # node:
-  #   # depends_on:
-  #   #   - l1
-  #   image: ${REGISTRY:-ghcr.io/soonlabs/soon-e2e}/node:${VERSION:-0.3}
-  #   container_name: ${NODE_CONTAINER_NAME:-node}
-  #   ports:
-  #     - ${BIND_HOST:-127.0.0.1}:${RPC_PORT:-8899}:8899
-  #     - ${BIND_HOST:-127.0.0.1}:${RPC_PUBSUB_PORT:-8900}:8900
-  #   healthcheck:
-  #     test: ["CMD", "curl", "http://localhost:8899/health"]
-  #     interval: 30s
-  #     retries: 3
-  #     start_period: 10s
-  #     timeout: 3s
-  #   restart: on-failure:5
-  #   stop_signal: SIGINT
-  #   stop_grace_period: 30s
-  #   extra_hosts:
-  #     - "host.docker.internal:host-gateway"
-  #   logging:
-  #     driver: "json-file"
-  #     options:
-  #       max-size: 100m
-  #       max-file: "3"
-  #   volumes:
-  #     - "soon_data:/.soon"
-  #     - "${PWD}/rollup.json:/.soon/rollup.json"
-  #   environment:
-  #     RUST_LOG: info,hyper=warn,alloy=warn,tonic=warn,h2=warn,tower=warn
-  #     SOON_NODE_STORAGE_PATH: /.soon/data
-  #     SOON_NODE_ROLLUP_CONFIG_PATH: /.soon/rollup.json
-  #     SOON_NODE_L1_RPC_URL: http://l1:8545
-  #     SOON_NODE_SCHEDULER_WORKER_NUM: 4
-  #     SOON_NODE_NETWORK_IDENTITY: /.soon/network_identity.json
-  #     SOON_NODE_ENABLE_SEQUENCER: true
-  #     SOON_NODE_FULL_RPC_API: true
-  #     SOON_NODE_RPC_PUBSUB_ENABLE_BLOCK_SUBSCRIPTION: true
+  # Soon L2 services
+  node:
+    depends_on:
+      - l1
+    image: ${REGISTRY:-ghcr.io/soonlabs/soon-e2e}/node:${VERSION:-0.3}
+    container_name: ${NODE_CONTAINER_NAME:-node}
+    ports:
+      - ${BIND_HOST:-127.0.0.1}:${RPC_PORT:-8899}:8899
+      - ${BIND_HOST:-127.0.0.1}:${RPC_PUBSUB_PORT:-8900}:8900
+    healthcheck:
+      test: ["CMD", "curl", "http://localhost:8899/health"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 3s
+    restart: on-failure:5
+    stop_signal: SIGINT
+    stop_grace_period: 30s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: 100m
+        max-file: "3"
+    volumes:
+      - "soon_data:/.soon"
+      - "${PWD}/rollup.json:/.soon/rollup.json"
+    environment:
+      RUST_LOG: info,hyper=warn,alloy=warn,tonic=warn,h2=warn,tower=warn
+      SOON_NODE_STORAGE_PATH: /.soon/data
+      SOON_NODE_ROLLUP_CONFIG_PATH: /.soon/rollup.json
+      SOON_NODE_L1_RPC_URL: http://l1:8545
+      SOON_NODE_SCHEDULER_WORKER_NUM: 4
+      SOON_NODE_NETWORK_IDENTITY: /.soon/network_identity.json
+      SOON_NODE_ENABLE_SEQUENCER: true
+      SOON_NODE_FULL_RPC_API: true
+      SOON_NODE_RPC_PUBSUB_ENABLE_BLOCK_SUBSCRIPTION: true
 
-  # proposer:
-  #   depends_on:
-  #     # - l1
-  #     - node
-  #   image: ${REGISTRY:-ghcr.io/soonlabs/soon-e2e}/proposer:${VERSION:-0.3}
-  #   container_name: ${PROPOSER_CONTAINER_NAME:-proposer}
-  #   extra_hosts:
-  #     - "host.docker.internal:host-gateway"
-  #   ports:
-  #     - ${BIND_HOST:-127.0.0.1}:${PROPOSER_PORT:-8560}:8560
-  #   healthcheck:
-  #     test: ["CMD", "curl", "http://localhost:8560/health"]
-  #     interval: 30s
-  #     retries: 3
-  #     start_period: 10s
-  #     timeout: 3s
-  #   logging:
-  #     driver: "json-file"
-  #     options:
-  #       max-size: 100m
-  #       max-file: "3"
-  #   restart: on-failure:5
-  #   environment:
-  #     RUST_LOG: info
-  #     L1_ETH_RPC: http://l1:8545
-  #     SOON_RPC: http://node:8899
-  #     L2OO_ADDRESS: ${L2OO_ADDRESS}
-  #     POLL_INTERVAL: 6000
-  #     PRIVATE_KEY: ${PROPOSER_ADMIN_SECRET}
-  #     WAIT_HOSTS: node:8899
-  #     WAIT_TIMEOUT: 300
+  proposer:
+    depends_on:
+      - l1
+      - node
+    image: ${REGISTRY:-ghcr.io/soonlabs/soon-e2e}/proposer:${VERSION:-0.3}
+    container_name: ${PROPOSER_CONTAINER_NAME:-proposer}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - ${BIND_HOST:-127.0.0.1}:${PROPOSER_PORT:-8560}:8560
+    healthcheck:
+      test: ["CMD", "curl", "http://localhost:8560/health"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 3s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: 100m
+        max-file: "3"
+    restart: on-failure:5
+    environment:
+      RUST_LOG: info
+      L1_ETH_RPC: http://l1:8545
+      SOON_RPC: http://node:8899
+      L2OO_ADDRESS: ${L2OO_ADDRESS}
+      POLL_INTERVAL: 6000
+      PRIVATE_KEY: ${PROPOSER_ADMIN_SECRET}
+      WAIT_HOSTS: node:8899
+      WAIT_TIMEOUT: 300
 
-  # batcher:
-  #   depends_on:
-  #     # - l1
-  #     - node
-  #   image: ${REGISTRY:-ghcr.io/soonlabs/soon-e2e}/batcher:${VERSION:-0.3}
-  #   container_name: ${BATCHER_CONTAINER_NAME:-batcher}
-  #   extra_hosts:
-  #     - "host.docker.internal:host-gateway"
-  #   logging:
-  #     driver: "json-file"
-  #     options:
-  #       max-size: 100m
-  #       max-file: "3"
-  #   restart: on-failure:5
-  #   environment:
-  #     RUST_LOG: info
-  #     L1_RPC_URL: http://l1:8545
-  #     L2_RPC_URL: http://node:8899
-  #     ADMIN_SECRET_KEY: ${BATCHER_ADMIN_SECRET}
-  #     DA_PROVIDER_URL: http://da-server:8080
-  #     WAIT_HOSTS: node:8899,da-server:8080
-  #     WAIT_TIMEOUT: 300
+  batcher:
+    depends_on:
+      # - l1
+      - node
+    image: ${REGISTRY:-ghcr.io/soonlabs/soon-e2e}/batcher:${VERSION:-0.3}
+    container_name: ${BATCHER_CONTAINER_NAME:-batcher}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: 100m
+        max-file: "3"
+    restart: on-failure:5
+    environment:
+      RUST_LOG: info
+      L1_RPC_URL: http://l1:8545
+      L2_RPC_URL: http://node:8899
+      ADMIN_SECRET_KEY: ${BATCHER_ADMIN_SECRET}
+      DA_PROVIDER_URL: http://da-server:8080
+      WAIT_HOSTS: node:8899,da-server:8080
+      WAIT_TIMEOUT: 300
 
-  # da-server:
-  #   image: ${REGISTRY:-ghcr.io/soonlabs/soon-e2e}/da-server:${VERSION:-0.3}
-  #   container_name: ${DA_SERVER_CONTAINER_NAME:-da-server}
-  #   extra_hosts:
-  #     - "host.docker.internal:host-gateway"
-  #   ports:
-  #     - ${BIND_HOST:-127.0.0.1}:${DA_SERVER_PORT:-8080}:8080
-  #   healthcheck:
-  #     test: ["CMD", "curl", "http://localhost:8080/health"]
-  #     interval: 30s
-  #     retries: 3
-  #     start_period: 10s
-  #     timeout: 3s
-  #   logging:
-  #     driver: "json-file"
-  #     options:
-  #       max-size: 100m
-  #       max-file: "3"
-  #   restart: on-failure:5
-  #   environment:
-  #     RUST_LOG: info
+  da-server:
+    image: ${REGISTRY:-ghcr.io/soonlabs/soon-e2e}/da-server:${VERSION:-0.3}
+    container_name: ${DA_SERVER_CONTAINER_NAME:-da-server}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - ${BIND_HOST:-127.0.0.1}:${DA_SERVER_PORT:-8080}:8080
+    healthcheck:
+      test: ["CMD", "curl", "http://localhost:8080/health"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 3s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: 100m
+        max-file: "3"
+    restart: on-failure:5
+    environment:
+      RUST_LOG: info
 
   # nginx:
   #   depends_on:

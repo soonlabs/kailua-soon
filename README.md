@@ -31,26 +31,31 @@ Kailua enables rollup operators to add a new fault proof contract, compatible wi
 
 ## Devnet Usage
 
-1. `just devnet-build`
-    * Builds the local cargo and foundry projects.
-2. `just devnet-up`
-    * Starts a local OP Stack devnet using docker.
-    * Dumps the output into `devnetlog.txt` for inspection.
-3. `just devnet-upgrade`
+1. `just devnet-build-l1`
+    * Builds the local cargo and foundry projects for L1 node.
+2. `just devnet-up-l1`
+    * Start l1 node for devnet.
+3. `just devnet-verify`
+    * Verifies the contracts are deployed correctly.    
+4. `just devnet-build-l2`
+    * Builds the L2 node related files according to l1 node.
+5. `just devnet-up`
+    * Start the entire devnet, including l1 and l2 nodes.
+6. `just devnet-upgrade`
     * Upgrades the devnet to use the `KailuaGame` contract.
     * Assumes the default values of the local optimism devnet, but can take parameters.
-4. `just devnet-propose`
+7. `just devnet-propose`
     * Launches the Kailua proposer.
     * This runs the sequences, which periodically creates new `KailuaGame` instances.
-5. `just devnet-validate`
+8. `just devnet-validate`
     * Launches the Kailua validator.
     * This monitors `KailuaGame` instances for disputes and creates proofs to resolve them.
     * Note: Use `RISC0_DEV_MODE=1` to use fake proofs.
-6. `just devnet-fault`
+9. `just devnet-fault`
     * Deploys a single `KailuaGame` instance with a faulty sequencing proposal.
     * Tests the validator's fault proving functionality.
     * Tests the proposer's canonical chain tracking functionality.
-7. After you're done:
+10. After you're done:
     * `just devnet-down` to stop the running docker containers.
     * `just devnet-clean` to cleanup the docker volumes.
 

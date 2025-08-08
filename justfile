@@ -26,33 +26,26 @@ coverage:
 coverage-open:
   cargo +nightly llvm-cov -p kailua-common --branch --open
 
-devnet-build CONTRACTS_DIR="../soon/contracts/dump" +ARGS="-F devnet -F prove":
+devnet-build-l1 CONTRACTS_DIR="../soon/contracts/dump" +ARGS="-F devnet -F prove":
   cargo build {{ARGS}}
+  CONTRACTS_DIR={{CONTRACTS_DIR}} ./e2e/build_l1.sh
 
-  echo "🔧 generate keys..."
-  make -C {{CONTRACTS_DIR}} keys
-
-  echo "🔧 dump state for genesis..."
-  make -C {{CONTRACTS_DIR}} allocs
-
-  echo "🔧 generate genesis file..."
-  make -C {{CONTRACTS_DIR}} genesis
-
-  echo "🔧 copy files to e2e directory..."
-  cp {{CONTRACTS_DIR}}/genesis.json {{CONTRACTS_DIR}}/addresses.json {{CONTRACTS_DIR}}/genesis-keys.json e2e/
-  echo "✅ copy done!"
+devnet-build-l2 soon_root="../soon" network_name="ethereum.testnet" l1_chain_id="11155111" l1_rpc_url="http://localhost:8545" +ARGS="-F devnet -F prove":
+  SOON_ROOT={{soon_root}} NETWORK_NAME={{network_name}} L1_CHAIN_ID={{l1_chain_id}} L1_RPC_URL={{l1_rpc_url}} ./e2e/build_l2.sh
 
 devnet-build-fpvm +ARGS="-F devnet -F prove -F rebuild-fpvm": (build ARGS)
 
+devnet-up-l1:
+  cd e2e && docker compose up -d l1
+
 devnet-up:
   cd e2e && docker compose up -d
-  cd e2e && ./verify-contracts.sh
 
 devnet-down:
   cd e2e && docker compose down
 
 devnet-clean: devnet-down
-  docker volume rm e2e_l1_data 2>/dev/null || echo "⚠️  Docker volume e2e_l1_data not found or delete failed"
+  @docker volume rm e2e_l1_data 2>/dev/null || echo "⚠️  Docker volume e2e_l1_data not found or delete failed"
   rm -rf e2e/*.json
 
 devnet-verify:
