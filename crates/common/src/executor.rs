@@ -30,7 +30,7 @@ use kona_proof::errors::OracleProviderError;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use risc0_zkvm::sha::{Impl as SHA2, Sha256};
 use soon_derive::prelude::L2ChainProvider;
-use soon_primitives::blocks::{BlockInfo, L2BlockInfo};
+use soon_primitives::blocks::{BlockInfo, L2BlockHeader, L2BlockInfo};
 use soon_primitives::rollup_config::SoonRollupConfig;
 use spin::RwLock;
 use std::fmt::Debug;
@@ -112,7 +112,7 @@ impl<E: Executor + Send + Sync + Debug> Executor for CachedExecutor<E> {
     /// # Behavior
     /// Delegates the update operation to the `executor` component that handles
     /// the internal logic for updating the safe head within the system.
-    fn update_safe_head(&mut self, header: L2BlockInfo) -> Result<(), Self::Error> {
+    fn update_safe_head(&mut self, header: L2BlockHeader) -> Result<(), Self::Error> {
         self.executor.update_safe_head(header)
     }
 
@@ -167,8 +167,11 @@ impl<E: Executor + Send + Sync + Debug> Executor for CachedExecutor<E> {
             .unwrap_or(Ok(false))?
         {
             let artifacts = self.cache.pop().unwrap().artifacts.clone();
-            log(&format!("CACHE {}", artifacts.header.block_info.number));
-            self.update_safe_head(artifacts.header)?;
+            log(&format!("CACHE {}", artifacts.block_info.block_info.number));
+            self.update_safe_head(L2BlockHeader {
+                block_info: artifacts.block_info.block_info,
+                account_root: artifacts.state_root,
+            })?;
             return Ok(artifacts);
         }
         if let Some(collection_target) = &self.collection_target {
@@ -487,7 +490,7 @@ pub fn exec_precondition_hash(executions: &[Arc<Execution>]) -> B256 {
                 attributes_hash(&e.attributes)
                     .expect("Unhashable attributes.")
                     .0,
-                e.artifacts.header.block_info.hash.0,
+                e.artifacts.block_info.block_info.hash.0,
                 e.claimed_output.0,
             ]
             .concat()
