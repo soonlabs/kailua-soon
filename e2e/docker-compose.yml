@@ -4,8 +4,6 @@
 
 volumes:
   l1_data:
-  soon_data:
-
 
 services:
   l1:
@@ -54,18 +52,19 @@ services:
         max-size: 100m
         max-file: "3"
     volumes:
-      - "soon_data:/.soon"
-      - "${PWD}/rollup.json:/.soon/rollup.json"
+      - "${PWD}/.soon:/.soon"
+      - "${PWD}/ethereum.testnet.rollup.json:/.soon/rollup.json"
     environment:
       RUST_LOG: info,hyper=warn,alloy=warn,tonic=warn,h2=warn,tower=warn
-      SOON_NODE_STORAGE_PATH: /.soon/data
+      SOON_NODE_STORAGE_PATH: /.soon
       SOON_NODE_ROLLUP_CONFIG_PATH: /.soon/rollup.json
       SOON_NODE_L1_RPC_URL: http://l1:8545
       SOON_NODE_SCHEDULER_WORKER_NUM: 4
-      SOON_NODE_NETWORK_IDENTITY: /.soon/network_identity.json
+      SOON_NODE_NETWORK_IDENTITY: /.soon/keypair/network_identity.json
       SOON_NODE_ENABLE_SEQUENCER: true
       SOON_NODE_FULL_RPC_API: true
       SOON_NODE_RPC_PUBSUB_ENABLE_BLOCK_SUBSCRIPTION: true
+      SOON_NODE_ENABLE_FAUCET: ${SOON_NODE_ENABLE_FAUCET:-true}
 
   proposer:
     depends_on:

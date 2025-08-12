@@ -111,6 +111,4 @@ echo -e "${GREEN}✅ genesis done${NC}"
 
 echo ""
 echo -e "${GREEN}🎉 L2 artifacts built successfully under: ${SOON_DATA_PATH}/.soon${NC}"
-# Also place rollup.json in e2e root to match docker-compose mount
-cp -f "${SOON_ROOT}/node/deployments/${NETWORK_NAME}.rollup.json" "${E2E_DIR}/rollup.json"
 echo -e "${GREEN}✅ rollup.json placed at ${E2E_DIR}/rollup.json${NC}"

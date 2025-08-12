@@ -41,6 +41,12 @@ devnet-up-l1:
 devnet-up:
   cd e2e && docker compose up -d
 
+devnet-logs:
+  cd e2e && docker compose logs -f
+
+devnet-log CONTAINER:
+  cd e2e && docker compose logs -f {{CONTAINER}}
+
 devnet-down:
   cd e2e && docker compose down
 
