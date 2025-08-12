@@ -90,10 +90,10 @@ soon_network_identity_pk=$(echo $soon_network_identity_key | solana-keygen pubke
        --arg network_key "${soon_network_identity_key}" \
        --arg network_pub "${soon_network_identity_pk}" \
        '{
-         soon_identity: { private_key: $identity_key, public_key: $identity_pub },
-         soon_upgrader: { private_key: $upgrader_key, public_key: $upgrader_pub },
-         soon_faucet: { private_key: $faucet_key, public_key: $faucet_pub },
-         soon_network_identity: { private_key: $network_key, public_key: $network_pub }
+         soon_identity: { private_key: $identity_key, address: $identity_pub },
+         soon_upgrader: { private_key: $upgrader_key, address: $upgrader_pub },
+         soon_faucet: { private_key: $faucet_key, address: $faucet_pub },
+         soon_network_identity: { private_key: $network_key, address: $network_pub }
        }' > "${KEYS_JSON}"
 echo -e "${GREEN}✅ keys prepared at ${KEYS_JSON}${NC}"
 
@@ -112,3 +112,56 @@ echo -e "${GREEN}✅ genesis done${NC}"
 echo ""
 echo -e "${GREEN}🎉 L2 artifacts built successfully under: ${SOON_DATA_PATH}/.soon${NC}"
 echo -e "${GREEN}✅ rollup.json placed at ${E2E_DIR}/rollup.json${NC}"
+
+#
+# Step 3: Set sequencer pubkey in SystemConfig via cast
+#
+echo ""
+echo -e "${YELLOW}🔧 Step 3: set sequencer pubkey on L1 SystemConfig${NC}"
+
+# Ensure cast exists
+if ! command -v cast >/dev/null 2>&1; then
+  echo -e "${RED}❌ 'cast' not found. Please install foundry (foundryup) to proceed.${NC}"
+  exit 1
+fi
+
+# Read SystemConfigProxy address from addresses.json
+SYSTEM_CONFIG_PROXY=$(jq -r '.SystemConfigProxy' "${ADDR_FILE}")
+if [ -z "${SYSTEM_CONFIG_PROXY}" ] || [ "${SYSTEM_CONFIG_PROXY}" = "null" ]; then
+  echo -e "${RED}❌ Failed to read SystemConfigProxy from ${ADDR_FILE}.${NC}"
+  exit 1
+fi
+
+# Derive 32-byte pubkey (with 0x prefix) from soon_identity_key (Solana keypair JSON array)
+SEQUENCER_PUBKEY_HEX=$(echo "${soon_identity_key}" | python3 -c "
+import json, sys
+keypair = json.load(sys.stdin)
+public_key_bytes = keypair[32:]
+hex_pubkey = '0x' + ''.join([format(x, '02x') for x in public_key_bytes])
+print(hex_pubkey)
+")
+
+if [ -z "${SEQUENCER_PUBKEY_HEX}" ]; then
+  echo -e "${RED}❌ Failed to compute sequencer pubkey from soon identity key.${NC}"
+  exit 1
+fi
+
+# Choose a private key for ownership call; allow override via $PRIVATE_KEY
+DEFAULT_PRIVATE_KEY=$(jq -r '.gs_admin.private_key' "${KEYS_SRC}")
+CAST_PRIVATE_KEY="${PRIVATE_KEY:-${DEFAULT_PRIVATE_KEY}}"
+if [ -z "${CAST_PRIVATE_KEY}" ] || [ "${CAST_PRIVATE_KEY}" = "null" ]; then
+  echo -e "${RED}❌ No private key available for cast transaction. Set $PRIVATE_KEY or ensure ${KEYS_SRC} has .deployer.private_key${NC}"
+  exit 1
+fi
+
+echo -e "${YELLOW}➡️  Calling SystemConfig.setSequencerPubkey(height=1, pubkey=${SEQUENCER_PUBKEY_HEX}) on ${SYSTEM_CONFIG_PROXY}${NC}"
+
+# NOTE: Assuming signature (uint256, bytes32). Adjust if your contract uses a different type for height.
+cast send "${SYSTEM_CONFIG_PROXY}" \
+  "setSequencerPubkey(uint256,bytes32)" \
+  1 "${SEQUENCER_PUBKEY_HEX}" \
+  --rpc-url "${L1_RPC_URL}" \
+  --private-key "${CAST_PRIVATE_KEY}" \
+  --chain-id "${L1_CHAIN_ID}"
+
+echo -e "${GREEN}✅ Sequencer pubkey configured on SystemConfig${NC}"

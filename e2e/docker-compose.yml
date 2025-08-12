@@ -5,6 +5,7 @@
 volumes:
   l1_data:
 
+
 services:
   l1:
     build:
@@ -35,15 +36,6 @@ services:
     ports:
       - ${BIND_HOST:-127.0.0.1}:${RPC_PORT:-8899}:8899
       - ${BIND_HOST:-127.0.0.1}:${RPC_PUBSUB_PORT:-8900}:8900
-    healthcheck:
-      test: ["CMD", "curl", "http://localhost:8899/health"]
-      interval: 30s
-      retries: 3
-      start_period: 10s
-      timeout: 3s
-    restart: on-failure:5
-    stop_signal: SIGINT
-    stop_grace_period: 30s
     extra_hosts:
       - "host.docker.internal:host-gateway"
     logging:
@@ -77,7 +69,7 @@ services:
     ports:
       - ${BIND_HOST:-127.0.0.1}:${PROPOSER_PORT:-8560}:8560
     healthcheck:
-      test: ["CMD", "curl", "http://localhost:8560/health"]
+      test: [ "CMD", "curl", "http://localhost:8560/health" ]
       interval: 30s
       retries: 3
       start_period: 10s
@@ -129,7 +121,7 @@ services:
     ports:
       - ${BIND_HOST:-127.0.0.1}:${DA_SERVER_PORT:-8080}:8080
     healthcheck:
-      test: ["CMD", "curl", "http://localhost:8080/health"]
+      test: [ "CMD", "curl", "http://localhost:8080/health" ]
       interval: 30s
       retries: 3
       start_period: 10s
@@ -142,7 +134,6 @@ services:
     restart: on-failure:5
     environment:
       RUST_LOG: info
-
   # nginx:
   #   depends_on:
   #     - node
