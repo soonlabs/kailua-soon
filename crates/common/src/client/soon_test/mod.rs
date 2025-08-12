@@ -166,7 +166,8 @@ pub(crate) fn tx_to_execution(
             ..Default::default()
         },
         artifacts: BlockBuildingOutcome {
-            header,
+            block_info: header,
+            state_root: claimed_output,
             execution_result: vec![],
         },
         claimed_output,

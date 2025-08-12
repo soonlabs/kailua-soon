@@ -36,6 +36,7 @@ use soon_derive::traits::{BlobProvider, L2ChainProvider};
 use std::fmt::Debug;
 use std::mem::take;
 use std::sync::{Arc, Mutex};
+use soon_primitives::blocks::L2BlockHeader;
 use tracing::info;
 
 /// Initializes the L1, L2, and DA providers for the core client.
@@ -146,7 +147,6 @@ where
         StatelessL2Builder<
             OracleL2ChainProvider<O>,
             OracleL2ChainProvider<O>,
-            MemoryAccountsCallback,
         >,
         O,
         B,
@@ -271,7 +271,11 @@ where
                 l2_provider.clone(),
                 None,
             );
-            kona_executor.update_safe_head(safe_head)?;
+            kona_executor.update_safe_head(L2BlockHeader {
+                block_info: safe_head.block_info,
+                //TODO replace output_root with state root
+                account_root: boot.claimed_l2_output_root,
+            })?;
 
             // Validate expected block count
             assert_eq!(expected_output_count, execution_cache.len());
@@ -288,7 +292,7 @@ where
                     .last()
                     .unwrap()
                     .artifacts
-                    .header
+                    .block_info
                     .block_info
                     .number,
                 boot.claimed_l2_block_number
@@ -299,7 +303,7 @@ where
             for execution in execution_cache {
                 info!(
                     "enter execution {}/{}",
-                    execution.artifacts.header.block_info.number, boot.claimed_l2_block_number
+                    execution.artifacts.block_info.block_info.number, boot.claimed_l2_block_number
                 );
                 // Verify initial state
                 assert_eq!(execution.agreed_output, latest_output_root);
@@ -312,7 +316,8 @@ where
                     .context("compute_output_root: Verify post state")?;
 
                 // check l2 header
-                assert_eq!(execution.artifacts.header, executor_result.header);
+                assert_eq!(execution.artifacts.block_info, executor_result.block_info);
+                assert_eq!(execution.artifacts.state_root, executor_result.state_root);
                 //TODO check result
                 // assert_eq!(
                 //     execution.artifacts.execution_result,
@@ -320,12 +325,15 @@ where
                 // );
 
                 // Update state
-                kona_executor.update_safe_head(execution.artifacts.header)?;
+                kona_executor.update_safe_head(L2BlockHeader {
+                    block_info: execution.artifacts.block_info.block_info,
+                    account_root: executor_result.state_root,
+                })?;
                 // Verify post state
                 assert_eq!(execution.claimed_output, latest_output_root);
                 client::log(&format!(
                     "OUTPUT: {}/{}",
-                    execution.artifacts.header.block_info.number, boot.claimed_l2_block_number
+                    execution.artifacts.block_info.block_info.number, boot.claimed_l2_block_number
                 ));
             }
 
@@ -532,7 +540,7 @@ pub mod tests {
             } else {
                 Default::default()
             };
-        derive_to_execution::<StatelessL2Builder<_, _, MemoryAccountsCallback>, _, _>(
+        derive_to_execution::<StatelessL2Builder<_, _>, _, _>(
             boot_info,
             oracle.clone(),
             OracleBlobProvider::new(oracle),
@@ -612,7 +620,7 @@ pub mod tests {
         execution_cache: Vec<Arc<Execution>>,
     ) -> anyhow::Result<B256> {
         let oracle = Arc::new(TestOracle::new(boot_info.clone()));
-        test_execution_ex::<StatelessL2Builder<_, _, MemoryAccountsCallback>, _, _>(
+        test_execution_ex::<StatelessL2Builder<_, _>, _, _>(
             boot_info,
             execution_cache,
             oracle.clone(),

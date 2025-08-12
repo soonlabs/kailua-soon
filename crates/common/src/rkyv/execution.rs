@@ -14,6 +14,7 @@
 
 use alloy_eips::eip7685::Requests;
 use alloy_evm::block::BlockExecutionResult;
+use alloy_primitives::B256;
 use fraud_executor::outcome::BlockBuildingOutcome;
 use op_alloy_consensus::OpReceiptEnvelope;
 use rkyv::rancor::Fallible;
@@ -24,18 +25,19 @@ use soon_primitives::blocks::L2BlockInfo;
 pub struct BlockBuildingOutcomeRkyv;
 
 impl ArchiveWith<BlockBuildingOutcome> for BlockBuildingOutcomeRkyv {
-    type Archived = Archived<(Vec<u8>, Vec<u8>)>;
-    type Resolver = Resolver<(Vec<u8>, Vec<u8>)>;
+    type Archived = Archived<(Vec<u8>, Vec<u8>, Vec<u8>)>;
+    type Resolver = Resolver<(Vec<u8>, Vec<u8>, Vec<u8>)>;
 
     fn resolve_with(
         field: &BlockBuildingOutcome,
         resolver: Self::Resolver,
         out: Place<Self::Archived>,
     ) {
-        let block_header = bincode::serialize(&field.header).unwrap();
+        let block_header = bincode::serialize(&field.block_info).unwrap();
+        let state_root = bincode::serialize(&field.state_root).unwrap();
         let execution_result = bincode::serialize(&field.execution_result).unwrap();
-        let field = (block_header, execution_result);
-        <(Vec<u8>, Vec<u8>) as Archive>::resolve(&field, resolver, out);
+        let field = (block_header, state_root, execution_result);
+        <(Vec<u8>, Vec<u8>, Vec<u8>) as Archive>::resolve(&field, resolver, out);
     }
 }
 
@@ -48,28 +50,31 @@ where
         field: &BlockBuildingOutcome,
         serializer: &mut S,
     ) -> Result<Self::Resolver, S::Error> {
-        let header = bincode::serialize(&field.header).unwrap();
+        let header = bincode::serialize(&field.block_info).unwrap();
+        let state_root = bincode::serialize(&field.state_root).unwrap();
         let execution_result = bincode::serialize(&field.execution_result).unwrap();
-        let field = (header, execution_result);
-        <(Vec<u8>, Vec<u8>) as rkyv::Serialize<S>>::serialize(&field, serializer)
+        let field = (header, state_root, execution_result);
+        <(Vec<u8>, Vec<u8>, Vec<u8>) as rkyv::Serialize<S>>::serialize(&field, serializer)
     }
 }
 
-impl<D: Fallible> DeserializeWith<Archived<(Vec<u8>, Vec<u8>)>, BlockBuildingOutcome, D>
+impl<D: Fallible> DeserializeWith<Archived<(Vec<u8>, Vec<u8>, Vec<u8>)>, BlockBuildingOutcome, D>
     for BlockBuildingOutcomeRkyv
 where
     D: Fallible + ?Sized,
     <D as Fallible>::Error: rkyv::rancor::Source,
 {
     fn deserialize_with(
-        field: &Archived<(Vec<u8>, Vec<u8>)>,
+        field: &Archived<(Vec<u8>, Vec<u8>, Vec<u8>)>,
         deserializer: &mut D,
     ) -> Result<BlockBuildingOutcome, D::Error> {
-        let field: (Vec<u8>, Vec<u8>) = rkyv::Deserialize::deserialize(field, deserializer)?;
-        let header: L2BlockInfo = bincode::deserialize(field.0.as_slice()).unwrap();
-        let execution_result = bincode::deserialize(field.1.as_slice()).unwrap();
+        let field: (Vec<u8>, Vec<u8>, Vec<u8>) = rkyv::Deserialize::deserialize(field, deserializer)?;
+        let block_info: L2BlockInfo = bincode::deserialize(field.0.as_slice()).unwrap();
+        let state_root: B256 = bincode::deserialize(field.1.as_slice()).unwrap();
+        let execution_result = bincode::deserialize(field.2.as_slice()).unwrap();
         Ok(BlockBuildingOutcome {
-            header,
+            block_info,
+            state_root,
             execution_result,
         })
     }

@@ -358,7 +358,7 @@ pub fn stitch_executions(
                     .last()
                     .expect("Empty execution trace")
                     .artifacts
-                    .header
+                    .block_info
                     .block_info
                     .number,
             },

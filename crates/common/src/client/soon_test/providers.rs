@@ -17,6 +17,7 @@ use soon_primitives::system::SystemConfig;
 use spin::RwLock;
 use std::fmt::Debug;
 use std::sync::Arc;
+use solana_sdk::pubkey::Pubkey;
 
 /// Test L1 Chain Provider for testing purposes
 #[derive(Debug, Clone)]
@@ -282,7 +283,7 @@ impl<O> TrieDBProvider for TestOracleL2ChainProvider<O>
 where
     O: CommsClient + Send + Sync + Debug,
 {
-    fn bytecode_by_hash(&self, hash: B256) -> Result<Bytes, Self::Error> {
+    fn data_by_hash(&self, hash: B256) -> Result<Bytes, Self::Error> {
         kona_proof::block_on(async move {
             self.oracle
                 .get(PreimageKey::new(*hash, PreimageKeyType::Keccak256))
@@ -304,17 +305,7 @@ where
         Ok(())
     }
 
-    fn hint_account_proof(&self, _address: Address, _block_number: u64) -> Result<(), Self::Error> {
-        // No-op for testing
-        Ok(())
-    }
-
-    fn hint_storage_proof(
-        &self,
-        _address: Address,
-        _index: U256,
-        _block_number: u64,
-    ) -> Result<(), Self::Error> {
+    fn hint_account_proof(&self, _pubkey: &Pubkey, _block_number: u64) -> Result<(), Self::Error> {
         // No-op for testing
         Ok(())
     }
