@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloy::providers::RootProvider;
 use alloy_primitives::B256;
 use anyhow::{anyhow, bail, Context};
 use clap::Parser;
@@ -30,7 +29,7 @@ use std::env::set_var;
 use tempfile::tempdir;
 use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
-use jsonrpsee::http_client::{HttpClient, HttpClientBuilder};
+use jsonrpsee::http_client::HttpClientBuilder;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -39,8 +38,8 @@ async fn main() -> anyhow::Result<()> {
     set_var("KAILUA_VERBOSITY", args.v.to_string());
 
     // fetch starting block number
-    let l2_node_provider = args.op_node_address.as_ref().map(|addr| {
-        SoonNodeProvider(HttpClientBuilder::default().build(addr))
+    let l2_node_provider = args.soon_node_address.as_ref().map(|addr| {
+        SoonNodeProvider(HttpClientBuilder::default().build(addr).expect("invalid soon node address"))
     });
 
     // set tmp data dir if data dir unset

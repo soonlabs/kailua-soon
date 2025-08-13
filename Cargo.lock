@@ -7932,6 +7932,7 @@ dependencies = [
  "revm",
  "serde",
  "solana-sdk",
+ "soon-mpt-primitives",
  "soon-primitives",
  "thiserror 2.0.12",
  "tracing",
@@ -7990,6 +7991,7 @@ dependencies = [
  "alloy-trie 0.8.1",
  "op-alloy-rpc-types-engine",
  "serde",
+ "solana-sdk",
  "thiserror 2.0.12",
 ]
 
@@ -8034,6 +8036,7 @@ dependencies = [
  "op-revm",
  "serde",
  "serde_json",
+ "solana-sdk",
  "solana-transaction-status",
  "soon-da-provider",
  "soon-derive",
