@@ -21,8 +21,9 @@ use alloy::primitives::{Address, Bytes, U256};
 use alloy::providers::{Provider, RootProvider};
 use alloy::sol_types::SolValue;
 use anyhow::{anyhow, bail, Context};
+use jsonrpsee::http_client::HttpClientBuilder;
 use kailua_build::KAILUA_FPVM_ID;
-use kailua_client::provider::OpNodeProvider;
+use kailua_client::provider::SoonNodeProvider;
 use kailua_client::telemetry::TelemetryArgs;
 use kailua_client::{await_tel, await_tel_res};
 use kailua_common::config::{config_hash, BN254_CONTROL_ID, CONTROL_ROOT};
@@ -40,10 +41,7 @@ pub struct FastTrackArgs {
 
     /// Address of the OP-NODE endpoint to use
     #[clap(long, env)]
-    pub op_node_url: String,
-    /// Address of the OP-GETH endpoint to use (eth and debug namespace required).
-    #[clap(long, env)]
-    pub op_geth_url: String,
+    pub soon_node_url: String,
     /// Address of the ethereum rpc endpoint to use (eth namespace required)
     #[clap(long, env)]
     pub eth_rpc_url: String,
@@ -101,19 +99,18 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
     let tracer = tracer("kailua");
     let context = opentelemetry::Context::current_with_span(tracer.start("fast_track"));
 
-    let op_node_provider = OpNodeProvider(RootProvider::new_http(
-        args.op_node_url.as_str().try_into()?,
-    ));
+    let soon_node_provider = SoonNodeProvider(
+        HttpClientBuilder::default()
+            .build(args.soon_node_url.as_str())
+            .expect("invalid soon node url"),
+    );
     let eth_rpc_provider =
         RootProvider::<Ethereum>::new_http(args.eth_rpc_url.as_str().try_into()?);
 
     info!("Fetching rollup configuration from rpc endpoints.");
     // fetch rollup config
-    let config = await_tel!(
-        context,
-        fetch_rollup_config(&args.op_node_url, &args.op_geth_url, None)
-    )
-    .context("fetch_rollup_config")?;
+    let config = await_tel!(context, fetch_rollup_config(&args.soon_node_url, None))
+        .context("fetch_rollup_config")?;
     let rollup_config_hash = config_hash(&config).context("config_hash")?;
     info!("RollupConfigHash({})", hex::encode(rollup_config_hash));
 
@@ -199,7 +196,7 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
         tracer,
         "root_claim",
         retry_res_ctx_timeout!(
-            op_node_provider
+            soon_node_provider
                 .output_at_block(args.starting_block_number)
                 .await
         )

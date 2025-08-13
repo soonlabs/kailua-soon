@@ -48,12 +48,9 @@ pub struct CoreArgs {
     #[arg(long, short, help = "Verbosity level (0-4)", action = clap::ArgAction::Count)]
     pub v: u8,
 
-    /// Address of the OP-NODE endpoint to use
+    /// Address of the SOON-NODE endpoint to use.
     #[clap(long, env)]
-    pub op_node_url: String,
-    /// Address of the OP-GETH endpoint to use (eth and debug namespace required).
-    #[clap(long, env)]
-    pub op_geth_url: String,
+    pub soon_node_url: String,
     /// Address of the ethereum rpc endpoint to use (eth namespace required)
     #[clap(long, env)]
     pub eth_rpc_url: String,

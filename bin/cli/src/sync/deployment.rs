@@ -148,6 +148,7 @@ impl SyncDeployment {
             .stall_with_context(context.clone(), "KailuaGame::GENESIS_TIME_STAMP")
             .await
             .to();
+        //TODO
         let block_time = kailua_game_implementation
             .L2_BLOCK_TIME()
             .stall_with_context(context.clone(), "KailuaGame::L2_BLOCK_TIME")

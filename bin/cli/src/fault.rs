@@ -23,7 +23,8 @@ use alloy::primitives::{Bytes, B256, U256};
 use alloy::providers::RootProvider;
 use alloy::sol_types::SolValue;
 use anyhow::Context;
-use kailua_client::provider::OpNodeProvider;
+use jsonrpsee::http_client::HttpClientBuilder;
+use kailua_client::provider::SoonNodeProvider;
 use kailua_client::{await_tel, await_tel_res};
 use kailua_common::blobs::hash_to_fe;
 use kailua_common::config::config_hash;
@@ -51,9 +52,11 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
     let tracer = tracer("kailua");
     let context = opentelemetry::Context::current_with_span(tracer.start("fault"));
 
-    let op_node_provider = OpNodeProvider(RootProvider::new_http(
-        args.propose_args.core.op_node_url.as_str().try_into()?,
-    ));
+    let soon_node_provider = SoonNodeProvider(
+        HttpClientBuilder::default()
+            .build(args.propose_args.core.soon_node_url.as_str())
+            .expect("invalid soon node url"),
+    );
     let eth_rpc_provider =
         RootProvider::<Ethereum>::new_http(args.propose_args.core.eth_rpc_url.as_str().try_into()?);
 
@@ -61,11 +64,7 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
     // fetch rollup config
     let config = await_tel!(
         context,
-        fetch_rollup_config(
-            &args.propose_args.core.op_node_url,
-            &args.propose_args.core.op_geth_url,
-            None,
-        )
+        fetch_rollup_config(&args.propose_args.core.soon_node_url, None,)
     )
     .context("fetch_rollup_config")?;
     let rollup_config_hash = config_hash(&config).expect("Configuration hash derivation error");
@@ -149,7 +148,7 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
             tracer,
             "proposed_output_root",
             retry_res_ctx_timeout!(
-                op_node_provider
+                soon_node_provider
                     .output_at_block(proposed_block_number)
                     .await
             )
@@ -171,7 +170,7 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
                 context,
                 tracer,
                 "output_hash",
-                retry_res_ctx_timeout!(op_node_provider.output_at_block(io_block_number).await)
+                retry_res_ctx_timeout!(soon_node_provider.output_at_block(io_block_number).await)
             )
         } else {
             B256::ZERO

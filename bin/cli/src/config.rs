@@ -37,9 +37,6 @@ pub struct ConfigArgs {
     /// URL of OP-NODE endpoint to use
     #[clap(long, env)]
     pub op_node_url: String,
-    /// URL of OP-GETH endpoint to use (eth and debug namespace required).
-    #[clap(long, env)]
-    pub op_geth_url: String,
     /// Address of the ethereum rpc endpoint to use (eth namespace required)
     #[clap(long, env)]
     pub eth_rpc_url: String,
@@ -52,11 +49,8 @@ pub async fn config(args: ConfigArgs) -> anyhow::Result<()> {
     let tracer = tracer("kailua");
     let context = opentelemetry::Context::current_with_span(tracer.start("config"));
 
-    let config = await_tel!(
-        context,
-        fetch_rollup_config(&args.op_node_url, &args.op_geth_url, None)
-    )
-    .context("fetch_rollup_config")?;
+    let config = await_tel!(context, fetch_rollup_config(&args.op_node_url, None))
+        .context("fetch_rollup_config")?;
     debug!("{config:?}");
     let rollup_config_hash = config_hash(&config).expect("Configuration hash derivation error");
 

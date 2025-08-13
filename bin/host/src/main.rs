@@ -16,7 +16,7 @@ use alloy::providers::RootProvider;
 use alloy_primitives::B256;
 use anyhow::{anyhow, bail, Context};
 use clap::Parser;
-use kailua_client::provider::OpNodeProvider;
+use kailua_client::provider::SoonNodeProvider;
 use kailua_client::proving::ProvingError;
 use kailua_common::boot::StitchedBootInfo;
 use kailua_host::args::KailuaHostArgs;
@@ -30,6 +30,7 @@ use std::env::set_var;
 use tempfile::tempdir;
 use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
+use jsonrpsee::http_client::{HttpClient, HttpClientBuilder};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -38,12 +39,8 @@ async fn main() -> anyhow::Result<()> {
     set_var("KAILUA_VERBOSITY", args.v.to_string());
 
     // fetch starting block number
-    let op_node_provider = args.op_node_address.as_ref().map(|addr| {
-        OpNodeProvider(RootProvider::new_http(
-            addr.as_str()
-                .try_into()
-                .expect("Failed to parse op_node_address"),
-        ))
+    let l2_node_provider = args.op_node_address.as_ref().map(|addr| {
+        SoonNodeProvider(HttpClientBuilder::default().build(addr))
     });
 
     // set tmp data dir if data dir unset
@@ -84,7 +81,7 @@ async fn main() -> anyhow::Result<()> {
         concurrent_execution_preflight(
             &args,
             rollup_config.clone(),
-            op_node_provider.as_ref().expect("Missing op_node_provider"),
+            l2_node_provider.as_ref().expect("Missing l2_node_provider"),
             disk_kv_store.clone(),
         )
         .await
@@ -227,9 +224,9 @@ async fn main() -> anyhow::Result<()> {
                 num_proofs += 1;
                 // Split workload at midpoint (num_blocks > 1)
                 let mid_point = starting_block + num_blocks / 2;
-                let mid_output = op_node_provider
+                let mid_output = l2_node_provider
                     .as_ref()
-                    .expect("Missing op_node_provider")
+                    .expect("Missing l2_node_provider")
                     .output_at_block(mid_point)
                     .await?;
                 // Lower half workload ends at midpoint (inclusive)

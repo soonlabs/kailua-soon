@@ -18,7 +18,6 @@ use crate::{client, precondition};
 // use alloy_op_evm::OpEvmFactory;
 use alloy_primitives::B256;
 use anyhow::{bail, Context};
-use fraud_executor::executor::MemoryAccountsCallback;
 use kona_driver::{Driver, Executor};
 use kona_executor::{L2BlockBuilder, StatelessL2Builder, TrieDBProvider};
 use kona_mpt::TrieHinter;

@@ -5,12 +5,13 @@ use crate::{
 use alloy_consensus::Header;
 use alloy_primitives::{Address, Bytes, B256};
 use anyhow::{Context, Result};
+use bridge::solana_program::fee_calculator::FeeRateGovernor;
 use crossbeam_channel::Receiver;
 use fraud_executor::{
     accounts::{AccountPairs, SoonAccounts},
     outcome::BlockBuildingOutcome,
 };
-use kona_executor::{L2BlockBuilder, SvmStartUpMeta};
+use kona_executor::{L2BlockBuilder};
 use kona_preimage::CommsClient;
 use kona_proof::{BootInfo, FlushableCache};
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
@@ -50,7 +51,7 @@ pub struct ExecutionStorageItems {
     pub safe_head: L2BlockInfo,
     pub l2_blocks: HashMap<u64, L2Block>,
     pub init_accounts: HashMap<u64, SoonAccounts>,
-    pub startup_meta: HashMap<u64, SvmStartUpMeta>,
+    // pub startup_meta: HashMap<u64, SvmStartUpMeta>,
     pub sysvar_accounts: HashMap<u64, AccountPairs>,
     pub slot_hash_pairs: HashMap<u64, (B256, B256)>,
 }
@@ -169,6 +170,8 @@ pub(crate) fn tx_to_execution(
             block_info: header,
             state_root: claimed_output,
             execution_result: vec![],
+            fee_rate_governor: FeeRateGovernor::default(),
+            signature_count: 0,
         },
         claimed_output,
     })

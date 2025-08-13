@@ -129,11 +129,8 @@ pub async fn handle_proof_requests(
     let context = opentelemetry::Context::current_with_span(tracer.start("handle_proof_requests"));
 
     // Fetch rollup configuration
-    let rollup_config = await_tel!(
-        context,
-        fetch_rollup_config(&args.core.op_node_url, &args.core.op_geth_url, None)
-    )
-    .context("fetch_rollup_config")?;
+    let rollup_config = await_tel!(context, fetch_rollup_config(&args.core.soon_node_url, None))
+        .context("fetch_rollup_config")?;
     //TODO l2 chain id
     let l2_chain_id = "0".to_string();
     let config_hash = B256::from(config_hash(&rollup_config)?);

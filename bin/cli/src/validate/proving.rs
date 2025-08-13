@@ -15,11 +15,9 @@
 use crate::channel::DuplexChannel;
 use crate::sync::agent::SyncAgent;
 use crate::sync::proposal::Proposal;
-use crate::transact::rpc::{get_block_by_number, get_next_block};
+use crate::transact::rpc::get_next_block;
 use crate::validate::{Message, ValidateArgs};
 use alloy::eips::eip4844::IndexedBlobHash;
-use alloy::network::primitives::HeaderResponse;
-use alloy::network::BlockResponse;
 use alloy::primitives::{Address, B256};
 use anyhow::{bail, Context};
 use kailua_client::await_tel;
@@ -30,7 +28,7 @@ use opentelemetry::trace::FutureExt;
 use opentelemetry::trace::{TraceContextExt, Tracer};
 use risc0_zkvm::sha::Digestible;
 use risc0_zkvm::InnerReceipt;
-use soon_primitives::blocks::BlockInfo;
+use soon_primitives::blocks::{str_block_hash_to, BlockInfo};
 use std::path::PathBuf;
 use tracing::{debug, info};
 
@@ -65,8 +63,8 @@ pub fn create_proving_args(
         String::from("--payout-recipient-address"),
         payout_recipient.to_string(),
         // l2 el node
-        String::from("--op-node-address"),
-        args.core.op_node_url.clone(),
+        String::from("--soon-node-address"),
+        args.core.soon_node_url.clone(),
     ];
     // precondition data
     if let Some(precondition_data) = precondition_validation_data {
@@ -139,7 +137,7 @@ pub fn create_proving_args(
         args.core.beacon_rpc_url.clone(),
         // l2 el node
         String::from("--l2-node-address"),
-        args.core.op_geth_url.clone(),
+        args.core.soon_node_url.clone(),
         // path to cache
         String::from("--data-dir"),
         data_dir.to_str().unwrap().to_string(),
@@ -242,12 +240,17 @@ pub async fn request_fault_proof(
     debug!("l2_head_number {:?}", &agreed_l2_head_number);
 
     // Get L2 head hash
-    let agreed_l2_head_hash = await_tel!(
-        context,
-        get_block_by_number(&agent.provider.l2_provider, agreed_l2_head_number,)
-    )?
-    .header()
-    .hash();
+    let agreed_l2_head_hash = str_block_hash_to(
+        await_tel!(
+            context,
+            agent
+                .provider
+                .l2_provider
+                .get_block_by_number(agreed_l2_head_number)
+        )?
+        .blockhash
+        .as_str(),
+    );
     debug!("l2_head {:?}", &agreed_l2_head_hash);
 
     // Get L2 head output root
@@ -321,12 +324,17 @@ pub async fn request_validity_proof(
         None
     };
     // Get L2 head hash
-    let agreed_l2_head_hash = await_tel!(
-        context,
-        get_block_by_number(&agent.provider.l2_provider, parent.output_block_number)
-    )?
-    .header
-    .hash;
+    let agreed_l2_head_hash = str_block_hash_to(
+        await_tel!(
+            context,
+            agent
+                .provider
+                .l2_provider
+                .get_block_by_number(parent.output_block_number)
+        )?
+        .blockhash
+        .as_str(),
+    );
     debug!("l2_head {:?}", &agreed_l2_head_hash);
     // Message proving task
     channel

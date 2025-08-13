@@ -15,6 +15,7 @@
 use alloy_eips::eip7685::Requests;
 use alloy_evm::block::BlockExecutionResult;
 use alloy_primitives::B256;
+use bridge::solana_program::fee_calculator::FeeRateGovernor;
 use fraud_executor::outcome::BlockBuildingOutcome;
 use op_alloy_consensus::OpReceiptEnvelope;
 use rkyv::rancor::Fallible;
@@ -76,6 +77,8 @@ where
             block_info,
             state_root,
             execution_result,
+            fee_rate_governor: FeeRateGovernor::default(),
+            signature_count: 0,
         })
     }
 }

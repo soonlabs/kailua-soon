@@ -9,10 +9,9 @@ use anyhow::Result;
 use bridge::pda::{spl_token_mint_pubkey, spl_token_owner_pubkey};
 use crossbeam_channel::Receiver;
 use fraud_executor::accounts::SoonAccounts;
-use fraud_executor::executor::MemoryAccountsCallback;
+use litesvm::accounts_callback::MemoryAccountsCallback;
 use kona_executor::{
-    cal_init_accounts_hash, cal_init_state_root_hash, cal_svm_start_up_meta_hash,
-    slot_hash_pair_hash, SvmStartUpMeta,
+    cal_init_accounts_hash, cal_init_state_root_hash,
 };
 use kona_preimage::PreimageKey;
 use kona_proof::BootInfo;
@@ -95,12 +94,12 @@ pub(crate) fn executions_save_to_oracle(
         });
 
     // save startup meta
-    for (slot, startup_meta) in &storage_items.startup_meta {
-        oracle.insert_preimage(
-            PreimageKey::new_keccak256(cal_svm_start_up_meta_hash(*slot).0),
-            bincode::serialize(startup_meta)?,
-        );
-    }
+    // for (slot, startup_meta) in &storage_items.startup_meta {
+    //     oracle.insert_preimage(
+    //         PreimageKey::new_keccak256(cal_svm_start_up_meta_hash(*slot).0),
+    //         bincode::serialize(startup_meta)?,
+    //     );
+    // }
 
     // save sysvar accounts
     // for (slot, account_pairs) in &storage_items.sysvar_accounts {
@@ -111,12 +110,12 @@ pub(crate) fn executions_save_to_oracle(
     // }
 
     // save slot hash pairs
-    for (slot, (hash, parent_hash)) in &storage_items.slot_hash_pairs {
-        oracle.insert_preimage(
-            PreimageKey::new_keccak256(slot_hash_pair_hash(*slot).0),
-            bincode::serialize(&(*hash, *parent_hash))?,
-        );
-    }
+    // for (slot, (hash, parent_hash)) in &storage_items.slot_hash_pairs {
+    //     oracle.insert_preimage(
+    //         PreimageKey::new_keccak256(slot_hash_pair_hash(*slot).0),
+    //         bincode::serialize(&(*hash, *parent_hash))?,
+    //     );
+    // }
 
     // save l2 blocks
     for (slot, block) in &storage_items.l2_blocks {
@@ -141,13 +140,13 @@ pub(crate) async fn update_execution_storage_items(
     executor.storage_query(|s| {
         let soon_accounts = SoonAccounts::try_from(s)?;
         storage_items.init_accounts.insert(slot, soon_accounts);
-        storage_items.startup_meta.insert(
-            s.current_slot(),
-            SvmStartUpMeta {
-                epoch: s.current_bank().epoch(),
-                fee_collector: *s.current_bank().collector_id(),
-            },
-        );
+        // storage_items.startup_meta.insert(
+        //     s.current_slot(),
+        //     SvmStartUpMeta {
+        //         epoch: s.current_bank().epoch(),
+        //         fee_collector: *s.current_bank().collector_id(),
+        //     },
+        // );
         storage_items
             .sysvar_accounts
             .insert(slot, s.export_sysvars()?);
@@ -189,13 +188,13 @@ pub(crate) async fn blocks_to_execution_cache(
         storage_items
             .init_accounts
             .insert(s.current_slot(), soon_accounts);
-        storage_items.startup_meta.insert(
-            s.current_slot(),
-            SvmStartUpMeta {
-                epoch: s.current_bank().epoch(),
-                fee_collector: *s.current_bank().collector_id(),
-            },
-        );
+        // storage_items.startup_meta.insert(
+        //     s.current_slot(),
+        //     SvmStartUpMeta {
+        //         epoch: s.current_bank().epoch(),
+        //         fee_collector: *s.current_bank().collector_id(),
+        //     },
+        // );
         Ok(())
     })?;
     let agreed_output = current_executor_state_root(&executor)?;

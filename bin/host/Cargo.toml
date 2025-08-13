@@ -28,6 +28,7 @@ tracing-subscriber.workspace = true
 tracing.workspace = true
 
 opentelemetry.workspace = true
+jsonrpsee.workspace = true
 
 # Alloy
 alloy = { workspace = true, features = ["rlp", "reqwest"] }

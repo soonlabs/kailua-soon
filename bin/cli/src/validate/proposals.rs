@@ -797,7 +797,7 @@ pub async fn handle_proposals(
                     retry_res_ctx_timeout!(
                         agent
                             .provider
-                            .op_provider
+                            .l2_provider
                             .output_at_block(proof_journal.claimed_l2_block_number)
                             .await
                     )

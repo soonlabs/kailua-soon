@@ -89,7 +89,7 @@ impl SyncAgent {
         info!("Fetching rollup configuration from rpc endpoints.");
         let config = await_tel_res!(
             context,
-            fetch_rollup_config(&core_args.op_node_url, &core_args.op_geth_url, None),
+            fetch_rollup_config(&core_args.soon_node_url, None),
             "fetch_rollup_config"
         )?;
         let rollup_config_hash = config_hash(&config).expect("Configuration hash derivation error");
@@ -223,7 +223,7 @@ impl SyncAgent {
             context,
             tracer,
             "sync_status",
-            retry_res_ctx_timeout!(self.provider.op_provider.sync_status().await)
+            retry_res_ctx_timeout!(self.provider.l2_provider.sync_status().await)
         );
         let safe_l2_number = sync_status["safe_l2"]["number"].as_u64().unwrap();
         #[cfg(feature = "devnet")]
@@ -714,7 +714,7 @@ impl SyncAgent {
                 .step_by(step as usize)
                 .filter(|i| !self.outputs.contains_key(i))
                 .map(|i| {
-                    let provider = self.provider.op_provider.clone();
+                    let provider = self.provider.l2_provider.clone();
                     Box::pin(async move {
                         (
                             i,

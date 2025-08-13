@@ -92,7 +92,7 @@ dependencies = [
 [[package]]
 name = "agave-geyser-plugin-interface"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "log",
  "solana-sdk",
@@ -5994,6 +5994,7 @@ dependencies = [
  "l1-block-info",
  "litesvm",
  "serde",
+ "solana-program",
  "solana-sdk",
  "soon-mpt-primitives",
  "soon-mpt-trie",
@@ -7634,6 +7635,7 @@ dependencies = [
  "gcloud-sdk",
  "hex",
  "itertools 0.14.0",
+ "jsonrpsee",
  "kailua-build",
  "kailua-client",
  "kailua-common",
@@ -7678,6 +7680,7 @@ dependencies = [
  "fraud-executor",
  "hex",
  "human_bytes",
+ "jsonrpsee",
  "kailua-build",
  "kailua-common",
  "kailua-contracts",
@@ -7686,6 +7689,7 @@ dependencies = [
  "kona-preimage",
  "kona-proof",
  "kona-std-fpvm",
+ "litesvm",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
@@ -7736,6 +7740,7 @@ dependencies = [
  "kona-proof",
  "l1-block-info",
  "lazy_static",
+ "litesvm",
  "op-alloy-consensus 0.15.4",
  "op-alloy-rpc-types-engine",
  "pot",
@@ -7781,6 +7786,7 @@ dependencies = [
  "bytemuck",
  "clap 4.5.41",
  "hashbrown 0.15.4",
+ "jsonrpsee",
  "kailua-build",
  "kailua-client",
  "kailua-common",
@@ -8355,6 +8361,7 @@ dependencies = [
  "solana-compute-budget",
  "solana-compute-budget-program",
  "solana-config-program",
+ "solana-entry",
  "solana-loader-v4-program",
  "solana-program",
  "solana-program-runtime",
@@ -12798,7 +12805,7 @@ dependencies = [
 [[package]]
 name = "solana-account-decoder"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "Inflector",
  "base64 0.22.1",
@@ -12822,7 +12829,7 @@ dependencies = [
 [[package]]
 name = "solana-accounts-db"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bincode",
  "blake3",
@@ -12866,7 +12873,7 @@ dependencies = [
 [[package]]
 name = "solana-address-lookup-table-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bincode",
  "bytemuck",
@@ -12883,7 +12890,7 @@ dependencies = [
 [[package]]
 name = "solana-bloom"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bv",
  "fnv",
@@ -12899,7 +12906,7 @@ dependencies = [
 [[package]]
 name = "solana-bpf-loader-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bincode",
  "byteorder",
@@ -12920,7 +12927,7 @@ dependencies = [
 [[package]]
 name = "solana-bucket-map"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bv",
  "bytemuck",
@@ -12938,7 +12945,7 @@ dependencies = [
 [[package]]
 name = "solana-clap-utils"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "chrono",
  "clap 2.34.0",
@@ -12954,7 +12961,7 @@ dependencies = [
 [[package]]
 name = "solana-cli-config"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "dirs-next",
  "lazy_static",
@@ -12969,7 +12976,7 @@ dependencies = [
 [[package]]
 name = "solana-client"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "async-trait",
  "bincode",
@@ -13001,7 +13008,7 @@ dependencies = [
 [[package]]
 name = "solana-compute-budget"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "rustc_version 0.4.1",
  "solana-sdk",
@@ -13010,7 +13017,7 @@ dependencies = [
 [[package]]
 name = "solana-compute-budget-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "solana-program-runtime",
  "solana-sdk",
@@ -13019,7 +13026,7 @@ dependencies = [
 [[package]]
 name = "solana-config-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bincode",
  "chrono",
@@ -13032,7 +13039,7 @@ dependencies = [
 [[package]]
 name = "solana-connection-cache"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "async-trait",
  "bincode",
@@ -13052,7 +13059,7 @@ dependencies = [
 [[package]]
 name = "solana-core"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "ahash 0.8.12",
  "base64 0.22.1",
@@ -13129,7 +13136,7 @@ dependencies = [
 [[package]]
 name = "solana-cost-model"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "ahash 0.8.12",
  "lazy_static",
@@ -13151,7 +13158,7 @@ dependencies = [
 [[package]]
 name = "solana-curve25519"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bytemuck",
  "bytemuck_derive",
@@ -13163,7 +13170,7 @@ dependencies = [
 [[package]]
 name = "solana-download-utils"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "console",
  "indicatif",
@@ -13176,7 +13183,7 @@ dependencies = [
 [[package]]
 name = "solana-entry"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bincode",
  "crossbeam-channel",
@@ -13197,7 +13204,7 @@ dependencies = [
 [[package]]
 name = "solana-faucet"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bincode",
  "byteorder",
@@ -13220,7 +13227,7 @@ dependencies = [
 [[package]]
 name = "solana-genesis-utils"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "log",
  "solana-accounts-db",
@@ -13232,7 +13239,7 @@ dependencies = [
 [[package]]
 name = "solana-geyser-plugin-manager"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "agave-geyser-plugin-interface",
  "bs58 0.5.1",
@@ -13258,7 +13265,7 @@ dependencies = [
 [[package]]
 name = "solana-gossip"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "assert_matches",
  "bincode",
@@ -13305,7 +13312,7 @@ dependencies = [
 [[package]]
 name = "solana-inline-spl"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bytemuck",
  "rustc_version 0.4.1",
@@ -13315,7 +13322,7 @@ dependencies = [
 [[package]]
 name = "solana-ledger"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "assert_matches",
  "bincode",
@@ -13383,7 +13390,7 @@ dependencies = [
 [[package]]
 name = "solana-loader-v4-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "log",
  "solana-compute-budget",
@@ -13397,7 +13404,7 @@ dependencies = [
 [[package]]
 name = "solana-logger"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "env_logger 0.9.3",
  "lazy_static",
@@ -13407,7 +13414,7 @@ dependencies = [
 [[package]]
 name = "solana-measure"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "log",
  "solana-sdk",
@@ -13416,7 +13423,7 @@ dependencies = [
 [[package]]
 name = "solana-merkle-tree"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "fast-math",
  "solana-program",
@@ -13425,7 +13432,7 @@ dependencies = [
 [[package]]
 name = "solana-metrics"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "crossbeam-channel",
  "gethostname",
@@ -13439,7 +13446,7 @@ dependencies = [
 [[package]]
 name = "solana-net-utils"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bincode",
  "clap 3.2.25",
@@ -13467,7 +13474,7 @@ checksum = "8b8a731ed60e89177c8a7ab05fe0f1511cedd3e70e773f288f9de33a9cfdc21e"
 [[package]]
 name = "solana-perf"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "ahash 0.8.12",
  "bincode",
@@ -13493,7 +13500,7 @@ dependencies = [
 [[package]]
 name = "solana-poh"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "core_affinity",
  "crossbeam-channel",
@@ -13510,7 +13517,7 @@ dependencies = [
 [[package]]
 name = "solana-poseidon"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "ark-bn254 0.4.0",
  "light-poseidon",
@@ -13520,7 +13527,7 @@ dependencies = [
 [[package]]
 name = "solana-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "ark-bn254 0.4.0",
  "ark-ec 0.4.2",
@@ -13565,7 +13572,7 @@ dependencies = [
 [[package]]
 name = "solana-program-runtime"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "base64 0.22.1",
  "bincode",
@@ -13593,7 +13600,7 @@ dependencies = [
 [[package]]
 name = "solana-pubsub-client"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "crossbeam-channel",
  "futures-util",
@@ -13617,7 +13624,7 @@ dependencies = [
 [[package]]
 name = "solana-quic-client"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "async-mutex",
  "async-trait",
@@ -13642,7 +13649,7 @@ dependencies = [
 [[package]]
 name = "solana-rayon-threadlimit"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "lazy_static",
  "num_cpus",
@@ -13651,7 +13658,7 @@ dependencies = [
 [[package]]
 name = "solana-remote-wallet"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "console",
  "dialoguer",
@@ -13669,7 +13676,7 @@ dependencies = [
 [[package]]
 name = "solana-rpc"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "base64 0.22.1",
  "bincode",
@@ -13727,7 +13734,7 @@ dependencies = [
 [[package]]
 name = "solana-rpc-client"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -13753,7 +13760,7 @@ dependencies = [
 [[package]]
 name = "solana-rpc-client-api"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -13776,7 +13783,7 @@ dependencies = [
 [[package]]
 name = "solana-rpc-client-nonce-utils"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "clap 2.34.0",
  "solana-clap-utils",
@@ -13788,7 +13795,7 @@ dependencies = [
 [[package]]
 name = "solana-runtime"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "aquamarine",
  "arrayref",
@@ -13867,7 +13874,7 @@ dependencies = [
 [[package]]
 name = "solana-runtime-transaction"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "log",
  "rustc_version 0.4.1",
@@ -13879,7 +13886,7 @@ dependencies = [
 [[package]]
 name = "solana-sdk"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bincode",
  "bitflags 2.9.1",
@@ -13927,7 +13934,7 @@ dependencies = [
 [[package]]
 name = "solana-sdk-macro"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bs58 0.5.1",
  "proc-macro2",
@@ -13945,7 +13952,7 @@ checksum = "468aa43b7edb1f9b7b7b686d5c3aeb6630dc1708e86e31343499dd5c4d775183"
 [[package]]
 name = "solana-send-transaction-service"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "crossbeam-channel",
  "log",
@@ -13961,7 +13968,7 @@ dependencies = [
 [[package]]
 name = "solana-stake-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bincode",
  "log",
@@ -13976,7 +13983,7 @@ dependencies = [
 [[package]]
 name = "solana-storage-bigtable"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "backoff",
  "bincode",
@@ -14009,7 +14016,7 @@ dependencies = [
 [[package]]
 name = "solana-storage-proto"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bincode",
  "bs58 0.5.1",
@@ -14025,7 +14032,7 @@ dependencies = [
 [[package]]
 name = "solana-streamer"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "async-channel 1.9.0",
  "bytes",
@@ -14058,7 +14065,7 @@ dependencies = [
 [[package]]
 name = "solana-svm"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "itertools 0.12.1",
  "log",
@@ -14083,7 +14090,7 @@ dependencies = [
 [[package]]
 name = "solana-system-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bincode",
  "log",
@@ -14097,7 +14104,7 @@ dependencies = [
 [[package]]
 name = "solana-thin-client"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bincode",
  "log",
@@ -14111,7 +14118,7 @@ dependencies = [
 [[package]]
 name = "solana-tpu-client"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "async-trait",
  "bincode",
@@ -14134,7 +14141,7 @@ dependencies = [
 [[package]]
 name = "solana-transaction-metrics-tracker"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "Inflector",
  "base64 0.22.1",
@@ -14149,7 +14156,7 @@ dependencies = [
 [[package]]
 name = "solana-transaction-status"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "Inflector",
  "base64 0.22.1",
@@ -14175,7 +14182,7 @@ dependencies = [
 [[package]]
 name = "solana-turbine"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bincode",
  "bytes",
@@ -14211,7 +14218,7 @@ dependencies = [
 [[package]]
 name = "solana-type-overrides"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "lazy_static",
  "rand 0.8.5",
@@ -14220,7 +14227,7 @@ dependencies = [
 [[package]]
 name = "solana-udp-client"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "async-trait",
  "solana-connection-cache",
@@ -14234,7 +14241,7 @@ dependencies = [
 [[package]]
 name = "solana-unified-scheduler-logic"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "assert_matches",
  "solana-sdk",
@@ -14244,7 +14251,7 @@ dependencies = [
 [[package]]
 name = "solana-unified-scheduler-pool"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "assert_matches",
  "crossbeam-channel",
@@ -14264,7 +14271,7 @@ dependencies = [
 [[package]]
 name = "solana-version"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "log",
  "rustc_version 0.4.1",
@@ -14277,7 +14284,7 @@ dependencies = [
 [[package]]
 name = "solana-vote"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "itertools 0.12.1",
  "log",
@@ -14291,7 +14298,7 @@ dependencies = [
 [[package]]
 name = "solana-vote-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bincode",
  "log",
@@ -14310,7 +14317,7 @@ dependencies = [
 [[package]]
 name = "solana-wen-restart"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "anyhow",
  "log",
@@ -14334,7 +14341,7 @@ dependencies = [
 [[package]]
 name = "solana-zk-elgamal-proof-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bytemuck",
  "num-derive 0.4.2",
@@ -14347,7 +14354,7 @@ dependencies = [
 [[package]]
 name = "solana-zk-sdk"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "aes-gcm-siv",
  "base64 0.22.1",
@@ -14375,7 +14382,7 @@ dependencies = [
 [[package]]
 name = "solana-zk-token-proof-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "bytemuck",
  "num-derive 0.4.2",
@@ -14388,7 +14395,7 @@ dependencies = [
 [[package]]
 name = "solana-zk-token-sdk"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
 dependencies = [
  "aes-gcm-siv",
  "base64 0.22.1",

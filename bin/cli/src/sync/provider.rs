@@ -16,21 +16,21 @@ use crate::transact::blob::BlobProvider;
 use crate::CoreArgs;
 use alloy_provider::RootProvider;
 use anyhow::Context;
+use jsonrpsee::http_client::HttpClientBuilder;
 use kailua_client::await_tel;
-use kailua_client::provider::OpNodeProvider;
+use kailua_client::provider::SoonNodeProvider;
 use opentelemetry::trace::FutureExt;
 use opentelemetry::trace::{TraceContextExt, Tracer};
 
 /// A collection of RPC providers for L1 and L2 data
+/// TODO
 pub struct SyncProvider {
     /// DA provider for blobs
     pub da_provider: BlobProvider,
     /// Provider for L1 chain data
     pub l1_provider: RootProvider,
-    /// Provider for op-node queries
-    pub op_provider: OpNodeProvider,
     /// Provider for L2 chain data
-    pub l2_provider: RootProvider,
+    pub l2_provider: SoonNodeProvider,
 }
 
 impl SyncProvider {
@@ -41,15 +41,16 @@ impl SyncProvider {
         let da_provider = await_tel!(context, BlobProvider::new(core_args.beacon_rpc_url.clone()))
             .context("BlobProvider::new")?;
         let l1_provider = RootProvider::new_http(core_args.eth_rpc_url.as_str().try_into()?);
-        let op_provider = OpNodeProvider(RootProvider::new_http(
-            core_args.op_node_url.as_str().try_into()?,
-        ));
-        let l2_provider = RootProvider::new_http(core_args.op_geth_url.as_str().try_into()?);
+
+        let l2_provider = SoonNodeProvider(
+            HttpClientBuilder::default()
+                .build(core_args.soon_node_url.as_str())
+                .expect("invalid soon node url"),
+        );
 
         Ok(Self {
             da_provider,
             l1_provider,
-            op_provider,
             l2_provider,
         })
     }

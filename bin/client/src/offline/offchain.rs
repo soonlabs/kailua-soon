@@ -1,7 +1,7 @@
 use crate::offline::{OfflineClient, OfflineConfig};
 use alloy_primitives::{Address, B256};
 use anyhow::Result;
-use fraud_executor::executor::MemoryAccountsCallback;
+use litesvm::accounts_callback::MemoryAccountsCallback;
 use kailua_common::{
     client::{soon_test::derive_to_execution, stitching::run_stitching_client},
     test::mock::MockOracle,

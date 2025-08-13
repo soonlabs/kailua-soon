@@ -27,6 +27,8 @@ thiserror.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 tokio.workspace = true
+jsonrpsee.workspace = true
+litesvm.workspace = true
 
 opentelemetry.workspace = true
 opentelemetry_sdk.workspace = true
