@@ -801,7 +801,8 @@ pub async fn handle_proposals(
                             .output_at_block(proof_journal.claimed_l2_block_number)
                             .await
                     )
-                );
+                )
+                .hash();
                 if proof_journal.claimed_l2_output_root != op_node_output {
                     error!(
                         "Local op node output {op_node_output} doesn't match proof {}",

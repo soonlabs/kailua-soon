@@ -32,10 +32,10 @@ use kona_proof::{BootInfo, FlushableCache, HintType};
 use soon_derive::prelude::{ChainProvider, DAProvider};
 use soon_derive::sources::DAServerSource;
 use soon_derive::traits::{BlobProvider, L2ChainProvider};
+use soon_primitives::blocks::L2BlockHeader;
 use std::fmt::Debug;
 use std::mem::take;
 use std::sync::{Arc, Mutex};
-use soon_primitives::blocks::L2BlockHeader;
 use tracing::info;
 
 /// Initializes the L1, L2, and DA providers for the core client.
@@ -143,10 +143,7 @@ where
         kona_proof::block_on(async move { initialize_providers(clone_oracle, stream).await })?;
 
     run_core_client_ex::<
-        StatelessL2Builder<
-            OracleL2ChainProvider<O>,
-            OracleL2ChainProvider<O>,
-        >,
+        StatelessL2Builder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>>,
         O,
         B,
         OracleL1ChainProvider<O>,

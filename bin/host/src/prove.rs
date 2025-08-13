@@ -218,7 +218,8 @@ pub async fn compute_fpvm_proof(
         // upper half workload starts after midpoint
         let mut upper_job_args = oneshot_result.cached.args;
         upper_job_args.kona.agreed_l2_output_root = mid_output;
-        upper_job_args.kona.agreed_l2_block_number = mid_exec.artifacts.block_info.block_info.number;
+        upper_job_args.kona.agreed_l2_block_number =
+            mid_exec.artifacts.block_info.block_info.number;
         task_sender
             .send(Oneshot {
                 cached_task: create_cached_execution_task(

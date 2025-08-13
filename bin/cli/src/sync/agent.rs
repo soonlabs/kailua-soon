@@ -718,7 +718,9 @@ impl SyncAgent {
                     Box::pin(async move {
                         (
                             i,
-                            retry_res_timeout!(provider.output_at_block(i).await).await,
+                            retry_res_timeout!(provider.output_at_block(i).await)
+                                .await
+                                .hash(),
                         )
                     })
                 })

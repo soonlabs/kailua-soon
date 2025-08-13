@@ -16,11 +16,10 @@ use crate::transact::blob::BlobProvider;
 use crate::CoreArgs;
 use alloy_provider::RootProvider;
 use anyhow::Context;
-use jsonrpsee::http_client::HttpClientBuilder;
 use kailua_client::await_tel;
-use kailua_client::provider::SoonNodeProvider;
 use opentelemetry::trace::FutureExt;
 use opentelemetry::trace::{TraceContextExt, Tracer};
+use soon_l2_chain_provider::chain_provider::L2BlockFetcher;
 
 /// A collection of RPC providers for L1 and L2 data
 /// TODO
@@ -30,7 +29,7 @@ pub struct SyncProvider {
     /// Provider for L1 chain data
     pub l1_provider: RootProvider,
     /// Provider for L2 chain data
-    pub l2_provider: SoonNodeProvider,
+    pub l2_provider: L2BlockFetcher,
 }
 
 impl SyncProvider {
@@ -42,11 +41,7 @@ impl SyncProvider {
             .context("BlobProvider::new")?;
         let l1_provider = RootProvider::new_http(core_args.eth_rpc_url.as_str().try_into()?);
 
-        let l2_provider = SoonNodeProvider(
-            HttpClientBuilder::default()
-                .build(core_args.soon_node_url.as_str())
-                .expect("invalid soon node url"),
-        );
+        let l2_provider = L2BlockFetcher::new_with_url(core_args.soon_node_url.as_str());
 
         Ok(Self {
             da_provider,

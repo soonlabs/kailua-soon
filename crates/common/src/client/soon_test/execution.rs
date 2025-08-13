@@ -9,12 +9,10 @@ use anyhow::Result;
 use bridge::pda::{spl_token_mint_pubkey, spl_token_owner_pubkey};
 use crossbeam_channel::Receiver;
 use fraud_executor::accounts::SoonAccounts;
-use litesvm::accounts_callback::MemoryAccountsCallback;
-use kona_executor::{
-    cal_init_accounts_hash, cal_init_state_root_hash,
-};
+use kona_executor::{cal_init_accounts_hash, cal_init_state_root_hash};
 use kona_preimage::PreimageKey;
 use kona_proof::BootInfo;
+use litesvm::accounts_callback::MemoryAccountsCallback;
 use solana_sdk::{
     account::ReadableAccount, program_pack::Pack, signature::Keypair, signer::Signer,
 };

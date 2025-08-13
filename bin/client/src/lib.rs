@@ -18,7 +18,6 @@ pub mod bonsai;
 pub mod offline;
 pub mod oracle;
 pub mod proof;
-pub mod provider;
 pub mod proving;
 pub mod telemetry;
 pub mod witgen;

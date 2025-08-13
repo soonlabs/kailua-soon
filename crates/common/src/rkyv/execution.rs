@@ -69,7 +69,8 @@ where
         field: &Archived<(Vec<u8>, Vec<u8>, Vec<u8>)>,
         deserializer: &mut D,
     ) -> Result<BlockBuildingOutcome, D::Error> {
-        let field: (Vec<u8>, Vec<u8>, Vec<u8>) = rkyv::Deserialize::deserialize(field, deserializer)?;
+        let field: (Vec<u8>, Vec<u8>, Vec<u8>) =
+            rkyv::Deserialize::deserialize(field, deserializer)?;
         let block_info: L2BlockInfo = bincode::deserialize(field.0.as_slice()).unwrap();
         let state_root: B256 = bincode::deserialize(field.1.as_slice()).unwrap();
         let execution_result = bincode::deserialize(field.2.as_slice()).unwrap();

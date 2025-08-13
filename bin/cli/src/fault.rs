@@ -23,8 +23,6 @@ use alloy::primitives::{Bytes, B256, U256};
 use alloy::providers::RootProvider;
 use alloy::sol_types::SolValue;
 use anyhow::Context;
-use jsonrpsee::http_client::HttpClientBuilder;
-use kailua_client::provider::SoonNodeProvider;
 use kailua_client::{await_tel, await_tel_res};
 use kailua_common::blobs::hash_to_fe;
 use kailua_common::config::config_hash;
@@ -32,6 +30,7 @@ use kailua_contracts::*;
 use kailua_host::config::fetch_rollup_config;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::{FutureExt, TraceContextExt, Tracer};
+use soon_l2_chain_provider::chain_provider::L2BlockFetcher;
 use tracing::{error, info};
 
 #[derive(clap::Args, Debug, Clone)]
@@ -52,11 +51,8 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
     let tracer = tracer("kailua");
     let context = opentelemetry::Context::current_with_span(tracer.start("fault"));
 
-    let soon_node_provider = SoonNodeProvider(
-        HttpClientBuilder::default()
-            .build(args.propose_args.core.soon_node_url.as_str())
-            .expect("invalid soon node url"),
-    );
+    let soon_node_provider =
+        L2BlockFetcher::new_with_url(args.propose_args.core.soon_node_url.as_str());
     let eth_rpc_provider =
         RootProvider::<Ethereum>::new_http(args.propose_args.core.eth_rpc_url.as_str().try_into()?);
 
@@ -153,6 +149,7 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
                     .await
             )
         )
+        .hash()
     };
 
     // Prepare intermediate outputs
@@ -172,6 +169,7 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
                 "output_hash",
                 retry_res_ctx_timeout!(soon_node_provider.output_at_block(io_block_number).await)
             )
+            .hash()
         } else {
             B256::ZERO
         };

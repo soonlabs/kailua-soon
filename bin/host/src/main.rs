@@ -15,7 +15,6 @@
 use alloy_primitives::B256;
 use anyhow::{anyhow, bail, Context};
 use clap::Parser;
-use kailua_client::provider::SoonNodeProvider;
 use kailua_client::proving::ProvingError;
 use kailua_common::boot::StitchedBootInfo;
 use kailua_host::args::KailuaHostArgs;
@@ -24,12 +23,12 @@ use kailua_host::config::generate_rollup_config;
 use kailua_host::preflight::{concurrent_execution_preflight, fetch_precondition_data};
 use kailua_host::server::create_disk_kv_store;
 use kailua_host::tasks::{handle_oneshot_tasks, Cached, Oneshot, OneshotResult};
+use soon_l2_chain_provider::chain_provider::L2BlockFetcher;
 use std::collections::BinaryHeap;
 use std::env::set_var;
 use tempfile::tempdir;
 use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
-use jsonrpsee::http_client::HttpClientBuilder;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -38,9 +37,10 @@ async fn main() -> anyhow::Result<()> {
     set_var("KAILUA_VERBOSITY", args.v.to_string());
 
     // fetch starting block number
-    let l2_node_provider = args.soon_node_address.as_ref().map(|addr| {
-        SoonNodeProvider(HttpClientBuilder::default().build(addr).expect("invalid soon node address"))
-    });
+    let l2_node_provider = args
+        .soon_node_address
+        .as_ref()
+        .map(|addr| L2BlockFetcher::new_with_url(addr));
 
     // set tmp data dir if data dir unset
     let tmp_dir = tempdir().map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
@@ -227,7 +227,8 @@ async fn main() -> anyhow::Result<()> {
                     .as_ref()
                     .expect("Missing l2_node_provider")
                     .output_at_block(mid_point)
-                    .await?;
+                    .await?
+                    .hash();
                 // Lower half workload ends at midpoint (inclusive)
                 let mut lower_job_args = job_args.clone();
                 lower_job_args.kona.claimed_l2_output_root = mid_output;

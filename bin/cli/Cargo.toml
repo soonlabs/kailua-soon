@@ -60,6 +60,7 @@ risc0-zkvm.workspace = true
 #SOON
 soon-derive.workspace = true
 soon-primitives.workspace = true
+soon-l2-chain-provider.workspace = true
 
 jsonrpsee.workspace = true
 

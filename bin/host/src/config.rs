@@ -14,16 +14,15 @@
 
 use crate::args::KailuaHostArgs;
 use anyhow::Context;
-use kailua_client::provider::SoonNodeProvider;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::{FutureExt, TraceContextExt, Tracer};
 use serde_json::Value;
+use soon_l2_chain_provider::chain_provider::L2BlockFetcher;
 use soon_primitives::rollup_config::SoonRollupConfig;
 use std::path::PathBuf;
 use tempfile::TempDir;
 use tokio::fs;
 use tracing::{debug, info};
-use jsonrpsee::http_client::HttpClientBuilder;
 
 pub async fn generate_rollup_config(
     cfg: &mut KailuaHostArgs,
@@ -54,7 +53,7 @@ pub async fn fetch_rollup_config(
     let tracer = tracer("kailua");
     let context = opentelemetry::Context::current_with_span(tracer.start("fetch_rollup_config"));
 
-    let soon_node_provider = SoonNodeProvider(HttpClientBuilder::default().build(l2_node_address).expect("invalid l2 node address"));
+    let soon_node_provider = L2BlockFetcher::new_with_url(l2_node_address);
 
     let rollup_config: Value = soon_node_provider
         .rollup_config()

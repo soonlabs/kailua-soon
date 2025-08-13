@@ -21,9 +21,7 @@ use alloy::primitives::{Address, Bytes, U256};
 use alloy::providers::{Provider, RootProvider};
 use alloy::sol_types::SolValue;
 use anyhow::{anyhow, bail, Context};
-use jsonrpsee::http_client::HttpClientBuilder;
 use kailua_build::KAILUA_FPVM_ID;
-use kailua_client::provider::SoonNodeProvider;
 use kailua_client::telemetry::TelemetryArgs;
 use kailua_client::{await_tel, await_tel_res};
 use kailua_common::config::{config_hash, BN254_CONTROL_ID, CONTROL_ROOT};
@@ -31,6 +29,7 @@ use kailua_contracts::*;
 use kailua_host::config::fetch_rollup_config;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::{FutureExt, Status, TraceContextExt, Tracer};
+use soon_l2_chain_provider::chain_provider::L2BlockFetcher;
 use std::str::FromStr;
 use tracing::info;
 
@@ -99,11 +98,7 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
     let tracer = tracer("kailua");
     let context = opentelemetry::Context::current_with_span(tracer.start("fast_track"));
 
-    let soon_node_provider = SoonNodeProvider(
-        HttpClientBuilder::default()
-            .build(args.soon_node_url.as_str())
-            .expect("invalid soon node url"),
-    );
+    let soon_node_provider = L2BlockFetcher::new_with_url(args.soon_node_url.as_str());
     let eth_rpc_provider =
         RootProvider::<Ethereum>::new_http(args.eth_rpc_url.as_str().try_into()?);
 
@@ -200,7 +195,8 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
                 .output_at_block(args.starting_block_number)
                 .await
         )
-    );
+    )
+    .hash();
     info!("Deploying KailuaTreasury contract to L1 rpc.");
     let receipt = KailuaTreasury::deploy_builder(
         &deployer_provider,

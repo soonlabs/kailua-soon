@@ -10,6 +10,7 @@ use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use kona_proof::errors::OracleProviderError;
 use kona_proof::l2::CursorSetter;
 use l1_block_info::instruction::L1BlockInfoInstruction;
+use solana_sdk::pubkey::Pubkey;
 use soon_derive::traits::{ChainProvider, L2ChainProvider};
 use soon_primitives::blocks::{str_block_hash_to, BlockInfo, L1Header, L1Transaction, L2BlockInfo};
 use soon_primitives::l2blocks::L2Block;
@@ -17,7 +18,6 @@ use soon_primitives::system::SystemConfig;
 use spin::RwLock;
 use std::fmt::Debug;
 use std::sync::Arc;
-use solana_sdk::pubkey::Pubkey;
 
 /// Test L1 Chain Provider for testing purposes
 #[derive(Debug, Clone)]

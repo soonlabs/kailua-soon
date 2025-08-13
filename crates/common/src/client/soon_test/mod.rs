@@ -11,7 +11,7 @@ use fraud_executor::{
     accounts::{AccountPairs, SoonAccounts},
     outcome::BlockBuildingOutcome,
 };
-use kona_executor::{L2BlockBuilder};
+use kona_executor::L2BlockBuilder;
 use kona_preimage::CommsClient;
 use kona_proof::{BootInfo, FlushableCache};
 use op_alloy_rpc_types_engine::OpPayloadAttributes;

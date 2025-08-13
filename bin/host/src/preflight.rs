@@ -19,11 +19,11 @@ use alloy::providers::{Provider, RootProvider};
 use alloy_eips::eip4844::IndexedBlobHash;
 use alloy_primitives::B256;
 use anyhow::bail;
-use kailua_client::provider::SoonNodeProvider;
 use kailua_client::proving::ProvingError;
 use kailua_common::blobs::BlobFetchRequest;
 use kailua_common::precondition::PreconditionValidationData;
 use kona_preimage::{PreimageKey, PreimageKeyType};
+use soon_l2_chain_provider::chain_provider::L2BlockFetcher;
 use soon_primitives::blocks::BlockInfo;
 use soon_primitives::rollup_config::SoonRollupConfig;
 use std::env::set_var;
@@ -135,7 +135,7 @@ pub async fn fetch_precondition_data(
 pub async fn concurrent_execution_preflight(
     args: &KailuaHostArgs,
     rollup_config: SoonRollupConfig,
-    soon_node_provider: &SoonNodeProvider,
+    soon_node_provider: &L2BlockFetcher,
     disk_kv_store: Option<RWLKeyValueStore>,
 ) -> anyhow::Result<()> {
     // let l2_provider = args.kona.create_providers().await?.l2;
@@ -160,7 +160,8 @@ pub async fn concurrent_execution_preflight(
         args.kona.claimed_l2_block_number = args.kona.claimed_l2_block_number + processed_blocks;
         args.kona.claimed_l2_output_root = soon_node_provider
             .output_at_block(args.kona.claimed_l2_block_number)
-            .await?;
+            .await?
+            .hash();
         // queue and start new job
         jobs.push(tokio::spawn(crate::prove::compute_cached_proof(
             args.clone(),
