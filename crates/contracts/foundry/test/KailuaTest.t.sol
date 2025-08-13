@@ -76,6 +76,7 @@ contract KailuaTest is Test {
             Claim.wrap(rootClaim),
             l2BlockNumber
         );
+        treasury.assignVanguard(address(this));
         game = new KailuaGame(treasury, genesisTimestamp, l2BlockTime, Duration.wrap(maxClockDuration));
         // Anchoring
         factory.setImplementation(GameType.wrap(1337), treasury);

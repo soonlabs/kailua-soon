@@ -157,11 +157,6 @@ contract KailuaTreasury is KailuaTournament, IKailuaTreasury {
     }
 
     /// @inheritdoc KailuaTournament
-    function minCreationTime() public view override returns (Timestamp minCreationTime_) {
-        minCreationTime_ = createdAt;
-    }
-
-    /// @inheritdoc KailuaTournament
     function parentGame() public view override returns (KailuaTournament parentGame_) {
         parentGame_ = this;
     }
@@ -242,9 +237,6 @@ contract KailuaTreasury is KailuaTournament, IKailuaTreasury {
     /// @notice The leading proposer that can extend the proposal tree
     address public vanguard;
 
-    /// @notice The duration for which the vanguard may lead
-    Duration public vanguardAdvantage;
-
     /// @notice Boolean flag to prevent re-entrant calls
     bool internal isLocked;
 
@@ -324,9 +316,8 @@ contract KailuaTreasury is KailuaTournament, IKailuaTreasury {
     }
 
     /// @notice Updates the vanguard address and advantage duration
-    function assignVanguard(address _vanguard, Duration _vanguardAdvantage) external onlyFactoryOwner {
+    function assignVanguard(address _vanguard) external onlyFactoryOwner {
         vanguard = _vanguard;
-        vanguardAdvantage = _vanguardAdvantage;
     }
 
     /// @notice Checks the proposer's bonded amount and creates a new proposal through the factory
@@ -359,17 +350,8 @@ contract KailuaTreasury is KailuaTournament, IKailuaTreasury {
                 revert BlockNumberMismatch(previousGame.l2BlockNumber(), tournament.l2BlockNumber());
             }
         }
-        // Check whether the proposer must follow a vanguard if one is set
-        if (vanguard != address(0x0) && vanguard != msg.sender) {
-            // The proposer may only counter the vanguard during the advantage time
-            KailuaTournament proposalParent = tournament.parentGame();
-            if (proposalParent.childCount() == 1) {
-                // Count the advantage clock since proposal was possible
-                uint64 elapsedAdvantage = uint64(block.timestamp - tournament.minCreationTime().raw());
-                if (elapsedAdvantage < vanguardAdvantage.raw()) {
-                    revert VanguardError(address(proposalParent));
-                }
-            }
+        if (vanguard != msg.sender) {
+            revert OnlyVanguard();
         }
         // Record proposer
         proposerOf[address(tournament)] = msg.sender;

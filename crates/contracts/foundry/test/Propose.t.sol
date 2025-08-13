@@ -83,11 +83,11 @@ contract ProposeTest is KailuaTest {
         // Fail assignment
         vm.prank(address(0xbeef));
         vm.expectRevert("not owner");
-        treasury.assignVanguard(address(0x007), Duration.wrap(0xFFFFFFFFFFFFFFFF));
-        vm.assertEq(treasury.vanguard(), address(0x0));
+        treasury.assignVanguard(address(0x007));
+        vm.assertEq(treasury.vanguard(), address(this));
 
         // Assign vanguard
-        treasury.assignVanguard(address(0x007), Duration.wrap(0xFFFFFFFFFFFFFFFF));
+        treasury.assignVanguard(address(0x007));
         vm.assertEq(treasury.vanguard(), address(0x007));
 
         vm.warp(
@@ -108,6 +108,8 @@ contract ProposeTest is KailuaTest {
             abi.encodePacked(uint64(128), anchorIndex, uint64(0))
         );
         // Success after vanguard
+        treasury.assignVanguard(address(0x01));
+        vm.prank(treasury.vanguard());
         KailuaTournament proposal_128_1 = treasury.propose(
             Claim.wrap(0x000101000001010000001010000010100000101000001010000001010000010F),
             abi.encodePacked(uint64(128), anchorIndex, uint64(0))
@@ -132,6 +134,10 @@ contract ProposeTest is KailuaTest {
             Claim.wrap(0x0001010000010100000010100000101000001010000010100000010100000101),
             abi.encodePacked(uint64(128), anchorIndex, uint64(0))
         );
+
+        // Set vanguard
+        treasury.assignVanguard(address(0x007));
+
         // Fail on duplicate with same counter
         vm.startPrank(address(0x007));
         vm.expectRevert();
@@ -196,12 +202,14 @@ contract ProposeTest is KailuaTest {
         );
 
         // Succeed on first proposal from 0x0000..
+        treasury.assignVanguard(address(0x0));
         vm.startPrank(address(0x0));
         KailuaTournament proposal_128_0 = treasury.propose(
             Claim.wrap(0x0001010000010100000010100000101000001010000010100000010100000101),
             abi.encodePacked(uint64(128), uint64(anchor.gameIndex()), uint64(0))
         );
         vm.stopPrank();
+        treasury.assignVanguard(address(this));
 
         // Fail on creating a child
         uint64 parentIndex = uint64(proposal_128_0.gameIndex());
@@ -292,6 +300,8 @@ contract ProposeTest is KailuaTest {
             abi.encodePacked(uint64(128), anchorIndex, uint64(0))
         );
         // Succeed on sibling proposal for new proposer
+        // Set vanguard
+        treasury.assignVanguard(address(0x007));
         vm.prank(address(0x007));
         // [128]
         // [128]
@@ -299,6 +309,7 @@ contract ProposeTest is KailuaTest {
             Claim.wrap(0x000101000001010000001010000010100000101000001010000001010000010F),
             abi.encodePacked(uint64(128), anchorIndex, uint64(0))
         );
+        treasury.assignVanguard(address(this));
         // Succeed on successor proposal
         // [128, 256]
         // [128]
@@ -323,6 +334,7 @@ contract ProposeTest is KailuaTest {
             game.GENESIS_TIME_STAMP()
                 + game.PROPOSAL_OUTPUT_COUNT() * game.OUTPUT_BLOCK_SPAN() * game.L2_BLOCK_TIME() * 4
         );
+        treasury.assignVanguard(address(0x007));
         // Succeed on child proposal for new proposer
         // [128, 256, 384]
         // [128, 512]
@@ -352,33 +364,6 @@ contract ProposeTest is KailuaTest {
         vm.assertEq(treasury.lastResolved(), address(proposal_384_0));
         proposal_512_0.resolve();
         vm.assertEq(treasury.lastResolved(), address(proposal_512_0));
-    }
-
-    function test_minCreationTime() public {
-        // Fail before l2 block time
-        uint64 anchorIndex = uint64(anchor.gameIndex());
-        vm.expectRevert();
-        treasury.propose(
-            Claim.wrap(0x0001010000010100000010100000101000001010000010100000010100000101),
-            abi.encodePacked(uint64(128), anchorIndex, uint64(0))
-        );
-
-        vm.warp(
-            game.GENESIS_TIME_STAMP() + game.PROPOSAL_OUTPUT_COUNT() * game.OUTPUT_BLOCK_SPAN() * game.L2_BLOCK_TIME()
-        );
-        // Succeed after l2 block time
-        KailuaTournament proposal_128_0 = treasury.propose(
-            Claim.wrap(0x0001010000010100000010100000101000001010000010100000010100000101),
-            abi.encodePacked(uint64(128), anchorIndex, uint64(0))
-        );
-
-        // Validate expected min creation time
-        vm.assertEq(proposal_128_0.minCreationTime().raw(), uint64(block.timestamp));
-
-        // Finalize
-        vm.assertEq(treasury.lastResolved(), address(anchor));
-        proposal_128_0.resolve();
-        vm.assertEq(treasury.lastResolved(), address(proposal_128_0));
     }
 
     function test_KailuaTreasury_extraData() public {

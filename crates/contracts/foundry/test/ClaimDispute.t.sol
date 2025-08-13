@@ -229,6 +229,7 @@ contract ClaimDisputeTest is KailuaTest {
             abi.encodePacked(uint64(256), uint64(proposal_128_0.gameIndex()), uint64(0))
         );
 
+        treasury.assignVanguard(address(0x01));
         // bad proposal
         vm.startPrank(address(0x01));
         KailuaTournament proposal_256_1 = treasury.propose(
@@ -287,6 +288,7 @@ contract ClaimDisputeTest is KailuaTest {
             abi.encodePacked(uint64(256), uint64(proposal_128_0.gameIndex()), uint64(0))
         );
 
+        treasury.assignVanguard(address(0x01));
         // bad proposal
         vm.startPrank(address(0x01));
         KailuaTournament proposal_256_1 = treasury.propose(
@@ -535,6 +537,7 @@ contract ClaimDisputeTest is KailuaTest {
 
             KailuaTournament[PROPOSAL_BUFFER_LEN] memory proposals;
             for (uint256 j = 1; j < PROPOSAL_BUFFER_LEN; j++) {
+                treasury.assignVanguard(address(bytes20(uint160(100000 * i + j))));
                 vm.startPrank(address(bytes20(uint160(100000 * i + j))));
                 if (j == i) {
                     // Send successful proposal
@@ -559,6 +562,7 @@ contract ClaimDisputeTest is KailuaTest {
             }
 
             // Publish late proposal
+            treasury.assignVanguard(address(bytes20(uint160(100000 * i))));
             vm.startPrank(address(bytes20(uint160(100000 * i))));
             proposals[0] = treasury.propose(
                 Claim.wrap(sha256(abi.encodePacked(bytes32(0)))), abi.encodePacked(blockHeight, parentIndex, uint64(0))
@@ -659,6 +663,7 @@ contract ClaimDisputeTest is KailuaTest {
 
             KailuaTournament[PROPOSAL_BUFFER_LEN] memory proposals;
             for (uint256 j = 1; j < PROPOSAL_BUFFER_LEN; j++) {
+                treasury.assignVanguard(address(bytes20(uint160(10000 * i + j))));
                 vm.startPrank(address(bytes20(uint160(10000 * i + j))));
                 if (j % i == 0) {
                     // Send successful proposal
@@ -685,6 +690,7 @@ contract ClaimDisputeTest is KailuaTest {
             }
 
             // Publish late proposal
+            treasury.assignVanguard(address(bytes20(uint160(100000 * i))));
             vm.startPrank(address(bytes20(uint160(100000 * i))));
             proposals[0] = treasury.propose(
                 Claim.wrap(sha256(abi.encodePacked(bytes32(0)))), abi.encodePacked(blockHeight, parentIndex, uint64(0))
@@ -760,6 +766,7 @@ contract ClaimDisputeTest is KailuaTest {
 
             KailuaTournament[PROPOSAL_BUFFER_LEN] memory proposals;
             for (uint256 j = 1; j < PROPOSAL_BUFFER_LEN; j++) {
+                treasury.assignVanguard(address(bytes20(uint160(10000 * i + j))));
                 vm.startPrank(address(bytes20(uint160(10000 * i + j))));
                 if (j % i == 0) {
                     // Send successful proposal
@@ -786,6 +793,7 @@ contract ClaimDisputeTest is KailuaTest {
             }
 
             // Publish late proposal
+            treasury.assignVanguard(address(bytes20(uint160(100000 * i))));
             vm.startPrank(address(bytes20(uint160(100000 * i))));
             proposals[0] = treasury.propose(
                 Claim.wrap(sha256(abi.encodePacked(bytes32(0)))), abi.encodePacked(blockHeight, parentIndex, uint64(0))
@@ -861,6 +869,7 @@ contract ClaimDisputeTest is KailuaTest {
         // bad duplicate proposal
         KailuaTournament[PROPOSAL_BUFFER_LEN] memory proposals_128;
         for (uint256 i = 0; i < PROPOSAL_BUFFER_LEN; i++) {
+            treasury.assignVanguard(address(bytes20(uint160(10000 * i + 1))));
             vm.startPrank(address(bytes20(uint160(10000 * i + 1))));
             proposals_128[i] = treasury.propose(
                 Claim.wrap(0x0001010000010100000010100000101000001010000010100000010100000101),
@@ -877,6 +886,7 @@ contract ClaimDisputeTest is KailuaTest {
         // bad duplicate proposal
         KailuaTournament[PROPOSAL_BUFFER_LEN] memory proposals_256;
         for (uint256 i = 0; i < PROPOSAL_BUFFER_LEN; i++) {
+            treasury.assignVanguard(address(bytes20(uint160(10000 * i + 1))));
             vm.startPrank(address(bytes20(uint160(10000 * i + 1))));
             proposals_256[i] = treasury.propose(
                 Claim.wrap(0x0001010000010100000010100000101000001010000010100000010100000101),
@@ -936,6 +946,7 @@ contract ClaimDisputeTest is KailuaTest {
         //            proposal_128_0.childCount()
         //        );
 
+        treasury.assignVanguard(address(this));
         // honest proposal
         KailuaTournament proposal_256_X = treasury.propose(
             Claim.wrap(0x0001010000010100000010100000101000001010000010100000010100000101),
@@ -975,6 +986,7 @@ contract ClaimDisputeTest is KailuaTest {
         );
 
         // bad proposal
+        treasury.assignVanguard(address(0x1));
         vm.startPrank(address(0x1));
         KailuaTournament proposal_128_1 = treasury.propose(
             Claim.wrap(0x0001010000010100000010100000101000001010000010100000010100000101),
@@ -986,6 +998,7 @@ contract ClaimDisputeTest is KailuaTest {
             game.GENESIS_TIME_STAMP()
                 + game.PROPOSAL_OUTPUT_COUNT() * game.OUTPUT_BLOCK_SPAN() * game.L2_BLOCK_TIME() * 2
         );
+        treasury.assignVanguard(address(this));
         // honest proposal
         KailuaTournament proposal_256_0 = treasury.propose(
             Claim.wrap(0x0001010000010100000010100000101000001010000010100000010100000100),
@@ -993,6 +1006,7 @@ contract ClaimDisputeTest is KailuaTest {
         );
 
         // fake hoenst proposal
+        treasury.assignVanguard(address(0x1));
         vm.startPrank(address(0x1));
         treasury.propose(
             Claim.wrap(0x0001010000010100000010100000101000001010000010100000010100000100),

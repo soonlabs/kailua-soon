@@ -85,6 +85,9 @@ error BlockNumberMismatch(uint256 anchored, uint256 initialized);
 /// @param parentGame The address of the parent proposal being extended
 error VanguardError(address parentGame);
 
+/// @notice Occurs when a non vanguard proposer attempts to extend the chain
+error OnlyVanguard();
+
 /// @notice Emitted when a proof is submitted.
 /// @param signature The proposal signature
 /// @param status The proven status

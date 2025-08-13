@@ -150,6 +150,9 @@ contract BondTest is KailuaTest {
             abi.encodePacked(uint64(128), anchorIndex, uint64(0))
         );
 
+        // Set vanguard
+        treasury.assignVanguard(address(0x01));
+
         vm.deal(address(0x01), 1000);
         vm.startPrank(address(0x01));
         treasury.propose{value: 987}(
@@ -198,6 +201,9 @@ contract BondTest is KailuaTest {
             game.GENESIS_TIME_STAMP()
                 + game.PROPOSAL_OUTPUT_COUNT() * game.OUTPUT_BLOCK_SPAN() * game.L2_BLOCK_TIME() * 2
         );
+
+        // Set vanguard
+        treasury.assignVanguard(address(0x01));
 
         vm.deal(address(0x01), 1000);
         vm.startPrank(address(0x01));
