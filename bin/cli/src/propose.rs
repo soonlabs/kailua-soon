@@ -231,19 +231,7 @@ pub async fn propose(args: ProposeArgs, data_dir: PathBuf) -> anyhow::Result<()>
         }
 
         // Wait for vanguard to make submission
-        let vanguard = await_tel!(context, fetch_vanguard(&agent));
-        let vanguard_advantage_timeout =
-            if canonical_tip.requires_vanguard_advantage(proposer_address, vanguard) {
-                let vanguard_advantage = await_tel!(context, fetch_vanguard_advantage(&agent));
-                min_proposal_time + vanguard_advantage
-            } else {
-                min_proposal_time
-            };
-        if chain_time < vanguard_advantage_timeout {
-            let time_to_wait = vanguard_advantage_timeout.saturating_sub(chain_time);
-            warn!("Waiting for at most {time_to_wait} more seconds of chain time for vanguard.");
-            continue;
-        }
+        // let vanguard = await_tel!(context, fetch_vanguard(&agent));
 
         // Prepare proposal
         let Some(proposed_output_root) = agent.outputs.get(&proposed_block_number).copied() else {
@@ -657,16 +645,6 @@ pub async fn fetch_vanguard(agent: &SyncAgent) -> Address {
     KailuaTreasury::new(agent.deployment.treasury, &agent.provider.l1_provider)
         .vanguard()
         .stall_with_context(context.clone(), "KailuaTreasury::vanguard")
-        .await
-}
-
-pub async fn fetch_vanguard_advantage(agent: &SyncAgent) -> u64 {
-    let tracer = tracer("kailua");
-    let context =
-        opentelemetry::Context::current_with_span(tracer.start("fetch_vanguard_advantage"));
-    KailuaTreasury::new(agent.deployment.treasury, &agent.provider.l1_provider)
-        .vanguardAdvantage()
-        .stall_with_context(context.clone(), "KailuaTreasury::vanguardAdvantage")
         .await
 }
 

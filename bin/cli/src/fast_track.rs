@@ -380,15 +380,15 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
     // Set the vanguard parameters if provided
     if let Some(vanguard_address_string) = args.vanguard_address {
         let vanguard_address = Address::from_str(&vanguard_address_string)?;
-        let vanguard_advantage = args.vanguard_advantage.unwrap_or(u64::MAX >> 4);
-        info!("Assigning proposal advantage to vanguard in KailuaTreasury.");
+        // let vanguard_advantage = args.vanguard_advantage.unwrap_or(u64::MAX >> 4);
+        info!("Assigning proposal vanguard in KailuaTreasury.");
 
         await_tel_res!(
             context,
             tracer,
             "KailuaTreasury::assignVanguard",
             crate::transact::safe::exec_safe_txn(
-                kailua_treasury_implementation.assignVanguard(vanguard_address, vanguard_advantage),
+                kailua_treasury_implementation.assignVanguard(vanguard_address),
                 &factory_owner_safe,
                 owner_address,
             )
