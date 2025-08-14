@@ -27,7 +27,6 @@ coverage-open:
   cargo +nightly llvm-cov -p kailua-common --branch --open
 
 devnet-build-l1 CONTRACTS_DIR="../soon/contracts/dump" +ARGS="-F devnet -F prove":
-  cargo build {{ARGS}}
   CONTRACTS_DIR={{CONTRACTS_DIR}} ./e2e/build_l1.sh
 
 devnet-build-l2 soon_root="../soon" network_name="ethereum.testnet" l1_chain_id="11155111" l1_rpc_url="http://localhost:8545" +ARGS="-F devnet -F prove":
