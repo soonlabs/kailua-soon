@@ -65,7 +65,7 @@ devnet-config target="debug" verbosity="" l1_rpc="http://127.0.0.1:8545" l2_rpc=
       --op-node-url {{rollup_node_rpc}} \
       --otlp-collector
 
-devnet-upgrade timeout="3600" advantage="60" target="debug" verbosity="" l1_rpc="http://127.0.0.1:8545" l2_rpc="http://127.0.0.1:8899" vanguard="0x12939E26f586A2314964d0Ce35cF571579c638c1" deployer="0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e" owner="0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e" guardian="0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e":
+devnet-upgrade timeout="3600" advantage="60" target="debug" verbosity="" l1_rpc="http://127.0.0.1:8545" l2_rpc="http://127.0.0.1:8899" vanguard="0x12939E26f586A2314964d0Ce35cF571579c638c1" deployer="0xc49af0e1e397697bd6a917a076d5cf4be42b91dfe307f7f3a07a07f9d50a3b89" owner="0xc49af0e1e397697bd6a917a076d5cf4be42b91dfe307f7f3a07a07f9d50a3b89" guardian="0xc49af0e1e397697bd6a917a076d5cf4be42b91dfe307f7f3a07a07f9d50a3b89":
   RISC0_DEV_MODE=1 ./target/{{target}}/kailua-cli fast-track \
       --eth-rpc-url {{l1_rpc}} \
       --soon-node-url {{l2_rpc}} \
