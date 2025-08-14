@@ -57,38 +57,6 @@ services:
       SOON_NODE_RPC_PUBSUB_ENABLE_BLOCK_SUBSCRIPTION: true
       SOON_NODE_ENABLE_FAUCET: ${SOON_NODE_ENABLE_FAUCET:-true}
 
-  proposer:
-    depends_on:
-      - l1
-      - node
-    image: ${REGISTRY:-ghcr.io/soonlabs/soon-e2e}/proposer:${VERSION:-0.3}
-    container_name: ${PROPOSER_CONTAINER_NAME:-proposer}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    ports:
-      - ${BIND_HOST:-127.0.0.1}:${PROPOSER_PORT:-8560}:8560
-    healthcheck:
-      test: [ "CMD", "curl", "http://localhost:8560/health" ]
-      interval: 30s
-      retries: 3
-      start_period: 10s
-      timeout: 3s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: 100m
-        max-file: "3"
-    restart: on-failure:5
-    environment:
-      RUST_LOG: info
-      L1_ETH_RPC: http://l1:8545
-      SOON_RPC: http://node:8899
-      L2OO_ADDRESS: ${L2OO_ADDRESS}
-      POLL_INTERVAL: 6000
-      PRIVATE_KEY: ${PROPOSER_ADMIN_SECRET}
-      WAIT_HOSTS: node:8899
-      WAIT_TIMEOUT: 300
-
   batcher:
     depends_on:
       # - l1

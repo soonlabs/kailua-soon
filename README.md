@@ -41,9 +41,11 @@ Kailua enables rollup operators to add a new fault proof contract, compatible wi
     * Builds the L2 node related files according to l1 node.
 5. `just devnet-up`
     * Start the entire devnet, including l1 and l2 nodes.
+6. `just devnet-build`
+    * Builds the local cargo and foundry projects.
 6. `just devnet-upgrade`
     * Upgrades the devnet to use the `KailuaGame` contract.
-    * Assumes the default values of the local optimism devnet, but can take parameters.
+    * Assumes the default values of the local soon devnet, but can take parameters.
 7. `just devnet-propose`
     * Launches the Kailua proposer.
     * This runs the sequences, which periodically creates new `KailuaGame` instances.

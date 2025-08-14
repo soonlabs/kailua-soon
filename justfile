@@ -32,6 +32,8 @@ devnet-build-l1 CONTRACTS_DIR="../soon/contracts/dump" +ARGS="-F devnet -F prove
 devnet-build-l2 soon_root="../soon" network_name="ethereum.testnet" l1_chain_id="11155111" l1_rpc_url="http://localhost:8545" +ARGS="-F devnet -F prove":
   SOON_ROOT={{soon_root}} NETWORK_NAME={{network_name}} L1_CHAIN_ID={{l1_chain_id}} L1_RPC_URL={{l1_rpc_url}} ./e2e/build_l2.sh
 
+devnet-build +ARGS="-F devnet -F prove": (build ARGS)
+
 devnet-build-fpvm +ARGS="-F devnet -F prove -F rebuild-fpvm": (build ARGS)
 
 devnet-up-l1:
