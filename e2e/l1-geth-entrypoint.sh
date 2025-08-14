@@ -18,19 +18,15 @@ MINER_COINBASE=${MINER_COINBASE:-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266}
 GETH_DEV=${GETH_DEV:-false}
 GETH_DEV_PERIOD=${GETH_DEV_PERIOD:-1}
 
-if [ "$GETH_DEV" != "true" ]; then
-    if [ ! -d "$GETH_CHAINDATA_DIR" ]; then
-        echo "$GETH_CHAINDATA_DIR missing, running init"
-        echo "Initializing genesis."
-        geth --verbosity="$VERBOSITY" init \
-            --datadir="$GETH_DATA_DIR" \
-            --state.scheme=hash \
-            "$GENESIS_FILE_PATH"
-    else
-        echo "$GETH_CHAINDATA_DIR exists."
-    fi
+if [ ! -d "$GETH_CHAINDATA_DIR" ]; then
+    echo "$GETH_CHAINDATA_DIR missing, running init"
+    echo "Initializing genesis."
+    geth --verbosity="$VERBOSITY" init \
+        --datadir="$GETH_DATA_DIR" \
+        --state.scheme=hash \
+        "$GENESIS_FILE_PATH"
 else
-    echo "GETH_DEV=true -> skipping custom genesis init (using --dev chain)"
+    echo "$GETH_CHAINDATA_DIR exists."
 fi
 
 # Warning: Archive mode is required, otherwise old trie nodes will be
