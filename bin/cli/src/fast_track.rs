@@ -125,6 +125,8 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
         "OwnerSignerArgs::wallet",
         args.owner_signer.wallet(Some(config.l1_chain_id))
     )?;
+    let owner_address = owner_wallet.default_signer().address();
+    info!("owner_address({:?})", owner_address);
     let owner_provider = args
         .txn_args
         .premium_provider::<Ethereum>()
@@ -151,7 +153,6 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
         .stall_with_context(context.clone(), "Safe::getOwners")
         .await;
     info!("Safe::owners({:?})", &safe_owners);
-    let owner_address = owner_wallet.default_signer().address();
     if safe_owners.first().unwrap() != &owner_address {
         bail!("Incorrect owner key.");
     } else if safe_owners.len() != 1 {
