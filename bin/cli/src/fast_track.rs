@@ -265,6 +265,24 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
         );
     }
 
+    // Set the vanguard parameters if provided
+    if let Some(vanguard_address_string) = args.vanguard_address {
+        let vanguard_address = Address::from_str(&vanguard_address_string)?;
+        // let vanguard_advantage = args.vanguard_advantage.unwrap_or(u64::MAX >> 4);
+        info!("Assigning proposal vanguard in KailuaTreasury.");
+
+        await_tel_res!(
+            context,
+            tracer,
+            "KailuaTreasury::assignVanguard",
+            crate::transact::safe::exec_safe_txn(
+                kailua_treasury_implementation.assignVanguard(vanguard_address),
+                &factory_owner_safe,
+                owner_address,
+            )
+        )?;
+    }
+
     // Create new treasury instance from target block number
     let extra_data = Bytes::from(
         [
@@ -340,9 +358,8 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
     let receipt = KailuaGame::deploy_builder(
         &deployer_provider,
         *kailua_treasury_implementation.address(),
-        //TODO genesis l2_time
         U256::from(0),
-        U256::from(config.block_time),
+        U256::from(0),
         args.challenge_timeout,
     )
     .transact_with_context(context.clone(), "KailuaGame::deploy")
@@ -370,24 +387,6 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
             owner_address,
         )
     )?;
-
-    // Set the vanguard parameters if provided
-    if let Some(vanguard_address_string) = args.vanguard_address {
-        let vanguard_address = Address::from_str(&vanguard_address_string)?;
-        // let vanguard_advantage = args.vanguard_advantage.unwrap_or(u64::MAX >> 4);
-        info!("Assigning proposal vanguard in KailuaTreasury.");
-
-        await_tel_res!(
-            context,
-            tracer,
-            "KailuaTreasury::assignVanguard",
-            crate::transact::safe::exec_safe_txn(
-                kailua_treasury_implementation.assignVanguard(vanguard_address),
-                &factory_owner_safe,
-                owner_address,
-            )
-        )?;
-    }
 
     // Update the respectedGameType as the guardian
     if args.respect_kailua_proposals {
