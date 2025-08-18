@@ -34,17 +34,17 @@ echo "   Chain ID: $CHAIN_ID"
 
 # Check contract address file
 echo -e "\n${YELLOW}2. Check contract address file...${NC}"
-if [ ! -f "addresses.json" ]; then
+if [ ! -f "devnet/addresses.json" ]; then
     echo -e "${RED}❌ addresses.json file does not exist${NC}"
     exit 1
 fi
 
-CONTRACT_COUNT=$(jq 'keys | length' addresses.json)
+CONTRACT_COUNT=$(jq 'keys | length' devnet/addresses.json)
 echo -e "${GREEN}✅ Found $CONTRACT_COUNT contract addresses${NC}"
 
 # Check private key file
 echo -e "\n${YELLOW}3. Check private key file...${NC}"
-if [ ! -f "genesis-keys.json" ]; then
+if [ ! -f "devnet/genesis-keys.json" ]; then
     echo -e "${RED}❌ genesis-keys.json file does not exist${NC}"
     exit 1
 fi
@@ -66,8 +66,8 @@ else
   echo -e "${YELLOW}⚠️  cast not found, falling back to JSON-RPC check${NC}"
 fi
 
-for contract in $(jq -r 'keys[]' addresses.json); do
-    address=$(jq -r ".$contract" addresses.json)
+for contract in $(jq -r 'keys[]' devnet/addresses.json); do
+    address=$(jq -r ".$contract" devnet/addresses.json)
 
     if $USE_CAST; then
         code=$(cast code "$address" --rpc-url "$L1_RPC_URL" 2>/dev/null | tr -d '\n' || true)
@@ -109,14 +109,14 @@ fi
 echo -e "\n${YELLOW}5. Verify proposer / batcher configuration...${NC}"
 
 # Read expected addresses from key file
-GS_ADMIN_ADDR=$(jq -r '.gs_admin.address' genesis-keys.json)
-GS_ADMIN_PRIV=$(jq -r '.gs_admin.private_key' genesis-keys.json)
-GS_BATCHER_ADDR=$(jq -r '.gs_batcher.address' genesis-keys.json)
-GS_PROPOSER_ADDR=$(jq -r '.gs_proposer.address' genesis-keys.json)
+GS_ADMIN_ADDR=$(jq -r '.gs_admin.address' devnet/genesis-keys.json)
+GS_ADMIN_PRIV=$(jq -r '.gs_admin.private_key' devnet/genesis-keys.json)
+GS_BATCHER_ADDR=$(jq -r '.gs_batcher.address' devnet/genesis-keys.json)
+GS_PROPOSER_ADDR=$(jq -r '.gs_proposer.address' devnet/genesis-keys.json)
 
 # Read proxy addresses from address file
-L2OO_PROXY=$(jq -r '.L2OutputOracleProxy' addresses.json)
-SYSCFG_PROXY=$(jq -r '.SystemConfigProxy' addresses.json)
+L2OO_PROXY=$(jq -r '.L2OutputOracleProxy' devnet/addresses.json)
+SYSCFG_PROXY=$(jq -r '.SystemConfigProxy' devnet/addresses.json)
 
 # Helper function: extract 20-byte address from 32-byte storage value
 hex_to_address() {
@@ -222,7 +222,7 @@ declare -a CHECK_ADDRS=(
 
 # Add all addresses from genesis-keys.json
 for key in gs_admin gs_batcher gs_proposer gs_sequencer deployer; do
-  addr=$(jq -r ".$key.address" genesis-keys.json 2>/dev/null || echo "")
+  addr=$(jq -r ".$key.address" devnet/genesis-keys.json 2>/dev/null || echo "")
   if [ -n "$addr" ] && [ "$addr" != "null" ]; then
     CHECK_ADDRS+=("$addr")
   fi

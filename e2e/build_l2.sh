@@ -40,7 +40,7 @@ if [ ! -f "${SOON_ROOT}/Makefile" ]; then
 fi
 
 # Prepare soon contract.json for Makefile genesis rule
-ADDR_FILE="${E2E_DIR}/addresses.json"
+ADDR_FILE="${E2E_DIR}/devnet/addresses.json"
 if [ ! -f "${ADDR_FILE}" ]; then
   echo -e "${RED}❌ Missing ${ADDR_FILE}. Please run L1 build first.${NC}"
   exit 1
@@ -51,7 +51,7 @@ CONTRACT_JSON="${SOON_DATA_PATH}/${NETWORK_NAME}-contract.json"
 echo -e "${YELLOW}🔧 Writing ${CONTRACT_JSON} from e2e/addresses.json${NC}"
 jq '{SystemConfigProxy:.SystemConfigProxy}' "${ADDR_FILE}" > "${CONTRACT_JSON}"
 
-KEYS_SRC="${E2E_DIR}/genesis-keys.json"
+KEYS_SRC="${E2E_DIR}/devnet/genesis-keys.json"
 KEYS_JSON="${SOON_DATA_PATH}/${NETWORK_NAME}-keys.json"
 if [ ! -f "${KEYS_SRC}" ]; then
   echo -e "${RED}❌ Missing ${KEYS_SRC}. Please run L1 build first.${NC}"

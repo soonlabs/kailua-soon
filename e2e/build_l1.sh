@@ -227,7 +227,7 @@ if eth2-testnet-genesis deneb \
   --preset-capella=minimal \
   --preset-deneb=minimal \
   --eth1-config=$DEVNET_DIR/genesis.json \
-  --state-output=$DEVNET_DIR/genesis.ssz \
+  --state-output=$DEVNET_DIR/genesis-l1.ssz \
   --tranches-dir=$DEVNET_DIR/tranches \
   --mnemonics=$SCRIPT_DIR/mnemonics.yaml \
   --eth1-withdrawal-address=0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
