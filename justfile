@@ -53,7 +53,7 @@ devnet-down:
 
 devnet-clean: devnet-down
   @docker volume rm e2e_l1_data 2>/dev/null || echo "⚠️  Docker volume e2e_l1_data not found or delete failed"
-  rm -rf e2e/*.json
+  rm -rf e2e/devnet
 
 devnet-verify:
   cd e2e && ./verify-contracts.sh

@@ -95,7 +95,7 @@ fi
 
 # Copy files
 for file in "${FILES_TO_COPY[@]}"; do
-    if cp "$CONTRACTS_DIR/$file" "$SCRIPT_DIR/"; then
+    if cp "$CONTRACTS_DIR/$file" "$SCRIPT_DIR/devnet/"; then
         echo -e "${GREEN}✅ Copied $file${NC}"
     else
         echo -e "${RED}❌ Failed to copy $file${NC}"
@@ -114,10 +114,10 @@ ENV_EXAMPLE_PATH="$SCRIPT_DIR/.env.example"
 ENV_PATH="$SCRIPT_DIR/.env"
 
 # Extract values from generated files
-PROPOSER_ADMIN_SECRET=$(jq -r '.gs_proposer.private_key' "$SCRIPT_DIR/genesis-keys.json")
-BATCHER_ADMIN_SECRET=$(jq -r '.gs_batcher.private_key' "$SCRIPT_DIR/genesis-keys.json")
-L2OO_ADDRESS=$(jq -r '.L2OutputOracleProxy' "$SCRIPT_DIR/addresses.json")
-GAME_FACTORY_ADDRESS=$(jq -r '.DisputeGameFactoryProxy' "$SCRIPT_DIR/addresses.json")
+PROPOSER_ADMIN_SECRET=$(jq -r '.gs_proposer.private_key' "$SCRIPT_DIR/devnet/genesis-keys.json")
+BATCHER_ADMIN_SECRET=$(jq -r '.gs_batcher.private_key' "$SCRIPT_DIR/devnet/genesis-keys.json")
+L2OO_ADDRESS=$(jq -r '.L2OutputOracleProxy' "$SCRIPT_DIR/devnet/addresses.json")
+GAME_FACTORY_ADDRESS=$(jq -r '.DisputeGameFactoryProxy' "$SCRIPT_DIR/devnet/addresses.json")
 
 if [ -f "$ENV_EXAMPLE_PATH" ]; then
   cp -f "$ENV_EXAMPLE_PATH" "$ENV_PATH"
@@ -181,9 +181,9 @@ if eth2-testnet-genesis deneb \
   --preset-bellatrix=minimal \
   --preset-capella=minimal \
   --preset-deneb=minimal \
-  --eth1-config=./genesis.json \
-  --state-output=./genesis.ssz \
-  --tranches-dir=./tranches \
+  --eth1-config=./devnet/genesis.json \
+  --state-output=./devnet/genesis.ssz \
+  --tranches-dir=./devnet/tranches \
   --mnemonics=./mnemonics.yaml \
   --eth1-withdrawal-address=0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
   --eth1-match-genesis-time; then
