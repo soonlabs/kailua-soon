@@ -145,3 +145,54 @@ update_env_var GAME_FACTORY_ADDRESS "$GAME_FACTORY_ADDRESS"
 
 echo -e "${GREEN}✅ .env generated/updated at ${ENV_PATH}${NC}"
 
+# Step 6: Build beacon chain genesis
+echo ""
+echo -e "${YELLOW}🔧 Step 6: Building beacon chain genesis...${NC}"
+
+echo -e "${BLUE}🔍 Checking if eth2-testnet-genesis is installed...${NC}"
+
+# Check if eth2-testnet-genesis is available
+if ! command -v eth2-testnet-genesis &> /dev/null; then
+    echo -e "${YELLOW}❌ eth2-testnet-genesis not found. Installing...${NC}"
+    
+    # Get the version from version.json
+    ETH2_TESTNET_GENESIS_VERSION=$(jq -r .eth2_testnet_genesis < version.json)
+    echo -e "${BLUE}📦 Installing eth2-testnet-genesis version: $ETH2_TESTNET_GENESIS_VERSION${NC}"
+    
+    # Install eth2-testnet-genesis
+    if go install -v github.com/protolambda/eth2-testnet-genesis@$ETH2_TESTNET_GENESIS_VERSION; then
+        echo -e "${GREEN}✅ eth2-testnet-genesis installed successfully${NC}"
+    else
+        echo -e "${RED}❌ Failed to install eth2-testnet-genesis${NC}"
+        exit 1
+    fi
+else
+    echo -e "${GREEN}✅ eth2-testnet-genesis is already installed${NC}"
+fi
+
+echo -e "${BLUE}🚀 Generating beacon-chain genesis...${NC}"
+
+echo "eth2-testnet-genesis path: $(which eth2-testnet-genesis)"
+
+if eth2-testnet-genesis deneb \
+  --config=./beacon-data/config.yaml \
+  --preset-phase0=minimal \
+  --preset-altair=minimal \
+  --preset-bellatrix=minimal \
+  --preset-capella=minimal \
+  --preset-deneb=minimal \
+  --eth1-config=./genesis.json \
+  --state-output=./genesis.ssz \
+  --tranches-dir=./tranches \
+  --mnemonics=./mnemonics.yaml \
+  --eth1-withdrawal-address=0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+  --eth1-match-genesis-time; then
+    echo -e "${GREEN}✅ Beacon genesis generation completed successfully${NC}"
+else
+    echo -e "${RED}❌ Failed to generate beacon genesis${NC}"
+    exit 1
+fi
+
+echo ""
+echo -e "${GREEN}🎉 All L1 and beacon chain files build completed successfully!${NC}"
+

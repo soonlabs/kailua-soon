@@ -83,7 +83,7 @@ devnet-upgrade timeout="3600" advantage="60" target="debug" verbosity="" l1_rpc=
 
 devnet-reset: devnet-down devnet-clean devnet-up
 
-devnet-propose target="debug" verbosity="" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/propose" proposer="0x827a4394dbcd4cc304f2089553469cc464ac12c008eb5ec15225056baf147505":
+devnet-propose target="debug" verbosity="" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/propose" proposer="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
   ./target/{{target}}/kailua-cli propose \
       --eth-rpc-url {{l1_rpc}} \
       --beacon-rpc-url {{l1_beacon_rpc}} \
