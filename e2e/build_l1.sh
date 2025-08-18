@@ -220,16 +220,16 @@ echo -e "${BLUE}🚀 Generating beacon-chain genesis...${NC}"
 echo "eth2-testnet-genesis path: $(which eth2-testnet-genesis)"
 
 if eth2-testnet-genesis deneb \
-  --config=./beacon-data/config.yaml \
+  --config=$SCRIPT_DIR/beacon-data/config.yaml \
   --preset-phase0=minimal \
   --preset-altair=minimal \
   --preset-bellatrix=minimal \
   --preset-capella=minimal \
   --preset-deneb=minimal \
-  --eth1-config=./devnet/genesis.json \
-  --state-output=./devnet/genesis.ssz \
-  --tranches-dir=./devnet/tranches \
-  --mnemonics=./mnemonics.yaml \
+  --eth1-config=$DEVNET_DIR/genesis.json \
+  --state-output=$DEVNET_DIR/genesis.ssz \
+  --tranches-dir=$DEVNET_DIR/tranches \
+  --mnemonics=$SCRIPT_DIR/mnemonics.yaml \
   --eth1-withdrawal-address=0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
   --eth1-match-genesis-time; then
     echo -e "${GREEN}✅ Beacon genesis generation completed successfully${NC}"
