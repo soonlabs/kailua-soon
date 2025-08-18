@@ -16,6 +16,40 @@ CONTRACTS_DIR="${CONTRACTS_DIR:-../soon/contracts/dump}"
 echo -e "${BLUE}🚀 Building L1 node related files for e2e testing${NC}"
 echo "=================================================="
 
+# Step 0: Check Go version
+echo -e "${YELLOW}🔧 Step 0: Checking Go version...${NC}"
+
+# Get the directory where this script is located (e2e directory)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Get required Go version from version.json
+REQUIRED_GO_VERSION=$(jq -r .go < "$SCRIPT_DIR/version.json")
+echo -e "${BLUE}📋 Required Go version: $REQUIRED_GO_VERSION${NC}"
+
+# Check if Go is installed
+if ! command -v go &> /dev/null; then
+    echo -e "${RED}❌ Go is not installed${NC}"
+    echo "Please install Go version $REQUIRED_GO_VERSION first"
+    exit 1
+fi
+
+# Get current Go version
+CURRENT_GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
+echo -e "${BLUE}📋 Current Go version: $CURRENT_GO_VERSION${NC}"
+
+# Compare versions
+if [ "$CURRENT_GO_VERSION" != "$REQUIRED_GO_VERSION" ]; then
+    echo -e "${RED}❌ Go version mismatch${NC}"
+    echo "Current: $CURRENT_GO_VERSION"
+    echo "Required: $REQUIRED_GO_VERSION"
+    echo "Please install Go version $REQUIRED_GO_VERSION"
+    exit 1
+else
+    echo -e "${GREEN}✅ Go version matches requirement${NC}"
+fi
+
+echo ""
+
 # Check if contracts directory exists
 if [ ! -d "$CONTRACTS_DIR" ]; then
     echo -e "${RED}❌ Contracts directory does not exist: $CONTRACTS_DIR${NC}"
@@ -66,9 +100,6 @@ echo ""
 
 # Step 4: Copy files to e2e directory
 echo -e "${YELLOW}🔧 Step 4: Copy files to e2e directory...${NC}"
-
-# Get the directory where this script is located (e2e directory)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Check if devnet directory exists, create if it doesn't
 DEVNET_DIR="$SCRIPT_DIR/devnet"
@@ -170,7 +201,7 @@ if ! command -v eth2-testnet-genesis &> /dev/null; then
     echo -e "${YELLOW}❌ eth2-testnet-genesis not found. Installing...${NC}"
     
     # Get the version from version.json
-    ETH2_TESTNET_GENESIS_VERSION=$(jq -r .eth2_testnet_genesis < version.json)
+    ETH2_TESTNET_GENESIS_VERSION=$(jq -r .eth2_testnet_genesis < $SCRIPT_DIR/version.json)
     echo -e "${BLUE}📦 Installing eth2-testnet-genesis version: $ETH2_TESTNET_GENESIS_VERSION${NC}"
     
     # Install eth2-testnet-genesis
