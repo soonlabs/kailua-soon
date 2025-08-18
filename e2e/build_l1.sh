@@ -70,6 +70,20 @@ echo -e "${YELLOW}🔧 Step 4: Copy files to e2e directory...${NC}"
 # Get the directory where this script is located (e2e directory)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Check if devnet directory exists, create if it doesn't
+DEVNET_DIR="$SCRIPT_DIR/devnet"
+if [ ! -d "$DEVNET_DIR" ]; then
+    echo -e "${YELLOW}📁 Creating devnet directory...${NC}"
+    if mkdir -p "$DEVNET_DIR"; then
+        echo -e "${GREEN}✅ Created devnet directory: $DEVNET_DIR${NC}"
+    else
+        echo -e "${RED}❌ Failed to create devnet directory${NC}"
+        exit 1
+    fi
+else
+    echo -e "${GREEN}✅ Devnet directory already exists: $DEVNET_DIR${NC}"
+fi
+
 # Files to copy
 FILES_TO_COPY=(
     "genesis.json"
@@ -95,7 +109,7 @@ fi
 
 # Copy files
 for file in "${FILES_TO_COPY[@]}"; do
-    if cp "$CONTRACTS_DIR/$file" "$SCRIPT_DIR/devnet/"; then
+    if cp "$CONTRACTS_DIR/$file" "$DEVNET_DIR/"; then
         echo -e "${GREEN}✅ Copied $file${NC}"
     else
         echo -e "${RED}❌ Failed to copy $file${NC}"
