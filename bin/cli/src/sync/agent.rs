@@ -225,7 +225,7 @@ impl SyncAgent {
             "sync_status",
             retry_res_ctx_timeout!(self.provider.l2_provider.sync_status().await)
         );
-        let safe_l2_number = sync_status["safe_l2"]["number"].as_u64().unwrap();
+        let safe_l2_number = sync_status["l2State"]["safeL2"]["block_info"]["number"].as_u64().unwrap();
         #[cfg(feature = "devnet")]
         let safe_l2_number = safe_l2_number.saturating_sub(delay_l2_blocks);
         let output_block_number = safe_l2_number
