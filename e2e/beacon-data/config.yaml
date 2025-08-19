@@ -106,8 +106,8 @@ REORG_MAX_EPOCHS_SINCE_FINALIZATION: 2
 # Deposit contract
 # ---------------------------------------------------------------
 # Local Optimism monorepo devnet
-DEPOSIT_CHAIN_ID: 900
-DEPOSIT_NETWORK_ID: 900
+DEPOSIT_CHAIN_ID: 11155111
+DEPOSIT_NETWORK_ID: 11155111
 # Configured on a per testnet basis
 DEPOSIT_CONTRACT_ADDRESS: 0x1111111111111111111111111111111111111111
 

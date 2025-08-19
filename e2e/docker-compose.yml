@@ -21,11 +21,7 @@ services:
       - "${PWD}/devnet/genesis.json:/genesis.json"
       - "${PWD}/test-jwt-secret.txt:/config/jwt-secret.txt"
     environment:
-      GETH_MINER_RECOMMIT: 1000ms
-      MINER_COINBASE: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-      # enable dev chain (no beacon, instant sealing)
-      GETH_DEV: "true"
-      GETH_DEV_PERIOD: "1"
+      GETH_MINER_RECOMMIT: 100ms
 
   l1-bn:
     depends_on:
