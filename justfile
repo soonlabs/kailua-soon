@@ -70,7 +70,7 @@ devnet-upgrade timeout="3600" advantage="60" target="debug" verbosity="" l1_rpc=
       --eth-rpc-url {{l1_rpc}} \
       --soon-node-url {{l2_rpc}} \
       --starting-block-number 0 \
-      --proposal-output-count 20 \
+      --proposal-output-count 1 \
       --output-block-span 50 \
       --challenge-timeout {{timeout}} \
       --collateral-amount 1 \
