@@ -3,3 +3,4 @@ docker/
 .cache/
 .soon/
 !test-jwt-secret.txt
+*.ssz

@@ -38,7 +38,7 @@ CURRENT_GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
 echo -e "${BLUE}📋 Current Go version: $CURRENT_GO_VERSION${NC}"
 
 # Compare versions
-if [ "$CURRENT_GO_VERSION" != "$REQUIRED_GO_VERSION" ]; then
+if [ "$CURRENT_GO_VERSION" -lt "$REQUIRED_GO_VERSION" ]; then
     echo -e "${RED}❌ Go version mismatch${NC}"
     echo "Current: $CURRENT_GO_VERSION"
     echo "Required: $REQUIRED_GO_VERSION"
