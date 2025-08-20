@@ -13,7 +13,7 @@ CONFIG_NAME: 'minimal'
 # Transition
 # ---------------------------------------------------------------
 # 2**256-2**10 for testing minimal network
-TERMINAL_TOTAL_DIFFICULTY: 115792089237316195423570985008687907853269984665640564039457584007913129638912
+TERMINAL_TOTAL_DIFFICULTY: 0
 # By default, don't use these params
 TERMINAL_BLOCK_HASH: 0x0000000000000000000000000000000000000000000000000000000000000000
 TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: 18446744073709551615
@@ -24,8 +24,8 @@ TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: 18446744073709551615
 # ---------------------------------------------------------------
 # [customized]
 MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 64
-# Jan 3, 2020
-MIN_GENESIS_TIME: 1578009600
+# Set to slightly in the future to allow setup
+MIN_GENESIS_TIME: 1755666700
 # Highest byte set to 0xFF, this is dev network
 GENESIS_FORK_VERSION: 0x000000FF
 # [customized] don't wait with genesis if we don't have to

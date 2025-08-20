@@ -46,8 +46,10 @@ exec geth \
 	--authrpc.vhosts="*" \
 	--authrpc.jwtsecret=/config/jwt-secret.txt \
 	--gcmode=archive \
-  --state.scheme=hash \
+	--state.scheme=hash \
 	--metrics \
 	--metrics.addr=0.0.0.0 \
 	--metrics.port=6060 \
+	--allow-insecure-unlock \
+	--netrestrict="172.0.0.0/8,192.168.0.0/16,10.0.0.0/8,127.0.0.0/8" \
 	"$@"

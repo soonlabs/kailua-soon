@@ -37,15 +37,20 @@ fi
 CURRENT_GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
 echo -e "${BLUE}📋 Current Go version: $CURRENT_GO_VERSION${NC}"
 
-# Compare versions
-if [ "$CURRENT_GO_VERSION" -lt "$REQUIRED_GO_VERSION" ]; then
-    echo -e "${RED}❌ Go version mismatch${NC}"
+# Simple version comparison - just check if current version is newer or equal
+CURRENT_MAJOR=$(echo $CURRENT_GO_VERSION | cut -d. -f1)
+CURRENT_MINOR=$(echo $CURRENT_GO_VERSION | cut -d. -f2)
+REQUIRED_MAJOR=$(echo $REQUIRED_GO_VERSION | cut -d. -f1)
+REQUIRED_MINOR=$(echo $REQUIRED_GO_VERSION | cut -d. -f2)
+
+if [[ $CURRENT_MAJOR -gt $REQUIRED_MAJOR ]] || ([[ $CURRENT_MAJOR -eq $REQUIRED_MAJOR ]] && [[ $CURRENT_MINOR -ge $REQUIRED_MINOR ]]); then
+    echo -e "${GREEN}✅ Go version meets requirement${NC}"
+else
+    echo -e "${RED}❌ Go version is older than requirement${NC}"
     echo "Current: $CURRENT_GO_VERSION"
     echo "Required: $REQUIRED_GO_VERSION"
-    echo "Please install Go version $REQUIRED_GO_VERSION"
+    echo "Please install Go version $REQUIRED_GO_VERSION or newer"
     exit 1
-else
-    echo -e "${GREEN}✅ Go version matches requirement${NC}"
 fi
 
 echo ""
@@ -58,10 +63,10 @@ if [ ! -d "$CONTRACTS_DIR" ]; then
     exit 1
 fi
 
-# Check if Makefile exists in contracts directory
-if [ ! -f "$CONTRACTS_DIR/Makefile" ]; then
-    echo -e "${RED}❌ Makefile not found in: $CONTRACTS_DIR${NC}"
-    echo "Please ensure the contracts directory contains a Makefile"
+# Check if Makefile or justfile exists in contracts directory
+if [ ! -f "$CONTRACTS_DIR/Makefile" ] && [ ! -f "$CONTRACTS_DIR/justfile" ]; then
+    echo -e "${RED}❌ Neither Makefile nor justfile found in: $CONTRACTS_DIR${NC}"
+    echo "Please ensure the contracts directory contains a Makefile or justfile"
     exit 1
 fi
 

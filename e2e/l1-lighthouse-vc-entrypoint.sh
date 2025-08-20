@@ -1,11 +1,14 @@
 #!/bin/bash
 set -exu
 
-# Copy the keys and secrets into place:
-# We don't mount directly into place, to prevent the container from writing lock-files / slashing-db / etc.
-# back into the host, which could affect future fresh devnet runs if not cleaned up.
-cp -r /validator_setup/validators /db/validators
-cp -r /validator_setup/secrets /db/secrets
+/wait && echo "Lighthouse Validator Client is ready"
+
+# Validator keys and secrets are directly mounted
+# Check if they are properly mounted
+echo "Setting up validator keys..."
+ls -la /db/validators/ | head -5
+ls -la /db/secrets/ | head -5
+echo "Validator keys are directly mounted and ready"
 
 exec /usr/local/bin/lighthouse \
   vc \
