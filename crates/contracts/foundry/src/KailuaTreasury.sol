@@ -350,9 +350,6 @@ contract KailuaTreasury is KailuaTournament, IKailuaTreasury {
                 revert BlockNumberMismatch(previousGame.l2BlockNumber(), tournament.l2BlockNumber());
             }
         }
-        if (vanguard != msg.sender) {
-            revert OnlyVanguard();
-        }
         // Record proposer
         proposerOf[address(tournament)] = msg.sender;
         // Record proposal
