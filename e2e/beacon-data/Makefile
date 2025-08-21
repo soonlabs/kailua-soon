@@ -4,4 +4,6 @@ data:
 		--source-mnemonic="test test test test test test test test test test test junk" --out-loc=data && \
 		rm -rf data/lodestar-secrets data/nimbus-keys data/prysm data/teku-keys data/teku-secrets
 
+keys: data
+
 

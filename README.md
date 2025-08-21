@@ -31,33 +31,35 @@ Kailua enables rollup operators to add a new fault proof contract, compatible wi
 
 ## Devnet Usage
 
-1. `just devnet-build-l1`
+1. `just devnet-init-l1`
+    * (Optional) Init beacon chain validator keys if needed.
+2. `just devnet-build-l1`
     * Builds the local cargo and foundry projects for L1 node.
-2. `just devnet-up-l1`
+3. `just devnet-up-l1`
     * Start l1 node for devnet.
-3. `just devnet-verify`
+4. `just devnet-verify`
     * Verifies the contracts are deployed correctly.    
-4. `just devnet-build-l2`
+5. `just devnet-build-l2`
     * Builds the L2 node related files according to l1 node.
-5. `just devnet-up`
+6. `just devnet-up`
     * Start the entire devnet, including l1 and l2 nodes.
-6. `just devnet-build`
+7. `just devnet-build`
     * Builds the local cargo and foundry projects.
-7. `just devnet-upgrade`
+8. `just devnet-upgrade`
     * Upgrades the devnet to use the `KailuaGame` contract.
     * Assumes the default values of the local soon devnet, but can take parameters.
-8. `just devnet-propose`
+9. `just devnet-propose`
     * Launches the Kailua proposer.
     * This runs the sequences, which periodically creates new `KailuaGame` instances.
-9. `just devnet-validate`
+10. `just devnet-validate`
     * Launches the Kailua validator.
     * This monitors `KailuaGame` instances for disputes and creates proofs to resolve them.
     * Note: Use `RISC0_DEV_MODE=1` to use fake proofs.
-10. `just devnet-fault`
+11. `just devnet-fault`
     * Deploys a single `KailuaGame` instance with a faulty sequencing proposal.
     * Tests the validator's fault proving functionality.
     * Tests the proposer's canonical chain tracking functionality.
-11. After you're done:
+12. After you're done:
     * `just devnet-down` to stop the running docker containers.
     * `just devnet-clean` to cleanup the docker volumes.
 

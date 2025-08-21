@@ -36,6 +36,9 @@ devnet-build +ARGS="-F devnet -F prove": (build ARGS)
 
 devnet-build-fpvm +ARGS="-F devnet -F prove -F rebuild-fpvm": (build ARGS)
 
+devnet-init-l1:
+  ./e2e/init_l1_beacon.sh
+
 devnet-up-l1:
   cd e2e && docker compose up -d l1 l1-bn l1-vc
 
