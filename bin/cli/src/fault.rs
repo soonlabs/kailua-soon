@@ -136,6 +136,10 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
     let faulty_root_claim = B256::from(games_count.to_be_bytes());
     // Prepare remainder of proposal
     let proposed_block_number = parent_block_number + proposal_block_count;
+    info!(
+        "faulty parent block number:{}, faulty_block_number:{}, proposed_block_number:{}",
+        parent_block_number, faulty_block_number, proposed_block_number
+    );
     let proposed_output_root = if proposed_block_number == faulty_block_number {
         faulty_root_claim
     } else {
@@ -220,9 +224,9 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
     if !owed_collateral.is_zero() {
         transaction = transaction.value(owed_collateral);
     }
-    if !sidecar.blobs.is_empty() {
-        transaction = transaction.sidecar(sidecar);
-    }
+    // if !sidecar.blobs.is_empty() {
+    //     transaction = transaction.sidecar(sidecar);
+    // }
     match transaction
         .transact_with_context(context.clone(), "KailuaTreasury::propose")
         .await
