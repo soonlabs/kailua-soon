@@ -230,7 +230,7 @@ impl SyncAgent {
         let safe_l2_number = safe_l2_number.saturating_sub(delay_l2_blocks);
         let output_block_number = safe_l2_number
             .min(self.cursor.last_output_index + self.deployment.blocks_per_proposal());
-        if self.cursor.last_output_index + self.deployment.output_block_span < output_block_number {
+        if self.cursor.last_output_index + self.deployment.output_block_span <= output_block_number {
             info!(
                 "Syncing with op-node from block {} until block {output_block_number}",
                 self.cursor.last_output_index

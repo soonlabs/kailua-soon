@@ -73,7 +73,7 @@ devnet-upgrade timeout="3600" advantage="60" target="debug" verbosity="" l1_rpc=
       --eth-rpc-url {{l1_rpc}} \
       --soon-node-url {{l2_rpc}} \
       --starting-block-number 0 \
-      --proposal-output-count 2 \
+      --proposal-output-count 1 \
       --output-block-span 50 \
       --challenge-timeout {{timeout}} \
       --collateral-amount 1 \
@@ -95,24 +95,22 @@ devnet-propose target="debug" verbosity="-vvv" l1_rpc="http://127.0.0.1:8545" l1
       --proposer-key {{proposer}} \
       {{verbosity}}
 
-devnet-fault offset parent target="debug" proposer="0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a" verbosity="" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:9545" rollup_node_rpc="http://127.0.0.1:7545":
+devnet-fault offset parent target="debug" proposer="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d" verbosity="" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899":
   ./target/{{target}}/kailua-cli test-fault \
       --eth-rpc-url {{l1_rpc}} \
       --beacon-rpc-url {{l1_beacon_rpc}} \
-      --op-geth-url {{l2_rpc}} \
-      --op-node-url {{rollup_node_rpc}} \
+      --soon-node-url {{l2_rpc}} \
       --proposer-key {{proposer}} \
       --fault-offset {{offset}} \
       --fault-parent {{parent}} \
       {{verbosity}}
 
-devnet-validate fastforward="0" target="debug" verbosity="" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:9545" rollup_node_rpc="http://127.0.0.1:7545" data_dir=".localtestdata/validate" validator="0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e":
+devnet-validate fastforward="100" target="debug" verbosity="" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/validate" validator="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
   ./target/{{target}}/kailua-cli validate \
       --fast-forward-target {{fastforward}} \
       --eth-rpc-url {{l1_rpc}} \
       --beacon-rpc-url {{l1_beacon_rpc}} \
-      --op-geth-url {{l2_rpc}} \
-      --op-node-url {{rollup_node_rpc}} \
+      --soon-node-url {{l2_rpc}} \
       --kailua-host ./target/{{target}}/kailua-host \
       --data-dir {{data_dir}} \
       --validator-key {{validator}} \
