@@ -56,7 +56,7 @@ where
         let mut block_hash = BlockHash::default();
         let number_bytes = header.number.to_be_bytes();
         block_hash[0..8].copy_from_slice(number_bytes.as_ref());
-        header.hash = block_hash.into();
+        header.hash = block_hash;
 
         Ok(header)
     }
@@ -89,7 +89,7 @@ where
         let mut block_hash = BlockHash::default();
         block_hash[0..8].copy_from_slice(number_bytes.as_ref());
         Ok(BlockInfo {
-            hash: block_hash.into(),
+            hash: block_hash,
             number: header.number,
             parent_hash: header.parent_hash,
             timestamp: header.timestamp,
@@ -205,7 +205,7 @@ where
                     block_info,
                     l1_origin: BlockNumHash {
                         number,
-                        hash: block_hash.into(),
+                        hash: block_hash,
                     },
                     seq_num: sequence_number,
                 })

@@ -200,6 +200,7 @@ where
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn run_core_client_ex<
     E,
     O: CommsClient + FlushableCache + Send + Sync + Debug,
