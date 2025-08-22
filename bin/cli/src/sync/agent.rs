@@ -738,6 +738,9 @@ impl SyncAgent {
 
             if !outputs.is_empty() {
                 info!("Fetched {} outputs.", outputs.len());
+                for (i, output) in outputs.iter().enumerate() {
+                    info!("output: {i}: {output:?}");
+                }
             }
             // Store outputs in memory and database
             for (i, output) in outputs.into_iter() {

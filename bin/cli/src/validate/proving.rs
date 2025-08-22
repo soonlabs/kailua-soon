@@ -47,7 +47,7 @@ pub fn create_proving_args(
     payout_recipient: Address,
     precondition_validation_data: Option<PreconditionValidationData>,
     l1_head: B256,
-    agreed_l2_head_hash: B256,
+    agreed_l2_block_number: u64,
     agreed_l2_output_root: B256,
     claimed_l2_block_number: u64,
     claimed_l2_output_root: B256,
@@ -115,8 +115,8 @@ pub fn create_proving_args(
         String::from("--l1-head"),
         l1_head.to_string(),
         // l2 starting block hash from on-chain proposal
-        String::from("--agreed-l2-head-hash"),
-        agreed_l2_head_hash.to_string(),
+        String::from("--agreed-l2-block-number"),
+        agreed_l2_block_number.to_string(),
         // l2 starting output root
         String::from("--agreed-l2-output-root"),
         agreed_l2_output_root.to_string(),
@@ -239,20 +239,6 @@ pub async fn request_fault_proof(
         parent.output_block_number + agent.deployment.output_block_span * divergence_point;
     debug!("l2_head_number {:?}", &agreed_l2_head_number);
 
-    // Get L2 head hash
-    let agreed_l2_head_hash = str_block_hash_to(
-        await_tel!(
-            context,
-            agent
-                .provider
-                .l2_provider
-                .get_block_by_number(agreed_l2_head_number)
-        )?
-        .blockhash
-        .as_str(),
-    );
-    debug!("l2_head {:?}", &agreed_l2_head_hash);
-
     // Get L2 head output root
     let Some(agreed_l2_output_root) = agent.outputs.get(&agreed_l2_head_number).copied() else {
         bail!("Output root for agreed block {agreed_l2_head_number} not in memory.");
@@ -271,7 +257,7 @@ pub async fn request_fault_proof(
             index: proposal.index,
             precondition_validation_data: None,
             l1_head,
-            agreed_l2_head_hash,
+            agreed_l2_block_number: agreed_l2_head_number,
             agreed_l2_output_root,
             claimed_l2_block_number,
             claimed_l2_output_root,
@@ -323,19 +309,7 @@ pub async fn request_validity_proof(
     } else {
         None
     };
-    // Get L2 head hash
-    let agreed_l2_head_hash = str_block_hash_to(
-        await_tel!(
-            context,
-            agent
-                .provider
-                .l2_provider
-                .get_block_by_number(parent.output_block_number)
-        )?
-        .blockhash
-        .as_str(),
-    );
-    debug!("l2_head {:?}", &agreed_l2_head_hash);
+
     // Message proving task
     channel
         .sender
@@ -343,7 +317,7 @@ pub async fn request_validity_proof(
             index: proposal.index,
             precondition_validation_data,
             l1_head,
-            agreed_l2_head_hash,
+            agreed_l2_block_number: parent.output_block_number,
             agreed_l2_output_root: parent.output_root,
             claimed_l2_block_number: proposal.output_block_number,
             claimed_l2_output_root: proposal.output_root,
