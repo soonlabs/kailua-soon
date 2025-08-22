@@ -122,7 +122,7 @@ services:
       L1_RPC_URL: http://l1:8545
       L2_RPC_URL: http://node:8899
       ADMIN_SECRET_KEY: ${BATCHER_ADMIN_SECRET}
-      DA_PROVIDER_URL: http://da-server:8080
+      DA_PROVIDER_URL: http://da-server:8080/
       WAIT_HOSTS: node:8899,da-server:8080
       WAIT_TIMEOUT: 300
 
