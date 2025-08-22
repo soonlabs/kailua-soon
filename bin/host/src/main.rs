@@ -38,7 +38,8 @@ async fn main() -> anyhow::Result<()> {
 
     // fetch starting block number
     let l2_node_provider = args
-        .soon_node_address
+        .kona
+        .l2_node_address
         .as_ref()
         .map(|addr| L2BlockFetcher::new_with_url(addr));
 

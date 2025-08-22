@@ -35,7 +35,7 @@ pub async fn generate_rollup_config(
             let tmp_cfg_file = tmp_dir.path().join("rollup-config.json");
             info!("Fetching rollup config from nodes.");
             fetch_rollup_config(
-                cfg.soon_node_address.as_ref().unwrap().as_str(),
+                cfg.kona.l2_node_address.as_ref().unwrap().as_str(),
                 Some(&tmp_cfg_file),
             )
             .await?;
