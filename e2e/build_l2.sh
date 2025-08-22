@@ -114,10 +114,30 @@ echo -e "${GREEN}🎉 L2 artifacts built successfully under: ${SOON_DATA_PATH}/.
 echo -e "${GREEN}✅ rollup.json placed at ${E2E_DIR}/rollup.json${NC}"
 
 #
-# Step 3: Set sequencer pubkey in SystemConfig via cast
+# Step 3: Modify channel_timeout in rollup.json
 #
 echo ""
-echo -e "${YELLOW}🔧 Step 3: set sequencer pubkey on L1 SystemConfig${NC}"
+echo -e "${YELLOW}🔧 Step 3: modifying channel_timeout in rollup.json${NC}"
+
+ROLLUP_JSON="${E2E_DIR}/rollup.json"
+if [ ! -f "${ROLLUP_JSON}" ]; then
+  echo -e "${RED}❌ rollup.json not found at ${ROLLUP_JSON}${NC}"
+  exit 1
+fi
+
+# Create a backup of the original rollup.json
+cp "${ROLLUP_JSON}" "${ROLLUP_JSON}.backup"
+echo -e "${YELLOW}📋 Created backup at ${ROLLUP_JSON}.backup${NC}"
+
+# Modify channel_timeout to 100 using jq
+jq '.channel_timeout = 100' "${ROLLUP_JSON}" > "${ROLLUP_JSON}.tmp" && mv "${ROLLUP_JSON}.tmp" "${ROLLUP_JSON}"
+echo -e "${GREEN}✅ Modified channel_timeout to 100 in ${ROLLUP_JSON}${NC}"
+
+#
+# Step 4: Set sequencer pubkey in SystemConfig via cast
+#
+echo ""
+echo -e "${YELLOW}🔧 Step 4: set sequencer pubkey on L1 SystemConfig${NC}"
 
 # Ensure cast exists
 if ! command -v cast >/dev/null 2>&1; then
