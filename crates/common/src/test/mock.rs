@@ -464,8 +464,8 @@ mod tests {
             );
 
             assert_eq!(
-                execution.artifacts.header,
-                new_oracle.executions[i].artifacts.header
+                execution.artifacts.block_info,
+                new_oracle.executions[i].artifacts.block_info
             );
             assert_eq!(
                 execution.artifacts.execution_result.len(),

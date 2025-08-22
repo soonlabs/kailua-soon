@@ -1,6 +1,6 @@
 use alloy_consensus::{Header, Receipt};
 use alloy_eips::{BlockNumHash, BlockNumberOrTag};
-use alloy_primitives::{keccak256, Address, BlockHash, Bytes, B256, U160, U256};
+use alloy_primitives::{keccak256, Address, BlockHash, Bytes, B256, U160};
 use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use kona_driver::PipelineCursor;

@@ -522,6 +522,7 @@ pub mod tests {
     use kona_executor::OffchainL2Builder;
     use kona_proof::l1::OracleBlobProvider;
     use kona_proof::BootInfo;
+    use litesvm::accounts_callback::MemoryAccountsCallback;
     use std::sync::Arc;
     use tracing_subscriber::EnvFilter;
 

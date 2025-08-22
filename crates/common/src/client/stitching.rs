@@ -487,7 +487,6 @@ pub mod tests {
     use crate::{client::core::tests::test_derivation, test::create_analyzed_oracle};
     use alloy_primitives::b256;
     use anyhow::Context;
-    use fraud_executor::executor::MemoryAccountsCallback;
     use kona_executor::StatelessL2Builder;
     use kona_proof::l1::OracleBlobProvider;
     use rayon::prelude::{IntoParallelIterator, ParallelIterator};
@@ -555,7 +554,7 @@ pub mod tests {
             None => B256::ZERO,
             Some(data) => oracle.add_precondition_data(data),
         };
-        run_stitching_client::<StatelessL2Builder<_, _, MemoryAccountsCallback>, _, _>(
+        run_stitching_client::<StatelessL2Builder<_, _>, _, _>(
             precondition_validation_data_hash,
             oracle.clone(),
             oracle.clone(),
@@ -584,7 +583,7 @@ pub mod tests {
             Some(data) => oracle.add_precondition_data(data),
         };
 
-        let result = run_stitching_client::<StatelessL2Builder<_, _, MemoryAccountsCallback>, _, _>(
+        let result = run_stitching_client::<StatelessL2Builder<_, _>, _, _>(
             precondition_validation_data_hash,
             oracle.clone(),
             oracle.clone(),
@@ -617,7 +616,7 @@ pub mod tests {
                 l1_head: boot_info.l1_head,
                 agreed_l2_output_root: e.agreed_output,
                 claimed_l2_output_root: e.claimed_output,
-                claimed_l2_block_number: e.artifacts.header.block_info.number,
+                claimed_l2_block_number: e.artifacts.block_info.block_info.number,
             })
             .collect::<Vec<_>>();
         let precondition_hash = precondition_validation_data
@@ -626,7 +625,7 @@ pub mod tests {
         // forward stitching pass
         let starting_block_number = stitched_executions
             .first()
-            .map(|e| e.artifacts.header.block_info.number - 1)
+            .map(|e| e.artifacts.block_info.block_info.number - 1)
             .unwrap_or(boot_info.claimed_l2_block_number);
         let proof_journal = test_stitching_client(
             BootInfo {
@@ -646,7 +645,7 @@ pub mod tests {
         // backward stitching pass
         let ending_block_number = stitched_executions
             .last()
-            .map(|e| e.artifacts.header.block_info.number)
+            .map(|e| e.artifacts.block_info.block_info.number)
             .unwrap_or(boot_info.claimed_l2_block_number);
         let proof_journal = test_stitching_client(
             BootInfo {
