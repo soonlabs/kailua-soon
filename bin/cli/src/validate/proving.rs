@@ -136,8 +136,8 @@ pub fn create_proving_args(
         String::from("--l1-beacon-address"),
         args.core.beacon_rpc_url.clone(),
         // l2 el node
-        String::from("--l2-node-address"),
-        args.core.soon_node_url.clone(),
+        String::from("--da-proxy-url"),
+        args.core.da_proxy_url.clone(),
         // path to cache
         String::from("--data-dir"),
         data_dir.to_str().unwrap().to_string(),

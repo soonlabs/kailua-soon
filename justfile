@@ -92,7 +92,7 @@ devnet-propose target="debug" verbosity="-vvv" da_proxy="http://127.0.0.1:8080" 
       --eth-rpc-url {{l1_rpc}} \
       --beacon-rpc-url {{l1_beacon_rpc}} \
       --soon-node-url {{l2_rpc}} \
-      --da_proxy_url {{da_proxy}} \
+      --da-proxy-url {{da_proxy}} \
       --data-dir {{data_dir}} \
       --proposer-key {{proposer}} \
       {{verbosity}}
@@ -102,7 +102,7 @@ devnet-fault offset parent target="debug" proposer="0x5a2ca727946070dd1e37b79197
       --eth-rpc-url {{l1_rpc}} \
       --beacon-rpc-url {{l1_beacon_rpc}} \
       --soon-node-url {{l2_rpc}} \
-      --da_proxy_url {{da_proxy}} \
+      --da-proxy-url {{da_proxy}} \
       --proposer-key {{proposer}} \
       --fault-offset {{offset}} \
       --fault-parent {{parent}} \
@@ -114,7 +114,7 @@ devnet-validate fastforward="100" target="debug" verbosity="" da_proxy="http://1
       --eth-rpc-url {{l1_rpc}} \
       --beacon-rpc-url {{l1_beacon_rpc}} \
       --soon-node-url {{l2_rpc}} \
-      --da_proxy_url {{da_proxy}} \
+      --da-proxy-url {{da_proxy}} \
       --kailua-host ./target/{{target}}/kailua-host \
       --data-dir {{data_dir}} \
       --validator-key {{validator}} \
@@ -127,7 +127,7 @@ bench l1_rpc l1_beacon_rpc l2_rpc da_proxy data start length range count target=
           --eth-rpc-url {{l1_rpc}} \
           --beacon-rpc-url {{l1_beacon_rpc}} \
           --soon-node-url {{l2_rpc}} \
-          --da_proxy_url {{da_proxy}} \
+          --da-proxy-url {{da_proxy}} \
           --data-dir {{data}} \
           --bench-start {{start}} \
           --bench-length {{length}} \
