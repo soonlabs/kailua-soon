@@ -87,31 +87,34 @@ devnet-upgrade timeout="3600" advantage="60" target="debug" verbosity="" l1_rpc=
 
 devnet-reset: devnet-down devnet-clean devnet-up
 
-devnet-propose target="debug" verbosity="-vvv" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/propose" proposer="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
+devnet-propose target="debug" verbosity="-vvv" da_proxy="http://127.0.0.1:8080" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/propose" proposer="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
   ./target/{{target}}/kailua-cli propose \
       --eth-rpc-url {{l1_rpc}} \
       --beacon-rpc-url {{l1_beacon_rpc}} \
       --soon-node-url {{l2_rpc}} \
+      --da_proxy_url {{da_proxy}} \
       --data-dir {{data_dir}} \
       --proposer-key {{proposer}} \
       {{verbosity}}
 
-devnet-fault offset parent target="debug" proposer="0x5a2ca727946070dd1e37b79197681ee861a6b4e31b3a86d54396ead0b0bb03ac" verbosity="" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899":
+devnet-fault offset parent target="debug" proposer="0x5a2ca727946070dd1e37b79197681ee861a6b4e31b3a86d54396ead0b0bb03ac" verbosity="" da_proxy="http://127.0.0.1:8080" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899":
   ./target/{{target}}/kailua-cli test-fault \
       --eth-rpc-url {{l1_rpc}} \
       --beacon-rpc-url {{l1_beacon_rpc}} \
       --soon-node-url {{l2_rpc}} \
+      --da_proxy_url {{da_proxy}} \
       --proposer-key {{proposer}} \
       --fault-offset {{offset}} \
       --fault-parent {{parent}} \
       {{verbosity}}
 
-devnet-validate fastforward="100" target="debug" verbosity="" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/validate" validator="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
+devnet-validate fastforward="100" target="debug" verbosity="" da_proxy="http://127.0.0.1:8080" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/validate" validator="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
   ./target/{{target}}/kailua-cli validate \
       --fast-forward-target {{fastforward}} \
       --eth-rpc-url {{l1_rpc}} \
       --beacon-rpc-url {{l1_beacon_rpc}} \
       --soon-node-url {{l2_rpc}} \
+      --da_proxy_url {{da_proxy}} \
       --kailua-host ./target/{{target}}/kailua-host \
       --data-dir {{data_dir}} \
       --validator-key {{validator}} \
@@ -119,12 +122,12 @@ devnet-validate fastforward="100" target="debug" verbosity="" l1_rpc="http://127
 
 devnet-prove block_number block_count="1" target="debug" verbosity="" data=".localtestdata": (prove block_number block_count "http://localhost:8545" "http://localhost:5052" "http://localhost:9545" "http://localhost:7545" data target verbosity)
 
-bench l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc data start length range count target="release" verbosity="":
+bench l1_rpc l1_beacon_rpc l2_rpc da_proxy data start length range count target="release" verbosity="":
     ./target/{{target}}/kailua-cli benchmark \
           --eth-rpc-url {{l1_rpc}} \
           --beacon-rpc-url {{l1_beacon_rpc}} \
-          --op-geth-url {{l2_rpc}} \
-          --op-node-url {{rollup_node_rpc}} \
+          --soon-node-url {{l2_rpc}} \
+          --da_proxy_url {{da_proxy}} \
           --data-dir {{data}} \
           --bench-start {{start}} \
           --bench-length {{length}} \
@@ -133,13 +136,13 @@ bench l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc data start length range count 
           {{verbosity}}
 
 # Run the client program natively with the host program attached.
-prove block_number block_count l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc data target="release" seq_window="50" verbosity="":
+prove block_number block_count l1_rpc l1_beacon_rpc l2_rpc da_proxy data target="release" seq_window="50" verbosity="":
   #!/usr/bin/env bash
 
   L1_NODE_ADDRESS="{{l1_rpc}}"
   L1_BEACON_ADDRESS="{{l1_beacon_rpc}}"
-  L2_NODE_ADDRESS="{{l2_rpc}}"
-  OP_NODE_ADDRESS="{{rollup_node_rpc}}"
+  SOON_NODE_URL="{{l2_rpc}}"
+  DA_PROXY_URL="{{da_proxy}}"
 
   L2_BLOCK_NUMBER={{block_number}}
   CLAIMED_L2_BLOCK_NUMBER=$((L2_BLOCK_NUMBER + {{block_count}} - 1))
@@ -158,20 +161,20 @@ prove block_number block_count l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc data 
   # Get the info for the parent l2 block
   echo "Fetching data for parent of block #$L2_BLOCK_NUMBER..."
   AGREED_L2_OUTPUT_ROOT=$(cast rpc --rpc-url $OP_NODE_ADDRESS "optimism_outputAtBlock" $(cast 2h $((L2_BLOCK_NUMBER - 1))) | jq -r .outputRoot)
-  AGREED_L2_HEAD=$(cast block --rpc-url $L2_NODE_ADDRESS $((L2_BLOCK_NUMBER - 1)) --json | jq -r .hash)
 
   echo "Running host program with zk client program..."
   ./target/{{target}}/kailua-host {{verbosity}} \
     --op-node-address $OP_NODE_ADDRESS \
     --l1-head $L1_HEAD \
-    --agreed-l2-head-hash $AGREED_L2_HEAD \
+    --agreed-l2-block-number $L2_BLOCK_NUMBER \
     --agreed-l2-output-root $AGREED_L2_OUTPUT_ROOT \
     --claimed-l2-output-root $CLAIMED_L2_OUTPUT_ROOT \
     --claimed-l2-block-number $CLAIMED_L2_BLOCK_NUMBER \
     --l2-chain-id $L2_CHAIN_ID \
     --l1-node-address $L1_NODE_ADDRESS \
     --l1-beacon-address $L1_BEACON_ADDRESS \
-    --l2-node-address $L2_NODE_ADDRESS \
+    --soon-node-url $SOON_NODE_URL \
+    --da-proxy-url $DA_PROXY_URL \
     --data-dir {{data}} \
     --native
 
@@ -201,11 +204,11 @@ query block_number l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc seq_window="50":
   # L2 chain id
   cast chain-id --rpc-url $L2_NODE_ADDRESS
 
-prove-offline block_number l1_head l2_hash l2_claim l2_output_root l2_chain_id data target="release" verbosity="":
+prove-offline block_number l1_head l2_block_number l2_claim l2_output_root l2_chain_id data target="release" verbosity="":
   echo "Running host program with zk client program..."
   NUM_CONCURRENT_PREFLIGHTS=0 ./target/{{target}}/kailua-host {{verbosity}} \
     --l1-head {{l1_head}} \
-    --agreed-l2-head-hash {{l2_hash}} \
+    --agreed-l2-block-number {{l2_block_number}} \
     --claimed-l2-output-root {{l2_claim}} \
     --agreed-l2-output-root {{l2_output_root}} \
     --claimed-l2-block-number {{block_number}} \

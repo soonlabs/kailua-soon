@@ -57,6 +57,9 @@ pub struct CoreArgs {
     /// Address of the L1 Beacon API endpoint to use.
     #[clap(long, env)]
     pub beacon_rpc_url: String,
+    /// Address of the DA proxy endpoint to use.
+    #[clap(long, env)]
+    pub da_proxy_url: String,
 
     #[cfg(feature = "devnet")]
     #[clap(long, env, default_value_t = 0)]
