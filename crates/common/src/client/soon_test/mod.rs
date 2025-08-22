@@ -14,6 +14,7 @@ use fraud_executor::{
 use kona_executor::L2BlockBuilder;
 use kona_preimage::CommsClient;
 use kona_proof::{BootInfo, FlushableCache};
+use litesvm::{L2Transaction, ParentInfo};
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use solana_sdk::{signature::Keypair, signer::Signer, transaction::VersionedTransaction};
 use soon_derive::traits::BlobProvider;
@@ -54,6 +55,8 @@ pub struct ExecutionStorageItems {
     // pub startup_meta: HashMap<u64, SvmStartUpMeta>,
     pub sysvar_accounts: HashMap<u64, AccountPairs>,
     pub slot_hash_pairs: HashMap<u64, (B256, B256)>,
+    pub parent_info_map: HashMap<u64, ParentInfo>,
+    pub clock_timestamps: HashMap<u64, i64>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -192,7 +195,8 @@ pub(crate) fn to_execution(
 }
 
 pub(crate) fn encode_tx(tx: VersionedTransaction) -> Result<Bytes> {
-    let tx_bytes = bincode::serialize(&tx)?;
+    let l2_tx = L2Transaction::new_head(1, tx);
+    let tx_bytes = bincode::serialize(&l2_tx)?;
     Ok(Bytes::from(tx_bytes))
 }
 

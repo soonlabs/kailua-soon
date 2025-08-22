@@ -667,8 +667,7 @@ pub mod tests {
             da_provider,
             execution_cache,
             None,
-        )
-        .expect("run_core_client");
+        )?;
 
         assert_eq!(result_boot_info.l1_head, boot_info.l1_head);
         assert_eq!(

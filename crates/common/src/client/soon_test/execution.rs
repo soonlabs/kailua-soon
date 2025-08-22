@@ -9,10 +9,13 @@ use anyhow::Result;
 use bridge::pda::{spl_token_mint_pubkey, spl_token_owner_pubkey};
 use crossbeam_channel::Receiver;
 use fraud_executor::accounts::SoonAccounts;
-use kona_executor::{cal_init_accounts_hash, cal_init_state_root_hash};
+use kona_executor::{
+    cal_init_accounts_hash, cal_init_state_root_hash, cal_svm_clock_timestamp, cal_svm_parent_info,
+};
 use kona_preimage::PreimageKey;
 use kona_proof::BootInfo;
 use litesvm::accounts_callback::MemoryAccountsCallback;
+use litesvm::ParentInfo;
 use solana_sdk::{
     account::ReadableAccount, program_pack::Pack, signature::Keypair, signer::Signer,
 };
@@ -125,6 +128,22 @@ pub(crate) fn executions_save_to_oracle(
         );
     }
 
+    // save parent info
+    for (slot, parent_info) in &storage_items.parent_info_map {
+        oracle.insert_preimage(
+            PreimageKey::new_keccak256(cal_svm_parent_info(*slot).0),
+            bincode::serialize(parent_info)?,
+        );
+    }
+
+    // save clock timestamps
+    for (slot, timestamp) in &storage_items.clock_timestamps {
+        oracle.insert_preimage(
+            PreimageKey::new_keccak256(cal_svm_clock_timestamp(*slot).0),
+            bincode::serialize(timestamp)?,
+        );
+    }
+
     Ok(())
 }
 
@@ -156,6 +175,22 @@ pub(crate) async fn update_execution_storage_items(
                 l2_block_info.block_info.parent_hash,
             ),
         );
+
+        let parent_bank = s.current_bank().parent().unwrap();
+        storage_items.parent_info_map.insert(
+            slot,
+            ParentInfo {
+                slot: parent_bank.slot(),
+                bank_hash: parent_bank.hash(),
+                fee_rate_governor: parent_bank.fee_rate_governor.clone(),
+                signature_count: parent_bank.signature_count(),
+            },
+        );
+
+        storage_items
+            .clock_timestamps
+            .insert(slot, s.current_bank().clock().unix_timestamp);
+
         storage_items.l2_blocks.insert(slot, l2_block);
         Ok(())
     })?;
