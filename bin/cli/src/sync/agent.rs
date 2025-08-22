@@ -569,6 +569,12 @@ impl SyncAgent {
 
         // Update claim status
         proposal.correct_claim = Some(local_claim == proposal.output_root);
+        if local_claim != proposal.output_root {
+            info!(
+                "claim mismatch: local_claim: {} != proposal.output_root:{}",
+                local_claim, proposal.output_root
+            );
+        }
         // Check intermediate output correctness for KailuaGame instances
         if proposal.has_parent() {
             let starting_block_number = proposal

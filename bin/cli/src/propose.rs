@@ -241,6 +241,7 @@ pub async fn propose(args: ProposeArgs, data_dir: PathBuf) -> anyhow::Result<()>
             error!("Could not fetch output claim.");
             continue;
         };
+        info!("proposed_output_root: {proposed_output_root}");
         // Prepare intermediate outputs
         let mut io_field_elements = vec![];
         for i in 1..agent.deployment.proposal_output_count {
