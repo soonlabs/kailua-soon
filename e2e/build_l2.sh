@@ -111,7 +111,7 @@ echo -e "${GREEN}✅ genesis done${NC}"
 
 echo ""
 echo -e "${GREEN}🎉 L2 artifacts built successfully under: ${SOON_DATA_PATH}/.soon${NC}"
-echo -e "${GREEN}✅ rollup.json placed at ${E2E_DIR}/rollup.json${NC}"
+echo -e "${GREEN}✅ rollup.json placed at ${E2E_DIR}/${NETWORK_NAME}.rollup.json${NC}"
 
 #
 # Step 3: Modify channel_timeout in rollup.json
@@ -119,7 +119,7 @@ echo -e "${GREEN}✅ rollup.json placed at ${E2E_DIR}/rollup.json${NC}"
 echo ""
 echo -e "${YELLOW}🔧 Step 3: modifying channel_timeout in rollup.json${NC}"
 
-ROLLUP_JSON="${E2E_DIR}/rollup.json"
+ROLLUP_JSON="${E2E_DIR}/${NETWORK_NAME}.rollup.json"
 if [ ! -f "${ROLLUP_JSON}" ]; then
   echo -e "${RED}❌ rollup.json not found at ${ROLLUP_JSON}${NC}"
   exit 1
