@@ -27,7 +27,7 @@ pub struct KailuaHostArgs {
     pub kona: kona_host::single::SingleChainHost,
 
     /// How many threads to use for fetching preflight data
-    #[clap(long, env, default_value_t = 50)]
+    #[clap(long, env, default_value_t = 1)]
     pub num_concurrent_preflights: u64,
     /// How many threads to use for computing proofs
     #[clap(long, env, default_value_t = 1)]

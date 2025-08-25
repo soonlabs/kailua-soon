@@ -356,6 +356,18 @@ pub async fn compute_cached_proof(
         chain_id: 0,
         rollup_config,
     };
+    
+    // Print complete boot information
+    println!("=== Boot Information ===");
+    println!("l1_head: {:?}", boot.l1_head);
+    println!("agreed_l2_block_number: {}", boot.agreed_l2_block_number);
+    println!("agreed_l2_output_root: {:?}", boot.agreed_l2_output_root);
+    println!("claimed_l2_output_root: {:?}", boot.claimed_l2_output_root);
+    println!("claimed_l2_block_number: {}", boot.claimed_l2_block_number);
+    println!("chain_id: {}", boot.chain_id);
+    println!("rollup_config: {:?}", boot.rollup_config);
+    println!("========================");
+    
     // Construct expected journal
     let proof_journal = stitch_boot_info(
         &boot,
