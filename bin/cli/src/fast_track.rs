@@ -184,7 +184,7 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
     };
 
     // Deploy KailuaTreasury contract
-    let root_claim = await_tel!(
+    let output_res = await_tel!(
         context,
         tracer,
         "root_claim",
@@ -193,8 +193,10 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
                 .output_at_block(args.starting_block_number)
                 .await
         )
-    )
-    .hash();
+    );
+    let root_claim = output_res.hash();
+    info!("output_res: {}", output_res);
+    info!("root_claim: {} at block number: {}", root_claim, args.starting_block_number);
     info!("Deploying KailuaTreasury contract to L1 rpc.");
     let receipt = KailuaTreasury::deploy_builder(
         &deployer_provider,
