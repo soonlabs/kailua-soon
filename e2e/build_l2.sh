@@ -111,13 +111,33 @@ echo -e "${GREEN}✅ genesis done${NC}"
 
 echo ""
 echo -e "${GREEN}🎉 L2 artifacts built successfully under: ${SOON_DATA_PATH}/.soon${NC}"
-echo -e "${GREEN}✅ rollup.json placed at ${E2E_DIR}/rollup.json${NC}"
+echo -e "${GREEN}✅ rollup.json placed at ${E2E_DIR}/${NETWORK_NAME}.rollup.json${NC}"
 
 #
-# Step 3: Set sequencer pubkey in SystemConfig via cast
+# Step 3: Modify max_frame_size and channel_size in rollup.json
 #
 echo ""
-echo -e "${YELLOW}🔧 Step 3: set sequencer pubkey on L1 SystemConfig${NC}"
+echo -e "${YELLOW}🔧 Step 3: modifying max_frame_size and channel_size in rollup.json${NC}"
+
+ROLLUP_JSON="${E2E_DIR}/${NETWORK_NAME}.rollup.json"
+if [ ! -f "${ROLLUP_JSON}" ]; then
+  echo -e "${RED}❌ rollup.json not found at ${ROLLUP_JSON}${NC}"
+  exit 1
+fi
+
+# Create a backup of the original rollup.json
+cp "${ROLLUP_JSON}" "${ROLLUP_JSON}.backup"
+echo -e "${YELLOW}📋 Created backup at ${ROLLUP_JSON}.backup${NC}"
+
+# Modify max_frame_size to 2000 and channel_size to 3000 using jq
+jq '.max_frame_size = 2000 | .channel_size = 3000' "${ROLLUP_JSON}" > "${ROLLUP_JSON}.tmp" && mv "${ROLLUP_JSON}.tmp" "${ROLLUP_JSON}"
+echo -e "${GREEN}✅ Modified max_frame_size to 2000 and channel_size to 3000 in ${ROLLUP_JSON}${NC}"
+
+#
+# Step 4: Set sequencer pubkey in SystemConfig via cast
+#
+echo ""
+echo -e "${YELLOW}🔧 Step 4: set sequencer pubkey on L1 SystemConfig${NC}"
 
 # Ensure cast exists
 if ! command -v cast >/dev/null 2>&1; then

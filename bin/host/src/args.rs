@@ -25,10 +25,7 @@ use std::cmp::Ordering;
 pub struct KailuaHostArgs {
     #[clap(flatten)]
     pub kona: kona_host::single::SingleChainHost,
-
-    /// Address of SOON-NODE endpoint to use
-    #[clap(long, env)]
-    pub soon_node_address: Option<String>,
+    
     /// How many threads to use for fetching preflight data
     #[clap(long, env, default_value_t = 4)]
     pub num_concurrent_preflights: u64,

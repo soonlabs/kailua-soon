@@ -63,7 +63,7 @@ pub fn create_proving_args(
         String::from("--payout-recipient-address"),
         payout_recipient.to_string(),
         // l2 el node
-        String::from("--soon-node-address"),
+        String::from("--l2-node-address"),
         args.core.soon_node_url.clone(),
     ];
     // precondition data
