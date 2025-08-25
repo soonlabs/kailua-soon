@@ -690,7 +690,7 @@ pub mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     pub async fn test_core_client_from_soon_executor() -> anyhow::Result<()> {
-        init_tracing_subscriber(4, None::<EnvFilter>)?;
+        init_tracing_subscriber(3, None::<EnvFilter>)?;
         let (boot_info, oracle) = soon_to_execution_cache(None).await?;
 
         test_execution_ex::<OffchainL2Builder<_, _, MemoryAccountsCallback>, _, _>(

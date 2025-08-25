@@ -7,17 +7,17 @@ use alloy_primitives::{Address, Bytes, B256};
 use anyhow::{Context, Result};
 use bridge::solana_program::fee_calculator::FeeRateGovernor;
 use crossbeam_channel::Receiver;
-use fraud_executor::{
-    accounts::{AccountPairs, SoonAccounts},
-    outcome::BlockBuildingOutcome,
-};
+use fraud_executor::{accounts::SoonAccounts, outcome::BlockBuildingOutcome};
 use kona_executor::L2BlockBuilder;
 use kona_preimage::CommsClient;
 use kona_proof::{BootInfo, FlushableCache};
-use litesvm::{L2Transaction, ParentInfo};
+use litesvm::ParentInfo;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
-use solana_sdk::{signature::Keypair, signer::Signer, transaction::VersionedTransaction};
+use solana_sdk::pubkey::Pubkey;
+use solana_sdk::{signature::Keypair, signer::Signer};
+use soon_derive::prelude::L2ChainProvider;
 use soon_derive::traits::BlobProvider;
+use soon_node::derive::driver::L2ChainProviderImmutable;
 use soon_node::node::tests::{new_derive_block_with_mock_l1, MockEthL1Node};
 use soon_node::{
     derive::mock::MockInstant,
@@ -51,12 +51,10 @@ pub(crate) use providers::{TestDaProvider, TestOracleL1ChainProvider, TestOracle
 pub struct ExecutionStorageItems {
     pub safe_head: L2BlockInfo,
     pub l2_blocks: HashMap<u64, L2Block>,
-    pub init_accounts: HashMap<u64, SoonAccounts>,
-    // pub startup_meta: HashMap<u64, SvmStartUpMeta>,
-    pub sysvar_accounts: HashMap<u64, AccountPairs>,
-    pub slot_hash_pairs: HashMap<u64, (B256, B256)>,
+    pub soon_accounts: HashMap<u64, SoonAccounts>,
     pub parent_info_map: HashMap<u64, ParentInfo>,
     pub clock_timestamps: HashMap<u64, i64>,
+    pub leader: Pubkey,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -153,22 +151,15 @@ where
     Ok(execution_cache)
 }
 
-pub(crate) fn tx_to_execution(
-    txs: Vec<VersionedTransaction>,
+pub(crate) fn to_execution(
+    block: L2Block,
     agreed_output: B256,
     claimed_output: B256,
     header: L2BlockInfo,
 ) -> Result<Execution> {
-    let txs = txs
-        .into_iter()
-        .map(encode_tx)
-        .collect::<Result<Vec<Bytes>>>()?;
     Ok(Execution {
         agreed_output,
-        attributes: OpPayloadAttributes {
-            transactions: Some(txs),
-            ..Default::default()
-        },
+        attributes: l2_block_to_op_attributes(block)?,
         artifacts: BlockBuildingOutcome {
             block_info: header,
             state_root: claimed_output,
@@ -180,24 +171,20 @@ pub(crate) fn tx_to_execution(
     })
 }
 
-pub(crate) fn to_execution(
-    block: RawBlock,
-    agreed_output: B256,
-    claimed_output: B256,
-    header: L2BlockInfo,
-) -> Result<Execution> {
-    let txs = block
-        .transactions
-        .iter()
-        .map(|tx| tx.to_versioned_transaction())
-        .collect::<Vec<_>>();
-    tx_to_execution(txs, agreed_output, claimed_output, header)
-}
-
-pub(crate) fn encode_tx(tx: VersionedTransaction) -> Result<Bytes> {
-    let l2_tx = L2Transaction::new_head(1, tx);
-    let tx_bytes = bincode::serialize(&l2_tx)?;
-    Ok(Bytes::from(tx_bytes))
+fn l2_block_to_op_attributes(block: L2Block) -> Result<OpPayloadAttributes> {
+    Ok(OpPayloadAttributes {
+        transactions: Some(
+            block
+                .transactions
+                .into_iter()
+                .map(|tx| {
+                    let tx_bytes = bincode::serialize(&tx)?;
+                    Ok(Bytes::from(tx_bytes))
+                })
+                .collect::<Result<_>>()?,
+        ),
+        ..Default::default()
+    })
 }
 
 #[allow(clippy::type_complexity)]
@@ -243,12 +230,36 @@ pub(crate) fn new_soon(
     Ok((producer, identity, metadata, complete_receiver))
 }
 
-pub(crate) fn current_executor_state_root(executor: &SharedExecutor) -> Result<B256> {
+pub(crate) async fn fetch_info_and_update_execution_storage_items(
+    executor: &mut SharedExecutor,
+    storage_items: &mut ExecutionStorageItems,
+) -> Result<(L2BlockInfo, B256, L2Block)> {
+    let slot = executor.latest_slot()?;
+    let l2_block = executor.block_by_number(slot).await?;
+    storage_items.l2_blocks.insert(slot, l2_block.clone());
+
     let state_root = executor.storage_query(|s| {
         let soon_accounts = SoonAccounts::try_from(s)?;
-        Ok(soon_accounts.state_root())
+        let state_root = soon_accounts.state_root();
+        storage_items.soon_accounts.insert(slot, soon_accounts);
+        storage_items.parent_info_map.insert(
+            slot,
+            ParentInfo {
+                slot: s.current_slot(),
+                bank_hash: s.current_bank().hash(),
+                fee_rate_governor: s.current_bank().fee_rate_governor.clone(),
+                signature_count: s.current_bank().signature_count(),
+            },
+        );
+        storage_items
+            .clock_timestamps
+            .insert(slot, s.current_bank().clock().unix_timestamp);
+        Ok(state_root)
     })?;
-    Ok(state_root)
+
+    let head = executor.l2_block_info_by_number_immut(slot)?;
+
+    Ok((head, state_root, l2_block))
 }
 
 pub(crate) async fn initialize_test_providers<O>(

@@ -1,34 +1,27 @@
-use super::{new_soon, ExecutionStorageItems, TokenMetadata};
-use crate::client::soon_test::{
-    current_executor_state_root, to_execution, tx_to_execution, L1_NUMBER,
+use super::{
+    fetch_info_and_update_execution_storage_items, new_soon, ExecutionStorageItems, TokenMetadata,
 };
+use crate::client::soon_test::{to_execution, L1_NUMBER};
 use crate::{executor::Execution, oracle::WitnessOracle, test::mock::MockOracle};
 use alloy_primitives::{keccak256, B256};
 use alloy_rlp::{BytesMut, Encodable};
 use anyhow::Result;
 use bridge::pda::{spl_token_mint_pubkey, spl_token_owner_pubkey};
 use crossbeam_channel::Receiver;
-use fraud_executor::accounts::SoonAccounts;
 use kona_executor::{
-    cal_init_accounts_hash, cal_init_state_root_hash, cal_svm_clock_timestamp, cal_svm_parent_info,
+    cal_init_state_root_hash, cal_soon_accounts_hash, cal_svm_clock_timestamp, cal_svm_leader,
+    cal_svm_parent_info,
 };
 use kona_preimage::PreimageKey;
 use kona_proof::BootInfo;
-use litesvm::accounts_callback::MemoryAccountsCallback;
-use litesvm::ParentInfo;
 use solana_sdk::{
     account::ReadableAccount, program_pack::Pack, signature::Keypair, signer::Signer,
 };
-use soon_derive::traits::L2ChainProvider;
-use soon_node::derive::driver::L2ChainProviderImmutable;
 use soon_node::node::tests::{new_derive_block_with_mock_l1, MockEthL1Node};
 use soon_node::{
     derive::mock::MockInstant,
     executor::{ExecutorOperator, SharedExecutor},
-    node::{
-        producer::Producer,
-        tests::{create_spl_tx, new_attributed_deposit_tx},
-    },
+    node::{producer::Producer, tests::create_spl_tx},
 };
 use soon_primitives::{
     blocks::{BlockInfo, L2BlockInfo, RawBlock},
@@ -77,46 +70,20 @@ pub(crate) fn executions_save_to_oracle(
         bincode::serialize(&storage_items.safe_head)?,
     );
 
-    // save init accounts
+    // save soon accounts
     storage_items
-        .init_accounts
+        .soon_accounts
         .iter()
         .for_each(|(slot, accounts)| {
-            // TODO: set feature set if needed
-            let accounts_callback = MemoryAccountsCallback::from(accounts.accounts.clone());
             oracle.insert_preimage(
-                PreimageKey::new_keccak256(cal_init_accounts_hash(*slot).0),
-                bincode::serialize(&accounts_callback).unwrap(),
+                PreimageKey::new_keccak256(cal_soon_accounts_hash(*slot).0),
+                bincode::serialize(accounts).unwrap(),
             );
             oracle.insert_preimage(
                 PreimageKey::new_keccak256(cal_init_state_root_hash(*slot).0),
                 accounts.state_root().to_vec(),
             )
         });
-
-    // save startup meta
-    // for (slot, startup_meta) in &storage_items.startup_meta {
-    //     oracle.insert_preimage(
-    //         PreimageKey::new_keccak256(cal_svm_start_up_meta_hash(*slot).0),
-    //         bincode::serialize(startup_meta)?,
-    //     );
-    // }
-
-    // save sysvar accounts
-    // for (slot, account_pairs) in &storage_items.sysvar_accounts {
-    //     oracle.insert_preimage(
-    //         PreimageKey::new_keccak256(cal_extra_accounts_hash(*slot).0),
-    //         bincode::serialize(account_pairs)?,
-    //     );
-    // }
-
-    // save slot hash pairs
-    // for (slot, (hash, parent_hash)) in &storage_items.slot_hash_pairs {
-    //     oracle.insert_preimage(
-    //         PreimageKey::new_keccak256(slot_hash_pair_hash(*slot).0),
-    //         bincode::serialize(&(*hash, *parent_hash))?,
-    //     );
-    // }
 
     // save l2 blocks
     for (slot, block) in &storage_items.l2_blocks {
@@ -144,56 +111,12 @@ pub(crate) fn executions_save_to_oracle(
         );
     }
 
-    Ok(())
-}
+    // save leader
+    oracle.insert_preimage(
+        PreimageKey::new_keccak256(cal_svm_leader().0),
+        bincode::serialize(&storage_items.leader)?,
+    );
 
-pub(crate) async fn update_execution_storage_items(
-    executor: &mut SharedExecutor,
-    storage_items: &mut ExecutionStorageItems,
-) -> Result<()> {
-    let slot = executor.latest_slot()?;
-    let l2_block = executor.block_by_number(slot).await?;
-    let l2_block_info = executor.l2_block_info_by_number_immut(slot)?;
-    executor.storage_query(|s| {
-        let soon_accounts = SoonAccounts::try_from(s)?;
-        storage_items.init_accounts.insert(slot, soon_accounts);
-        // storage_items.startup_meta.insert(
-        //     s.current_slot(),
-        //     SvmStartUpMeta {
-        //         epoch: s.current_bank().epoch(),
-        //         fee_collector: *s.current_bank().collector_id(),
-        //     },
-        // );
-        storage_items
-            .sysvar_accounts
-            .insert(slot, s.export_sysvars()?);
-
-        storage_items.slot_hash_pairs.insert(
-            slot,
-            (
-                l2_block_info.block_info.hash,
-                l2_block_info.block_info.parent_hash,
-            ),
-        );
-
-        let parent_bank = s.current_bank().parent().unwrap();
-        storage_items.parent_info_map.insert(
-            slot,
-            ParentInfo {
-                slot: parent_bank.slot(),
-                bank_hash: parent_bank.hash(),
-                fee_rate_governor: parent_bank.fee_rate_governor.clone(),
-                signature_count: parent_bank.signature_count(),
-            },
-        );
-
-        storage_items
-            .clock_timestamps
-            .insert(slot, s.current_bank().clock().unix_timestamp);
-
-        storage_items.l2_blocks.insert(slot, l2_block);
-        Ok(())
-    })?;
     Ok(())
 }
 
@@ -214,35 +137,19 @@ pub(crate) async fn blocks_to_execution_cache(
         chain_id: 0,
         rollup_config: SoonRollupConfig::default(),
     };
-    let mut storage_items = ExecutionStorageItems::default();
+    let mut storage_items = ExecutionStorageItems {
+        leader: identity.pubkey(),
+        ..Default::default()
+    };
     let mut executor = producer.get_executor().clone();
-    executor.storage_query(|s| {
-        let soon_accounts = SoonAccounts::try_from(s)?;
-        storage_items
-            .init_accounts
-            .insert(s.current_slot(), soon_accounts);
-        // storage_items.startup_meta.insert(
-        //     s.current_slot(),
-        //     SvmStartUpMeta {
-        //         epoch: s.current_bank().epoch(),
-        //         fee_collector: *s.current_bank().collector_id(),
-        //     },
-        // );
-        Ok(())
-    })?;
-    let agreed_output = current_executor_state_root(&executor)?;
-    let init_slot = executor.latest_slot()?;
-    let slot_1_head = executor.l2_block_info_by_number_immut(init_slot)?;
-    storage_items.safe_head = slot_1_head;
-    storage_items
-        .l2_blocks
-        .insert(init_slot, executor.block_by_number(init_slot).await?);
-    info!(
-        "storage safe head: {:?}, l2 block: {:?}",
-        storage_items.safe_head,
-        storage_items.l2_blocks.get(&init_slot).unwrap()
-    );
-    boot_info.agreed_l2_output_root = agreed_output;
+
+    // update storage items for slot 1
+    let (head, state_root_1, _) =
+        fetch_info_and_update_execution_storage_items(&mut executor, &mut storage_items).await?;
+    info!("soon slot 1 state root: {:?}", state_root_1);
+    storage_items.safe_head = head;
+    info!("storage safe head: {:?}", storage_items.safe_head);
+    boot_info.agreed_l2_output_root = state_root_1;
 
     // === slot 2
     // append a `CreateSPL` tx into the block
@@ -272,27 +179,16 @@ pub(crate) async fn blocks_to_execution_cache(
         mint.mint_authority.unwrap(),
         spl_token_owner_pubkey(&metadata.remote_token.0 .0.into())
     );
-    let claimed_output = current_executor_state_root(&executor)?;
-    info!("soon slot 2 state root: {:?}", claimed_output);
-    update_execution_storage_items(&mut executor, &mut storage_items).await?;
 
-    let slot_2_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
-    let l1_info_tx = new_attributed_deposit_tx(L1_NUMBER, 1);
-    let execution = tx_to_execution(
-        vec![
-            create_spl_tx.into(),
-            l1_info_tx
-                .to_sanitized_transaction(&Default::default())?
-                .to_versioned_transaction(),
-        ],
-        agreed_output,
-        claimed_output,
-        slot_2_head,
-    )?;
+    // update storage items for slot 2
+    let (head, state_root_2, l2_block) =
+        fetch_info_and_update_execution_storage_items(&mut executor, &mut storage_items).await?;
+    info!("soon slot 2 state root: {:?}", state_root_2);
+    // get execution
+    let execution = to_execution(l2_block, state_root_1, state_root_2, head)?;
     executions.push(Arc::new(execution));
 
     // === slot 3
-    let agreed_output = claimed_output;
     let derive_block_2 = new_derive_block_with_mock_l1(l1_node, metadata.to.pubkey());
     // let mut derive_block_2 = new_derive_block(metadata.to.pubkey(), L1_NUMBER + 1);
     // deposit erc20 token
@@ -305,16 +201,19 @@ pub(crate) async fn blocks_to_execution_cache(
     let raw = RawBlock::try_init(derive_block_2, 0, &Default::default())?;
     producer.mine_with_block(Some(raw.clone()))?;
     complete_receiver.try_recv()?;
-    let claimed_output = current_executor_state_root(&executor)?;
-    info!("soon slot 3 state root: {:?}", claimed_output);
-    boot_info.claimed_l2_output_root = claimed_output;
+
+    // update storage items for slot 3
+    let (head, state_root_3, l2_block) =
+        fetch_info_and_update_execution_storage_items(&mut executor, &mut storage_items).await?;
+    info!("soon slot 3 state root: {:?}", state_root_3);
+    // get execution
+    let execution = to_execution(l2_block, state_root_2, state_root_3, head)?;
+    executions.push(Arc::new(execution));
+
+    // update boot info
+    boot_info.claimed_l2_output_root = state_root_3;
     boot_info.claimed_l2_block_number = producer.get_executor().latest_slot()?;
     info!("boot info: {:?}", boot_info);
-    update_execution_storage_items(&mut executor, &mut storage_items).await?;
-
-    let slot_3_head = executor.l2_block_info_by_number_immut(executor.latest_slot()?)?;
-    let execution = to_execution(raw, agreed_output, claimed_output, slot_3_head)?;
-    executions.push(Arc::new(execution));
 
     Ok((boot_info, executions, storage_items))
 }
