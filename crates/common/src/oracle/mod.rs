@@ -93,6 +93,12 @@ pub fn validate_preimage(key: &PreimageKey, value: &[u8]) -> PreimageOracleResul
     };
     if let Some(image) = image {
         if key != &PreimageKey::new(image, key_type) {
+            println!("=== PreimageKey Mismatch ===");
+            println!("Expected key: {:?}", PreimageKey::new(image, key_type));
+            println!("Actual key: {:?}", key);
+            println!("Image: {:?}", image);
+            println!("Key type: {:?}", key_type);
+            println!("============================");
             return Err(PreimageOracleError::InvalidPreimageKey);
         }
     }
