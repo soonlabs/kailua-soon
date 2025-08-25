@@ -250,6 +250,17 @@ pub async fn request_fault_proof(
         bail!("Output root for claimed block {claimed_l2_block_number} not in memory.");
     };
 
+    // Print main information before sending
+    info!("request_fault_proof");
+    info!("=== Proposal Information ===");
+    info!("proposal.index: {}", proposal.index);
+    info!("l1_head: {:?}", l1_head);
+    info!("agreed_l2_block_number: {}", agreed_l2_head_number);
+    info!("agreed_l2_output_root: {:?}", agreed_l2_output_root);
+    info!("claimed_l2_block_number: {}", claimed_l2_block_number);
+    info!("claimed_l2_output_root: {:?}", claimed_l2_output_root);
+    info!("============================");
+
     // Message proving task
     channel
         .sender
@@ -309,6 +320,18 @@ pub async fn request_validity_proof(
     } else {
         None
     };
+
+    // Print main information before sending
+    info!("request_validity_proof");
+    info!("=== Proposal Information ===");
+    info!("proposal.index: {}", proposal.index);
+    info!("l1_head: {:?}", l1_head);
+    info!("agreed_l2_block_number: {}", parent.output_block_number);
+    info!("agreed_l2_output_root: {:?}", parent.output_root);
+    info!("claimed_l2_block_number: {}", proposal.output_block_number);
+    info!("claimed_l2_output_root: {:?}", proposal.output_root);
+    info!("precondition_validation_data: {:?}", precondition_validation_data);
+    info!("============================");
 
     // Message proving task
     channel
