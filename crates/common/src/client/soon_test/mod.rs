@@ -38,6 +38,7 @@ use std::{collections::HashMap, path::Path, sync::Arc};
 pub(crate) mod derivation;
 pub(crate) mod execution;
 pub(crate) mod providers;
+pub(crate) mod e2e;
 
 #[allow(unused_imports)]
 pub use derivation::soon_to_derivation;

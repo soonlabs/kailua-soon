@@ -557,6 +557,7 @@ pub fn recover_collected_executions(
 #[cfg_attr(coverage_nightly, coverage(off))]
 pub mod tests {
     use super::*;
+    use crate::client::soon_test::e2e::*;
     use crate::client::soon_test::{
         derive_to_execution, initialize_test_providers, soon_to_derivation,
         soon_to_execution_cache, TestDaProvider, TestOracleL1ChainProvider,
@@ -790,6 +791,13 @@ pub mod tests {
             oracle.clone(),
             OracleBlobProvider::new(oracle.clone()),
         )?;
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    pub async fn test_e2e_core_from_soon() -> anyhow::Result<()> {
+        init_tracing_subscriber(3, None::<EnvFilter>)?;
+        init_soon_env(None).await?;
         Ok(())
     }
 }
