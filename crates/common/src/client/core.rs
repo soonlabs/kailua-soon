@@ -68,7 +68,7 @@ where
     client::log("SAFE HEAD HASH");
     let safe_head_hash = fetch_safe_head_hash(oracle.as_ref(), boot.agreed_l2_output_root).await?;
 
-    let l1_provider = OracleL1ChainProvider::new(B256::ZERO, stream)
+    let l1_provider = OracleL1ChainProvider::new(boot.l1_head, stream)
         .await
         .context("new oracle l1 chain provider failed")?;
     let l2_provider =
