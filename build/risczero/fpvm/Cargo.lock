@@ -5576,6 +5576,7 @@ dependencies = [
  "soon-derive",
  "soon-primitives",
  "spin 0.10.0",
+ "tokio",
  "tracing",
 ]
 
@@ -12474,7 +12475,7 @@ dependencies = [
 name = "spl-noop"
 version = "0.2.0"
 dependencies = [
- "solana-program 2.3.0",
+ "solana-program 2.0.14",
 ]
 
 [[package]]

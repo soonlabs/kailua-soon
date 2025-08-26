@@ -24,7 +24,7 @@ hex.workspace = true
 copy_dir = { workspace = true, optional = true }
 kona-host = { workspace = true, optional = true }
 tempfile = { workspace = true, optional = true }
-tokio = { workspace = true, optional = true }
+tokio = { workspace = true, features = ["sync"] }
 
 alloy-consensus.workspace = true
 alloy-eips.workspace = true
@@ -80,7 +80,7 @@ bonsai-sdk.workspace = true
 
 [features]
 default = []
-offline = ["kona-host", "copy_dir", "tokio"]
+offline = ["kona-host", "copy_dir"]
 __test = [
 	"offline",
 	"tempfile",
