@@ -84,7 +84,7 @@ pub fn validate_preimage(key: &PreimageKey, value: &[u8]) -> PreimageOracleResul
             Some(x.as_bytes().try_into().unwrap())
         }
         // TODO: block slot is not validated here
-        PreimageKeyType::BlockSlot => None,
+        PreimageKeyType::BlockSlot | PreimageKeyType::DAProxyBlob => None,
         PreimageKeyType::Precompile => {
             unimplemented!("Precompile acceleration is not yet supported.");
         }
