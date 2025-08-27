@@ -104,6 +104,7 @@ services:
       SOON_NODE_ENABLE_DA: true
       DA_PROVIDER_URL: http://da-server:8080/
       SOON_NODE_DA_POLL_INTERVAL: 1000
+      SOON_NODE_ENABLE_FRAUD_PROOF: true
       SOON_NODE_ENABLE_FAUCET: ${SOON_NODE_ENABLE_FAUCET:-true}
 
   batcher:
