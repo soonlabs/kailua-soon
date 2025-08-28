@@ -34,6 +34,8 @@ use soon_derive::sources::DAServerSource;
 use soon_derive::traits::{BlobProvider, L2ChainProvider};
 use soon_primitives::blocks::L2BlockHeader;
 use soon_primitives::output_root::OutputRoot;
+use solana_sdk::{signature::Keypair, signer::Signer, system_instruction, transaction::Transaction};
+use bridge::pda::spl_token_owner_pubkey;
 use std::fmt::Debug;
 use std::mem::take;
 use std::sync::{Arc, Mutex};
@@ -797,7 +799,66 @@ pub mod tests {
     #[tokio::test(flavor = "multi_thread")]
     pub async fn test_e2e_core_from_soon() -> anyhow::Result<()> {
         init_tracing_subscriber(3, None::<EnvFilter>)?;
-        init_soon_env(None).await?;
+        let env = init_soon_env(None).await?;
+        
+        // Step 1: Generate approximately 100 accounts and SPL ATAs
+        let mut accounts = Vec::new();
+        let mut spl_accounts = Vec::new();
+        
+        for i in 0..100 {
+            let account = solana_sdk::signature::Keypair::new();
+            accounts.push(account);
+            
+            tracing::info!("Generated account {}: {} with SPL ATA: {}", i, accounts[i].pubkey(), spl_ata);
+        }
+        
+        // Step 2: Construct approximately 200 blocks of random transfer transactions
+        // let mut rng = rand::thread_rng();
+        // let last_blockhash = env.e2e_producer
+        //     .get_executor()
+        //     .storage_query(|s| Ok(s.current_bank().last_blockhash()))?;
+            
+        // for block_num in 0..200 {
+        //     use rand::Rng;
+            
+        //     // Generate 1-5 random transactions per block
+        //     let tx_count = rng.gen_range(1..=5);
+            
+        //     for tx_idx in 0..tx_count {
+        //         // Select random sender and receiver
+        //         let sender_idx = rng.gen_range(0..accounts.len());
+        //         let receiver_idx = rng.gen_range(0..accounts.len());
+                
+        //         if sender_idx != receiver_idx {
+        //             let sender = &accounts[sender_idx];
+        //             let receiver_pubkey = accounts[receiver_idx].pubkey();
+                    
+        //             // Create a simple transfer transaction
+        //             let transfer_amount = rng.gen_range(1000..10000); // Random lamports
+                    
+        //             let transfer_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
+        //                 &[solana_sdk::system_instruction::transfer(
+        //                     &sender.pubkey(),
+        //                     &receiver_pubkey,
+        //                     transfer_amount,
+        //                 )],
+        //                 Some(&sender.pubkey()),
+        //                 &[sender],
+        //                 last_blockhash,
+        //             );
+                    
+        //             tracing::info!(
+        //                 "Block {}, Tx {}: Transfer {} lamports from {} to {}",
+        //                 block_num,
+        //                 tx_idx,
+        //                 transfer_amount,
+        //                 sender.pubkey(),
+        //                 receiver_pubkey
+        //             );
+        //         }
+        //     }
+        // }
+        
         Ok(())
     }
 }

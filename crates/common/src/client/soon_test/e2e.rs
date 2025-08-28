@@ -40,6 +40,10 @@ pub type E2eSoonProducer = Producer<SharedExecutor, MockInstant>;
 pub struct E2eKailuaSoonEnvironment {
     pub e2e_producer: E2eSoonProducer,
     pub mpt_runner: MptRunner,
+    pub identity: Arc<Keypair>,
+    pub metadata: TokenMetadata,
+    pub complete_receiver: Receiver<(L2BlockInfo, Option<BlockInfo>)>,
+    pub l1_node: MockEthL1Node,
 }
 
 pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2eKailuaSoonEnvironment> {
@@ -64,5 +68,26 @@ pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2eKailuaSo
     Ok(E2eKailuaSoonEnvironment {
         e2e_producer,
         mpt_runner,
+        identity,
+        metadata,
+        complete_receiver,
+        l1_node: mock_l1_node,
     })
+}
+
+/// promote_multi_tx will promote more than 200 random blocks
+/// including modify `data` and `lamports` of all accounts.
+pub async fn promote_multi_tx(
+    env: &mut E2eKailuaSoonEnvironment,
+) -> Result<(BootInfo, Vec<Arc<Execution>>, ExecutionStorageItems)> {
+    let blocks = 300;
+    let mut accounts = Vec::new();
+    let mut spl_accounts = Vec::new();
+
+    // on slot 2, generate multi random accounts and spl ata.
+    // need to airdrop enough lamports + spl token
+    for _ in 0..50 {
+        let account = solana_sdk::signature::Keypair::new();
+        accounts.push(account);
+    }
 }
