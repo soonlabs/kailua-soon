@@ -6004,6 +6004,8 @@ name = "litesvm"
 version = "0.1.0"
 dependencies = [
  "bincode",
+ "fast-math",
+ "hex",
  "indexmap 2.7.1",
  "itertools 0.12.1",
  "serde",
@@ -6012,7 +6014,6 @@ dependencies = [
  "solana-compute-budget",
  "solana-compute-budget-program",
  "solana-config-program",
- "solana-entry",
  "solana-loader-v4-program",
  "solana-program 2.0.14",
  "solana-program-runtime",

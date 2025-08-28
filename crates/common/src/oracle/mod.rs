@@ -83,15 +83,13 @@ pub fn validate_preimage(key: &PreimageKey, value: &[u8]) -> PreimageOracleResul
             let x = SHA2::hash_bytes(value);
             Some(x.as_bytes().try_into().unwrap())
         }
-        // TODO: block slot is not validated here
-        PreimageKeyType::BlockSlot | PreimageKeyType::DAProxyBlob => None,
         PreimageKeyType::Precompile => {
             unimplemented!("Precompile acceleration is not yet supported.");
         }
         PreimageKeyType::Blob => {
             unreachable!("Blob key types should not be loaded.");
         }
-        PreimageKeyType::Local | PreimageKeyType::GlobalGeneric => None,
+        _ => None,
     };
     if let Some(image) = image {
         if key != &PreimageKey::new(image, key_type) {
