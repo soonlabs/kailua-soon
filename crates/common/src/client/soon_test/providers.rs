@@ -282,6 +282,14 @@ where
             .map_err(OracleProviderError::Rlp)
         })
     }
+
+    fn bank_hash(&self, _block_number: u64) -> Result<B256, Self::Error> {
+        Ok(B256::default())
+    }
+
+    fn block_time(&self, _block_number: u64) -> Result<i64, Self::Error> {
+        Ok(0)
+    }
 }
 
 impl<O> TrieDBProvider for TestOracleL2ChainProvider<O>
@@ -312,6 +320,14 @@ where
 
     fn hint_account_proof(&self, _pubkey: &Pubkey, _block_number: u64) -> Result<(), Self::Error> {
         // No-op for testing
+        Ok(())
+    }
+
+    fn hint_bank_hash(&self, _block_number: u64) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn hint_block_time(&self, _block_number: u64) -> Result<(), Self::Error> {
         Ok(())
     }
 }
