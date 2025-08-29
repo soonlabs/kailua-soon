@@ -13,7 +13,6 @@ use kona_preimage::CommsClient;
 use kona_proof::{BootInfo, FlushableCache};
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use solana_sdk::hash::Hash;
-use solana_sdk::pubkey::Pubkey;
 use solana_sdk::{signature::Keypair, signer::Signer};
 use soon_derive::prelude::L2ChainProvider;
 use soon_derive::traits::BlobProvider;
@@ -54,7 +53,6 @@ pub struct ExecutionStorageItems {
     pub soon_accounts: HashMap<u64, SoonAccounts>,
     pub clock_timestamps: HashMap<u64, i64>,
     pub bank_hashes: HashMap<u64, Hash>,
-    pub leader: Pubkey,
 }
 
 #[derive(Debug, Default, Clone)]

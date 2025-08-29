@@ -10,7 +10,6 @@ use bridge::pda::{spl_token_mint_pubkey, spl_token_owner_pubkey};
 use crossbeam_channel::Receiver;
 use kona_executor::{
     cal_init_state_root_hash, cal_soon_accounts_hash, cal_svm_bank_hash, cal_svm_clock_timestamp,
-    cal_svm_leader,
 };
 use kona_preimage::PreimageKey;
 use kona_proof::BootInfo;
@@ -111,12 +110,6 @@ pub(crate) fn executions_save_to_oracle(
         );
     }
 
-    // save leader
-    oracle.insert_preimage(
-        PreimageKey::new_keccak256(cal_svm_leader().0),
-        bincode::serialize(&storage_items.leader)?,
-    );
-
     Ok(())
 }
 
@@ -140,10 +133,7 @@ pub(crate) async fn blocks_to_execution_cache(
             ..Default::default()
         },
     };
-    let mut storage_items = ExecutionStorageItems {
-        leader: identity.pubkey(),
-        ..Default::default()
-    };
+    let mut storage_items = ExecutionStorageItems::default();
     let mut executor = producer.get_executor().clone();
 
     // update storage items for slot 1

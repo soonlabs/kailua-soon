@@ -118,13 +118,7 @@ pub(crate) async fn blocks_to_derivation_cache(
         chain_id: 0,
         rollup_config,
     };
-    let mut storage_items = DerivationStorageItems {
-        execution: ExecutionStorageItems {
-            leader: identity.pubkey(),
-            ..Default::default()
-        },
-        ..Default::default()
-    };
+    let mut storage_items = DerivationStorageItems::default();
     let mut executor = producer.get_executor().clone();
 
     // update storage items for slot 1
