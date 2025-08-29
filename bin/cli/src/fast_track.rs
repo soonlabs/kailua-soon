@@ -196,7 +196,10 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
     );
     let root_claim = output_res.hash();
     info!("output_res: {}", output_res);
-    info!("root_claim: {} at block number: {}", root_claim, args.starting_block_number);
+    info!(
+        "root_claim: {} at block number: {}",
+        root_claim, args.starting_block_number
+    );
     info!("Deploying KailuaTreasury contract to L1 rpc.");
     let receipt = KailuaTreasury::deploy_builder(
         &deployer_provider,

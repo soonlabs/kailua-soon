@@ -11,8 +11,8 @@ use fraud_executor::{accounts::SoonAccounts, outcome::BlockBuildingOutcome};
 use kona_executor::L2BlockBuilder;
 use kona_preimage::CommsClient;
 use kona_proof::{BootInfo, FlushableCache};
-use litesvm::ParentInfo;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
+use solana_sdk::hash::Hash;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::{signature::Keypair, signer::Signer};
 use soon_derive::prelude::L2ChainProvider;
@@ -52,8 +52,8 @@ pub struct ExecutionStorageItems {
     pub safe_head: L2BlockInfo,
     pub l2_blocks: HashMap<u64, L2Block>,
     pub soon_accounts: HashMap<u64, SoonAccounts>,
-    pub parent_info_map: HashMap<u64, ParentInfo>,
     pub clock_timestamps: HashMap<u64, i64>,
+    pub bank_hashes: HashMap<u64, Hash>,
     pub leader: Pubkey,
 }
 
@@ -242,15 +242,9 @@ pub(crate) async fn fetch_info_and_update_execution_storage_items(
         let soon_accounts = SoonAccounts::try_from(s)?;
         let state_root = soon_accounts.state_root();
         storage_items.soon_accounts.insert(slot, soon_accounts);
-        storage_items.parent_info_map.insert(
-            slot,
-            ParentInfo {
-                slot: s.current_slot(),
-                bank_hash: s.current_bank().hash(),
-                fee_rate_governor: s.current_bank().fee_rate_governor.clone(),
-                signature_count: s.current_bank().signature_count(),
-            },
-        );
+        storage_items
+            .bank_hashes
+            .insert(slot, s.current_bank().hash());
         storage_items
             .clock_timestamps
             .insert(slot, s.current_bank().clock().unix_timestamp);

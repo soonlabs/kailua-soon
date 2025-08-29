@@ -330,7 +330,10 @@ pub async fn request_validity_proof(
     info!("agreed_l2_output_root: {:?}", parent.output_root);
     info!("claimed_l2_block_number: {}", proposal.output_block_number);
     info!("claimed_l2_output_root: {:?}", proposal.output_root);
-    info!("precondition_validation_data: {:?}", precondition_validation_data);
+    info!(
+        "precondition_validation_data: {:?}",
+        precondition_validation_data
+    );
     info!("============================");
 
     // Message proving task

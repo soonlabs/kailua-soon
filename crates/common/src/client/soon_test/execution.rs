@@ -9,8 +9,8 @@ use anyhow::Result;
 use bridge::pda::{spl_token_mint_pubkey, spl_token_owner_pubkey};
 use crossbeam_channel::Receiver;
 use kona_executor::{
-    cal_init_state_root_hash, cal_soon_accounts_hash, cal_svm_clock_timestamp, cal_svm_leader,
-    cal_svm_parent_info,
+    cal_init_state_root_hash, cal_soon_accounts_hash, cal_svm_bank_hash, cal_svm_clock_timestamp,
+    cal_svm_leader,
 };
 use kona_preimage::PreimageKey;
 use kona_proof::BootInfo;
@@ -95,11 +95,11 @@ pub(crate) fn executions_save_to_oracle(
         );
     }
 
-    // save parent info
-    for (slot, parent_info) in &storage_items.parent_info_map {
+    // save bank hashes
+    for (slot, hash) in &storage_items.bank_hashes {
         oracle.insert_preimage(
-            PreimageKey::new_keccak256(cal_svm_parent_info(*slot).0),
-            bincode::serialize(parent_info)?,
+            PreimageKey::new_keccak256(cal_svm_bank_hash(*slot).0),
+            bincode::serialize(hash)?,
         );
     }
 
@@ -135,7 +135,10 @@ pub(crate) async fn blocks_to_execution_cache(
         agreed_l2_block_number: 1,
         claimed_l2_block_number: 3,
         chain_id: 0,
-        rollup_config: SoonRollupConfig::default(),
+        rollup_config: SoonRollupConfig {
+            sequencer_schedules: vec![(0, identity.pubkey())],
+            ..Default::default()
+        },
     };
     let mut storage_items = ExecutionStorageItems {
         leader: identity.pubkey(),

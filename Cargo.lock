@@ -8372,7 +8372,6 @@ dependencies = [
  "solana-loader-v4-program",
  "solana-program",
  "solana-program-runtime",
- "solana-runtime-transaction",
  "solana-sdk",
  "solana-stake-program",
  "solana-svm",
@@ -13879,18 +13878,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-runtime-transaction"
-version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
-dependencies = [
- "log",
- "rustc_version 0.4.1",
- "solana-compute-budget",
- "solana-sdk",
- "thiserror 1.0.69",
-]
-
-[[package]]
 name = "solana-sdk"
 version = "2.0.14"
 source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
@@ -14778,6 +14765,9 @@ dependencies = [
  "roaring",
  "serde",
  "serde_json",
+ "smallvec",
+ "solana-accounts-db",
+ "solana-program",
  "solana-sdk",
  "thiserror 1.0.69",
 ]
@@ -15075,6 +15065,7 @@ dependencies = [
  "solana-ledger",
  "solana-measure",
  "solana-metrics",
+ "solana-program",
  "solana-program-runtime",
  "solana-rayon-threadlimit",
  "solana-rpc",
