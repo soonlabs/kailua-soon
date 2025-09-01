@@ -12,12 +12,14 @@ use kona_executor::L2BlockBuilder;
 use kona_preimage::CommsClient;
 use kona_proof::{BootInfo, FlushableCache};
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
-use solana_sdk::hash::Hash;
+use solana_sdk::{hash::Hash, native_token::LAMPORTS_PER_SOL};
 use solana_sdk::{signature::Keypair, signer::Signer};
 use soon_derive::prelude::L2ChainProvider;
 use soon_derive::traits::BlobProvider;
-use soon_node::derive::driver::L2ChainProviderImmutable;
 use soon_node::node::tests::{new_derive_block_with_mock_l1, MockEthL1Node};
+use soon_node::{
+    derive::driver::L2ChainProviderImmutable, node::tests::init_soon_genesis_with_mints,
+};
 use soon_node::{
     derive::mock::MockInstant,
     executor::{ExecutorOperator, SharedExecutor},
@@ -36,9 +38,9 @@ use std::sync::Mutex;
 use std::{collections::HashMap, path::Path, sync::Arc};
 
 pub(crate) mod derivation;
+pub(crate) mod e2e;
 pub(crate) mod execution;
 pub(crate) mod providers;
-pub(crate) mod e2e;
 
 #[allow(unused_imports)]
 pub use derivation::soon_to_derivation;
@@ -197,12 +199,22 @@ pub(crate) fn new_soon(
     Arc<Keypair>,
     TokenMetadata,
     Receiver<(L2BlockInfo, Option<BlockInfo>)>,
+    Vec<Keypair>,
 )> {
     let identity = Arc::new(Keypair::new());
-    init_soon_genesis(
+    let mut mints = vec![];
+    for _ in 0..100 {
+        mints.push(Keypair::new());
+    }
+
+    init_soon_genesis_with_mints(
         path,
         &identity,
         true,
+        mints
+            .iter()
+            .map(|v| (v.pubkey(), 10 * LAMPORTS_PER_SOL))
+            .collect::<Vec<_>>(),
         Some(
             std::env::var("CARGO_MANIFEST_DIR")
                 .ok()
@@ -227,7 +239,7 @@ pub(crate) fn new_soon(
     // assert l1 block info state
     assert_eq!(producer.get_executor().latest_slot()?, 1);
 
-    Ok((producer, identity, metadata, complete_receiver))
+    Ok((producer, identity, metadata, complete_receiver, mints))
 }
 
 pub(crate) async fn fetch_info_and_update_execution_storage_items(

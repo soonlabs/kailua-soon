@@ -8,13 +8,13 @@ use alloy_rlp::{BytesMut, Encodable};
 use anyhow::Result;
 use bridge::pda::{spl_token_mint_pubkey, spl_token_owner_pubkey};
 use crossbeam_channel::Receiver;
-use kona_executor::{
-    cal_init_state_root_hash, cal_soon_accounts_hash, cal_svm_clock_timestamp, cal_svm_leader,
-    cal_svm_parent_info,
-};
+use kona_executor::{cal_init_state_root_hash, cal_soon_accounts_hash, cal_svm_clock_timestamp};
 use kona_preimage::PreimageKey;
 use kona_proof::BootInfo;
 use rkyv::ser::sharing::Share;
+use solana_sdk::native_token::LAMPORTS_PER_SOL;
+use solana_sdk::pubkey::Pubkey;
+use solana_sdk::system_transaction;
 use solana_sdk::{
     account::ReadableAccount, program_pack::Pack, signature::Keypair, signer::Signer,
 };
@@ -44,13 +44,14 @@ pub struct E2eKailuaSoonEnvironment {
     pub metadata: TokenMetadata,
     pub complete_receiver: Receiver<(L2BlockInfo, Option<BlockInfo>)>,
     pub l1_node: MockEthL1Node,
+    pub mints: Vec<Keypair>,
 }
 
 pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2eKailuaSoonEnvironment> {
     // init soon producer.
     let mut mock_l1_node = MockEthL1Node::new(L1_NUMBER, 12);
     let temp = tempfile::tempdir()?;
-    let (mut e2e_producer, identity, metadata, complete_receiver) =
+    let (mut e2e_producer, identity, metadata, complete_receiver, mints) =
         new_soon(temp.path(), relative_to_soon, &mut mock_l1_node)?;
 
     // init mpt calculation.
@@ -72,22 +73,26 @@ pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2eKailuaSo
         metadata,
         complete_receiver,
         l1_node: mock_l1_node,
+        mints,
     })
 }
 
 /// promote_multi_tx will promote more than 200 random blocks
 /// including modify `data` and `lamports` of all accounts.
-pub async fn promote_multi_tx(
-    env: &mut E2eKailuaSoonEnvironment,
-) -> Result<(BootInfo, Vec<Arc<Execution>>, ExecutionStorageItems)> {
+pub async fn promote_multi_tx(env: &mut E2eKailuaSoonEnvironment) -> Result<()> {
     let blocks = 300;
-    let mut accounts = Vec::new();
-    let mut spl_accounts = Vec::new();
+    let last_blockhash = env
+        .e2e_producer
+        .get_executor()
+        .storage_query(|s| Ok(s.current_bank().last_blockhash()))?;
 
-    // on slot 2, generate multi random accounts and spl ata.
-    // need to airdrop enough lamports + spl token
-    for _ in 0..50 {
-        let account = solana_sdk::signature::Keypair::new();
-        accounts.push(account);
+    for i in 0..blocks {
+        let from = env.mints[i % env.mints.len()].insecure_clone();
+        let to = env.mints[(i + 1) % env.mints.len()].pubkey();
+        let tx = system_transaction::transfer(&from, &to, LAMPORTS_PER_SOL, last_blockhash);
+        env.e2e_producer.add_tx(tx)?;
+        env.e2e_producer.mine_with_block(None)?;
+        env.complete_receiver.try_recv()?;
     }
+    Ok(())
 }

@@ -37,7 +37,7 @@ use super::{new_soon, DerivationStorageItems, TokenMetadata};
 pub async fn soon_to_derivation(relative_to_soon: Option<&str>) -> Result<(BootInfo, MockOracle)> {
     let mut mock_l1_node = MockEthL1Node::new(L1_NUMBER, 12);
     let temp = tempfile::tempdir()?;
-    let (mut producer, identity, metadata, complete_receiver) =
+    let (mut producer, identity, metadata, complete_receiver, _) =
         new_soon(temp.path(), relative_to_soon, &mut mock_l1_node)?;
 
     let (boot_info, oracle_storage_items) = blocks_to_derivation_cache(

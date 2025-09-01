@@ -559,7 +559,7 @@ pub fn recover_collected_executions(
 #[cfg_attr(coverage_nightly, coverage(off))]
 pub mod tests {
     use super::*;
-    use crate::client::soon_test::e2e::*;
+    use crate::client::soon_test::e2e::{init_soon_env, promote_multi_tx};
     use crate::client::soon_test::{
         derive_to_execution, initialize_test_providers, soon_to_derivation,
         soon_to_execution_cache, TestDaProvider, TestOracleL1ChainProvider,
@@ -799,20 +799,12 @@ pub mod tests {
     #[tokio::test(flavor = "multi_thread")]
     pub async fn test_e2e_core_from_soon() -> anyhow::Result<()> {
         init_tracing_subscriber(3, None::<EnvFilter>)?;
-        let env = init_soon_env(None).await?;
-        
-        // Step 1: Generate approximately 100 accounts and SPL ATAs
-        let mut accounts = Vec::new();
-        let mut spl_accounts = Vec::new();
-        
-        for i in 0..100 {
-            let account = solana_sdk::signature::Keypair::new();
-            accounts.push(account);
-            
-            tracing::info!("Generated account {}: {} with SPL ATA: {}", i, accounts[i].pubkey(), spl_ata);
-        }
-        
+        let mut env = init_soon_env(None).await?;
+
         // Step 2: Construct approximately 200 blocks of random transfer transactions
+        promote_multi_tx(&mut env).await?;
+        
+        
         // let mut rng = rand::thread_rng();
         // let last_blockhash = env.e2e_producer
         //     .get_executor()
