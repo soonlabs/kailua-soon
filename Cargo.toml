@@ -119,6 +119,8 @@ litesvm = { path = "../kona-soon/crates/executor/svm" }
 
 # SOON
 soon-primitives = { path = '../soon/node/primitives' }
+soon-mpt-primitives = { path = '../soon/node/mpt/primitives' }
+soon-mpt-handler = { path = '../soon/node/mpt/handler' }
 soon-derive = { path = '../soon/node/derive' }
 soon-l2-chain-provider = { path = '../soon/node/l2provider' }
 

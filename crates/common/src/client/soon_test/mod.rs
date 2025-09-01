@@ -23,10 +23,7 @@ use soon_node::{
 use soon_node::{
     derive::mock::MockInstant,
     executor::{ExecutorOperator, SharedExecutor},
-    node::{
-        producer::Producer,
-        tests::{init_soon_genesis, new_producer},
-    },
+    node::{producer::Producer, tests::new_producer},
 };
 use soon_primitives::blocks::L1Transaction;
 use soon_primitives::{
