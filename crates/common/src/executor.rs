@@ -171,6 +171,7 @@ impl<E: Executor + Send + Sync + Debug> Executor for CachedExecutor<E> {
             self.update_safe_head(L2BlockHeader {
                 block_info: artifacts.block_info.block_info,
                 account_root: artifacts.state_root,
+                widthdraw_root: artifacts.withdraw_root,
             })?;
             return Ok(artifacts);
         }
@@ -239,7 +240,7 @@ impl<E: Executor + Send + Sync + Debug> Executor for CachedExecutor<E> {
 /// - Returns the cursor wrapped in an `Arc<RwLock<PipelineCursor>>` for safe concurrent access.
 pub async fn new_execution_cursor<L2>(
     rollup_config: &SoonRollupConfig,
-    safe_header: L2BlockInfo,
+    safe_header: L2BlockHeader,
     l2_chain_provider: &mut L2,
 ) -> Result<Arc<RwLock<PipelineCursor>>, OracleProviderError>
 where
@@ -258,7 +259,7 @@ where
     let mut cursor = PipelineCursor::new(channel_timeout, BlockInfo::default());
     // `l2_safe_head_output_root` can be zero because it is not used. The executor is always
     // instructed to recompute the output root.
-    let tip = TipCursor::new(safe_head_info, B256::ZERO);
+    let tip = TipCursor::new(safe_head_info, safe_header, B256::ZERO);
     cursor.advance(BlockInfo::default(), tip);
 
     // Wrap the cursor in a shared read-write lock

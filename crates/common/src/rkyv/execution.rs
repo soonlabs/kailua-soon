@@ -77,6 +77,7 @@ where
         Ok(BlockBuildingOutcome {
             block_info,
             state_root,
+            withdraw_root: B256::ZERO,
             execution_result,
             fee_rate_governor: FeeRateGovernor::default(),
             signature_count: 0,

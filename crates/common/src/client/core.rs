@@ -33,6 +33,7 @@ use soon_derive::prelude::{ChainProvider, DAProvider};
 use soon_derive::sources::DAServerSource;
 use soon_derive::traits::{BlobProvider, L2ChainProvider};
 use soon_primitives::blocks::L2BlockHeader;
+use soon_primitives::output_root::OutputRoot;
 use std::fmt::Debug;
 use std::mem::take;
 use std::sync::{Arc, Mutex};
@@ -240,12 +241,19 @@ where
         let safe_head = l2_provider
             .l2_block_info_by_number(boot.agreed_l2_block_number)
             .await?;
+        let safe_head_output =
+            fetch_safe_l2_output(oracle.as_ref(), boot.agreed_l2_output_root).await?;
+        let safe_head_header = L2BlockHeader {
+            block_info: safe_head.block_info,
+            account_root: safe_head_output.state_root,
+            widthdraw_root: safe_head_output.bridge_storage_root,
+        };
         client::log("SAFE HEAD done");
 
-        if boot.claimed_l2_block_number < safe_head.block_info.number {
+        if boot.claimed_l2_block_number < safe_head_header.block_info.number {
             bail!("Invalid claim");
         }
-        let safe_head_number = safe_head.block_info.number;
+        let safe_head_number = safe_head_header.block_info.number;
         info!(
             "SAFE HEAD number: {}, claimed_l2_block_number: {}",
             safe_head_number, boot.claimed_l2_block_number
@@ -257,9 +265,10 @@ where
         ////////////////////////////////////////////////////////////////
         if boot.l1_head.is_zero() {
             client::log("EXECUTION ONLY");
-            let cursor = new_execution_cursor(rollup_config.as_ref(), safe_head, &mut l2_provider)
-                .await
-                .context("new_execution_cursor")?;
+            let cursor =
+                new_execution_cursor(rollup_config.as_ref(), safe_head_header, &mut l2_provider)
+                    .await
+                    .context("new_execution_cursor")?;
             l2_provider.set_cursor(cursor.clone());
 
             let mut kona_executor = KonaExecutor::<_, _, E>::new(
@@ -268,11 +277,7 @@ where
                 l2_provider.clone(),
                 None,
             );
-            kona_executor.update_safe_head(L2BlockHeader {
-                block_info: safe_head.block_info,
-                //TODO replace output_root with state root
-                account_root: boot.claimed_l2_output_root,
-            })?;
+            kona_executor.update_safe_head(safe_head_header)?;
 
             // Validate expected block count
             assert_eq!(expected_output_count, execution_cache.len());
@@ -325,6 +330,7 @@ where
                 kona_executor.update_safe_head(L2BlockHeader {
                     block_info: execution.artifacts.block_info.block_info,
                     account_root: executor_result.state_root,
+                    widthdraw_root: executor_result.withdraw_root,
                 })?;
                 // Verify post state
                 assert_eq!(execution.claimed_output, latest_output_root);
@@ -354,7 +360,7 @@ where
         // Create a new derivation driver with the given boot information and oracle.
         let cursor = new_oracle_pipeline_cursor(
             rollup_config.as_ref(),
-            safe_head,
+            safe_head_header,
             &mut l1_provider,
             &mut l2_provider,
         )
@@ -486,6 +492,43 @@ where
     output_preimage[96..128]
         .try_into()
         .map_err(OracleProviderError::SliceConversion)
+}
+
+/// Fetches the safe header of the L2 chain based on the agreed upon L2 output root in the
+/// [BootInfo].
+pub async fn fetch_safe_l2_output<O>(
+    caching_oracle: &O,
+    agreed_l2_output_root: B256,
+) -> Result<OutputRoot, OracleProviderError>
+where
+    O: CommsClient,
+{
+    let mut output_preimage = [0u8; 128];
+    HintType::StartingL2Output
+        .with_data(&[agreed_l2_output_root.as_ref()])
+        .send(caching_oracle)
+        .await?;
+    caching_oracle
+        .get_exact(
+            PreimageKey::new_keccak256(*agreed_l2_output_root),
+            output_preimage.as_mut(),
+        )
+        .await?;
+
+    let state_root = output_preimage[32..64]
+        .try_into()
+        .map_err(OracleProviderError::SliceConversion)?;
+    let bridge_storage_root = output_preimage[64..96]
+        .try_into()
+        .map_err(OracleProviderError::SliceConversion)?;
+    let block_hash = output_preimage[96..128]
+        .try_into()
+        .map_err(OracleProviderError::SliceConversion)?;
+    Ok(OutputRoot {
+        state_root,
+        bridge_storage_root,
+        block_hash,
+    })
 }
 
 /// Recovers a continuous execution trace from the collection target

@@ -6017,7 +6017,6 @@ dependencies = [
  "solana-loader-v4-program",
  "solana-program 2.0.14",
  "solana-program-runtime",
- "solana-runtime-transaction",
  "solana-sdk",
  "solana-stake-program",
  "solana-svm",
@@ -11082,18 +11081,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-runtime-transaction"
-version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#45c6873e8767eecb5bdb573b70f786a12f572168"
-dependencies = [
- "log",
- "rustc_version 0.4.1",
- "solana-compute-budget",
- "solana-sdk",
- "thiserror 1.0.69",
-]
-
-[[package]]
 name = "solana-sanitize"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12192,6 +12179,9 @@ dependencies = [
  "roaring",
  "serde",
  "serde_json",
+ "smallvec",
+ "solana-accounts-db",
+ "solana-program 2.0.14",
  "solana-sdk",
  "thiserror 1.0.69",
 ]
@@ -12343,6 +12333,7 @@ dependencies = [
  "solana-ledger",
  "solana-measure",
  "solana-metrics",
+ "solana-program 2.0.14",
  "solana-program-runtime",
  "solana-rayon-threadlimit",
  "solana-rpc",

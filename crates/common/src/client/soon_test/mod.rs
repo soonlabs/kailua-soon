@@ -161,6 +161,7 @@ pub(crate) fn to_execution(
         artifacts: BlockBuildingOutcome {
             block_info: header,
             state_root: claimed_output,
+            withdraw_root: B256::ZERO,
             execution_result: vec![],
             fee_rate_governor: FeeRateGovernor::default(),
             signature_count: 0,
