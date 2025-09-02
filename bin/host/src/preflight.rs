@@ -157,7 +157,7 @@ pub async fn concurrent_execution_preflight(
         num_blocks = num_blocks.saturating_sub(processed_blocks);
 
         // update ending block
-        args.kona.claimed_l2_block_number = args.kona.claimed_l2_block_number + processed_blocks;
+        args.kona.claimed_l2_block_number = args.kona.agreed_l2_block_number + processed_blocks;
         args.kona.claimed_l2_output_root = soon_node_provider
             .output_at_block(args.kona.claimed_l2_block_number)
             .await?
