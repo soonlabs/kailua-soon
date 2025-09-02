@@ -248,7 +248,7 @@ pub async fn handle_proving_tasks(
         }
         // pass arguments to point at target block
         kailua_host_command.args(proving_args.clone());
-        debug!("kailua_host_command {:?}", &kailua_host_command);
+        info!("kailua_host_command {:?}", &kailua_host_command);
         // call the kailua-host binary to generate a proof
         let insufficient_l1_data = match await_tel_res!(
             context,
