@@ -800,7 +800,7 @@ pub mod tests {
         init_tracing_subscriber(3, None::<EnvFilter>)?;
         let mut env = init_soon_env(None).await?;
         // Construct approximately 200 blocks of random transfer transactions
-        // promote_multi_tx(&mut env).await?;        
+        promote_multi_tx(&mut env).await?;        
         Ok(())
     }
 }

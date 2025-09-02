@@ -13,7 +13,6 @@ use kona_executor::{
 };
 use kona_preimage::PreimageKey;
 use kona_proof::BootInfo;
-use rkyv::ser::sharing::Share;
 use solana_sdk::{
     account::ReadableAccount, program_pack::Pack, signature::Keypair, signer::Signer,
 };

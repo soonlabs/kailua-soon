@@ -1,13 +1,15 @@
 use super::{
     fetch_info_and_update_execution_storage_items, new_soon, ExecutionStorageItems, TokenMetadata,
 };
+use crate::client::soon_test::e2e::hints::*;
 use crate::client::soon_test::{to_execution, L1_NUMBER};
 use alloy_primitives::{keccak256, B256};
 use alloy_rlp::{BytesMut, Encodable};
 use anyhow::{ensure, Result};
 use crossbeam_channel::Receiver;
 use crossbeam_channel::Sender;
-use kona_executor::{cal_init_state_root_hash, cal_soon_accounts_hash, cal_svm_clock_timestamp};
+use fraud_executor::accounts::SoonAccounts;
+use kona_executor::TrieDB;
 use kona_host::MemoryKeyValueStore;
 use kona_host::OnlineHostBackend;
 use kona_host::PreimageServer;
@@ -15,26 +17,34 @@ use kona_preimage::BidirectionalChannel;
 use kona_preimage::HintReader;
 use kona_preimage::OracleServer;
 use kona_preimage::PreimageKey;
+use solana_sdk::account::ReadableAccount;
 use solana_sdk::native_token::LAMPORTS_PER_SOL;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signature::Signer;
 use solana_sdk::system_transaction;
 use soon_mpt_handler::MptHandler;
-use soon_node::node::tests::{new_derive_block_with_mock_l1, MockEthL1Node};
+use soon_node::derive::driver::L2ChainProviderImmutable;
+use soon_node::node::tests::MockEthL1Node;
 use soon_node::{
     derive::mock::MockInstant,
     executor::{ExecutorOperator, SharedExecutor},
     node::mpt::MptRunner,
     node::{producer::Producer, tests::create_spl_tx},
 };
+use soon_primitives::blocks::L2BlockHeader;
+use soon_primitives::l2blocks::L2Block;
 use soon_primitives::mpt::MptUpdatingItem;
 use soon_primitives::{
     blocks::{BlockInfo, L2BlockInfo, RawBlock},
     rollup_config::SoonRollupConfig,
 };
 use spl_token::state::Mint;
+use std::fs;
+use std::path::Path;
 use std::sync::Arc;
+use std::time::Duration;
+use tempfile::TempDir;
 use tokio::sync::RwLock;
 use tracing::info;
 
@@ -43,7 +53,7 @@ pub type SharedMockL1 = Arc<RwLock<MockEthL1Node>>;
 
 /// An all-in-one environment holding every component for e2e fraud proof testing between
 /// Soon Execution and Kona Execution.
-pub struct E2eKailuaSoonEnvironment {
+pub struct E2EKailuaSoonEnvironment {
     pub e2e_producer: E2eSoonProducer,
     pub mpt_runner: MptRunner,
     pub mpt_signal: Sender<MptUpdatingItem>,
@@ -52,29 +62,38 @@ pub struct E2eKailuaSoonEnvironment {
     pub complete_receiver: Receiver<(L2BlockInfo, Option<BlockInfo>)>,
     pub l1_node: SharedMockL1,
     pub mints: Vec<Keypair>,
-    pub chain_provider: hints::E2EChainProvider,
+    pub chain_provider: E2EChainProvider,
+    pub trie_db: TrieDB<E2EOracle, E2EOracle>,
+    pub soon_path: TempDir,
 }
 
-pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2eKailuaSoonEnvironment> {
+pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2EKailuaSoonEnvironment> {
     // init soon producer.
     let mut mock_l1_node = MockEthL1Node::new(L1_NUMBER, 12);
     let temp = tempfile::tempdir()?;
     let (mut e2e_producer, identity, metadata, complete_receiver, mints) =
         new_soon(temp.path(), relative_to_soon, &mut mock_l1_node)?;
+
     let l1_node = Arc::new(RwLock::new(mock_l1_node));
 
     // init mpt calculation.
     let mpt_path = tempfile::tempdir()?;
-    let exit = e2e_producer
-        .get_executor()
-        .storage_query(|storage| Ok(storage.exit.clone()))?;
+    let executor = e2e_producer.get_executor();
+    let exit = executor.storage_query(|storage| Ok(storage.exit.clone()))?;
 
-    let (sender, r, s, _) = e2e_producer
-        .get_executor()
+    let (sender, r, s, _) = executor
         .storage_query(|storage| Ok(storage.signal_hub.mpt_update_chanel.clone().unwrap()))?;
     let mpt_runner = MptRunner::new(mpt_path.path(), r, s, exit)?;
+    mpt_runner.clone().run();
+    // finalize 0 and 1 slot.
+    sender.send(MptUpdatingItem::UpdateFinalizedSlot(0u64))?;
+    executor.finalize(1)?;
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    let state_root = mpt_runner.inner_handler().query_state_root(0)?;
+    let withdrawal_root = mpt_runner.inner_handler().query_withdrawal_root(0)?;
+    info!("init state_root {state_root}, withdrawal root {withdrawal_root}");
 
-    // init hint system.
+    // init hint backend.
     let mut kv = Arc::new(RwLock::new(MemoryKeyValueStore::new()));
     let hint = BidirectionalChannel::new()?;
     let preimage = BidirectionalChannel::new()?;
@@ -91,14 +110,34 @@ pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2eKailuaSo
     );
     tokio::task::spawn(
         PreimageServer::new(
-            OracleServer::new(preimage.host),
+            OracleServer::new(preimage.client),
             HintReader::new(hint.host),
             Arc::new(backend),
         )
         .start(),
     );
 
-    Ok(E2eKailuaSoonEnvironment {
+    // init trie-db frontend
+    let oracel = E2EOracle {
+        hint_writer: HintWriter::new(hint.client),
+        preimage_reader: OracleReader::new(preimage.host),
+    };
+    let trie_db = TrieDB::new(
+        L2BlockHeader {
+            block_info: BlockInfo {
+                hash: B256::ZERO,
+                number: 0,
+                parent_hash: B256::ZERO,
+                timestamp: 0,
+            },
+            account_root: state_root,
+            widthdraw_root: withdrawal_root,
+        },
+        oracel.clone(),
+        oracel.clone(),
+    );
+
+    Ok(E2EKailuaSoonEnvironment {
         e2e_producer,
         mpt_runner,
         mpt_signal: sender,
@@ -108,19 +147,28 @@ pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2eKailuaSo
         l1_node,
         mints,
         chain_provider,
+        trie_db,
+        soon_path: temp,
     })
 }
 
 /// promote_multi_tx will promote more than 200 random blocks
 /// including modify `data` and `lamports` of all accounts.
-pub async fn promote_multi_tx(env: &mut E2eKailuaSoonEnvironment) -> Result<()> {
+pub async fn promote_multi_tx(env: &mut E2EKailuaSoonEnvironment) -> Result<()> {
     let blocks = 50;
-    let last_blockhash = env
-        .e2e_producer
-        .get_executor()
-        .storage_query(|s| Ok(s.current_bank().last_blockhash()))?;
+    let executor = env.e2e_producer.get_executor().clone();
+
+    let last_blockhash = executor.storage_query(|s| Ok(s.current_bank().last_blockhash()))?;
+    let mut latest_accounts = executor.storage_query(|s| Ok(SoonAccounts::try_from(s)?))?;
+    for account in &latest_accounts.accounts {
+        info!("account {}, lamports: {}, owner:{}, data: {}", account.0.to_string(), account.1.lamports(), account.1.owner(), account.1.data().len());
+    }
+
+    let latest_state_root = latest_accounts.state_root();
+    env.trie_db.reset_trie_node(latest_state_root);
 
     for i in 0..blocks {
+        let slot = (i + 2) as u64;
         let from = env.mints[i % env.mints.len()].insecure_clone();
         let to = env.mints[(i + 1) % env.mints.len()].pubkey();
         let tx = system_transaction::transfer(&from, &to, LAMPORTS_PER_SOL, last_blockhash);
@@ -129,10 +177,27 @@ pub async fn promote_multi_tx(env: &mut E2eKailuaSoonEnvironment) -> Result<()> 
         env.complete_receiver.try_recv()?;
 
         // finalize at once.
-        env.mpt_signal
-            .send(MptUpdatingItem::UpdateFinalizedSlot((i + 1) as u64))?;
+        executor.finalize(slot)?;
+        let accounts = executor.storage_query(|s| Ok(SoonAccounts::try_from(s)?))?;
+        let diff = latest_accounts.diff(&accounts);
+        info!("hello2? {}", diff.accounts.len());
+        for account in &accounts.accounts {
+        info!("account {}, lamports: {}, owner:{}, data: {}", account.0.to_string(), account.1.lamports(), account.1.owner(), account.1.data().len());
+    }
+
+        let (s, w) = env
+            .trie_db
+            .world_states(diff.accounts.iter().map(|k| (&k.0, &k.1)))?;
+        info!("slot {slot}: {s} {w}");
+        latest_accounts = accounts;
     }
     Ok(())
+}
+
+pub fn get_l2_block_by_executor(executor: &SharedExecutor, slot: u64) -> Result<L2Block> {
+    let blockstore = executor.storage_query(|storage| Ok(storage.blockstore().clone()))?;
+    let block = blockstore.get_complete_block_with_entries(slot, true, true, false)?;
+    Ok(L2Block::try_from(block)?)
 }
 
 pub mod hints {
@@ -142,7 +207,6 @@ pub mod hints {
     use solana_sdk::account::{AccountSharedData, WritableAccount};
     use soon_mpt_primitives::constants::KECCAK_EMPTY;
     use soon_primitives::{
-        l2blocks::L2Block,
         mpt::{AccountWithTrie, WrappedSolanaAccount},
         output_root::OutputRoot,
     };
@@ -152,7 +216,7 @@ pub mod hints {
     use kona_proof::{Hint, HintType};
     use soon_node::{derive::driver::L2ChainProviderImmutable, executor::SharedExecutor};
 
-    use crate::client::soon_test::e2e::E2eKailuaSoonEnvironment;
+    use crate::client::soon_test::e2e::E2EKailuaSoonEnvironment;
 
     pub struct E2EOnlineHostBackendCfg {}
 
@@ -390,67 +454,86 @@ pub mod hints {
     }
 }
 
-pub mod trie_db {
-    use kona_executor::{TrieDB, TrieDBProvider};
-    use kona_mpt::{TrieHinter, TrieProvider};
+use kona_executor::TrieDBProvider;
+use kona_mpt::{TrieHinter, TrieProvider};
+use kona_preimage::{HintWriter, NativeChannel, OracleReader};
+use kona_proof::{errors::OracleProviderError, HintType};
 
-    use crate::client::soon_test::e2e::hints;
+#[derive(thiserror::Error, Debug, Eq, PartialEq)]
+#[error("TestE2EError: {0}")]
+pub struct TestE2EError(&'static str);
 
-    #[derive(thiserror::Error, Debug, Eq, PartialEq)]
-    #[error("TestE2EError: {0}")]
-    pub struct TestE2EError(&'static str);
+#[derive(Clone)]
+pub struct E2EOracle {
+    pub hint_writer: HintWriter<NativeChannel>,
+    pub preimage_reader: OracleReader<NativeChannel>,
+}
 
-    impl TrieProvider for hints::E2EChainProvider {
-        type Error = TestE2EError;
+impl TrieProvider for E2EOracle {
+    type Error = TestE2EError;
 
-        fn trie_node_by_hash(
-            &self,
-            key: alloy_primitives::B256,
-        ) -> Result<kona_mpt::TrieNode, Self::Error> {
-            todo!()
-        }
-
-        fn bank_hash(&self, block_number: u64) -> Result<alloy_primitives::B256, Self::Error> {
-            todo!()
-        }
-
-        fn block_time(&self, block_number: u64) -> Result<i64, Self::Error> {
-            todo!()
-        }
+    fn trie_node_by_hash(
+        &self,
+        key: alloy_primitives::B256,
+    ) -> Result<kona_mpt::TrieNode, Self::Error> {
+        todo!()
     }
 
-    impl TrieDBProvider for hints::E2EChainProvider {
-        fn data_by_hash(
-            &self,
-            code_hash: alloy_primitives::B256,
-        ) -> Result<alloy_primitives::Bytes, Self::Error> {
-            unimplemented!("data by hash")
-        }
+    fn bank_hash(&self, block_number: u64) -> Result<alloy_primitives::B256, Self::Error> {
+        todo!()
     }
 
-    impl TrieHinter for hints::E2EChainProvider {
-        type Error = TestE2EError;
+    fn block_time(&self, block_number: u64) -> Result<i64, Self::Error> {
+        todo!()
+    }
+}
 
-        fn hint_trie_node(&self, hash: alloy_primitives::B256) -> Result<(), Self::Error> {
-            todo!()
-        }
+impl TrieDBProvider for E2EOracle {
+    fn data_by_hash(
+        &self,
+        code_hash: alloy_primitives::B256,
+    ) -> Result<alloy_primitives::Bytes, Self::Error> {
+        unimplemented!("data by hash")
+    }
+}
 
-        fn hint_account_proof(
-            &self,
-            pubkey: &solana_sdk::pubkey::Pubkey,
-            block_number: u64,
-        ) -> Result<(), Self::Error> {
-            todo!()
-        }
+impl TrieHinter for E2EOracle {
+    type Error = OracleProviderError;
 
-        fn hint_bank_hash(&self, block_number: u64) -> Result<(), Self::Error> {
-            todo!()
-        }
-
-        fn hint_block_time(&self, block_number: u64) -> Result<(), Self::Error> {
-            todo!()
-        }
+    fn hint_trie_node(&self, hash: alloy_primitives::B256) -> Result<(), Self::Error> {
+        kona_proof::block_on(async move {
+            HintType::L2StateNode
+                .with_data(&[hash.as_slice()])
+                // .with_data(
+                //     self.chain_id
+                //         .map_or_else(Vec::new, |id| id.to_be_bytes().to_vec()),
+                // )
+                .send(&self.hint_writer)
+                .await
+        })
     }
 
-    pub type E2ETrieDB = TrieDB<hints::E2EChainProvider, hints::E2EChainProvider>;
+    fn hint_account_proof(
+        &self,
+        pubkey: &solana_sdk::pubkey::Pubkey,
+        block_number: u64,
+    ) -> Result<(), Self::Error> {
+        kona_proof::block_on(async move {
+            tracing::info!("hint_account_proof, pubkey: {:?}", pubkey);
+            let hashed_address = keccak256(pubkey.as_ref());
+            tracing::info!("hint_account_proof, hashed_address: {:?}", hashed_address);
+            HintType::L2AccountProof
+                .with_data(&[block_number.to_be_bytes().as_ref(), hashed_address.as_ref()])
+                .send(&self.hint_writer)
+                .await
+        })
+    }
+
+    fn hint_bank_hash(&self, block_number: u64) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn hint_block_time(&self, block_number: u64) -> Result<(), Self::Error> {
+        todo!()
+    }
 }
