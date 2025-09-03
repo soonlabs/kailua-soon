@@ -3146,45 +3146,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "batcher"
-version = "0.1.0"
-dependencies = [
- "alloy 0.15.11",
- "alloy-rlp",
- "anyhow",
- "async-trait",
- "bincode",
- "clap 4.5.41",
- "ctrlc",
- "dirs 4.0.0",
- "env_logger 0.11.8",
- "ethers",
- "futures 0.3.31",
- "hex",
- "l1-block-info",
- "log",
- "op-alloy-consensus 0.15.4",
- "op-alloy-rpc-types-engine",
- "rand 0.8.5",
- "reqwest 0.11.27",
- "serde",
- "serde_json",
- "solana-client",
- "solana-sdk",
- "solana-transaction-status",
- "soon-da-provider",
- "soon-derive",
- "soon-miniz-oxide",
- "soon-primitives",
- "soon-rpc",
- "soon-verifier",
- "thiserror 1.0.69",
- "time",
- "tokio",
- "tokio-retry",
-]
-
-[[package]]
 name = "bech32"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7723,7 +7684,6 @@ dependencies = [
  "alloy-rpc-types-engine",
  "anyhow",
  "async-trait",
- "batcher",
  "bincode",
  "bonsai-sdk",
  "bridge",
@@ -7998,6 +7958,7 @@ dependencies = [
  "serde",
  "solana-sdk",
  "thiserror 2.0.12",
+ "tracing",
 ]
 
 [[package]]
@@ -13166,7 +13127,7 @@ dependencies = [
 [[package]]
 name = "solana-curve25519"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#682284fb02137d5aaea78c937e071324d762a9af"
 dependencies = [
  "bytemuck",
  "bytemuck_derive",
@@ -13535,7 +13496,7 @@ dependencies = [
 [[package]]
 name = "solana-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#682284fb02137d5aaea78c937e071324d762a9af"
 dependencies = [
  "ark-bn254 0.4.0",
  "ark-ec 0.4.2",
@@ -13882,7 +13843,7 @@ dependencies = [
 [[package]]
 name = "solana-sdk"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#682284fb02137d5aaea78c937e071324d762a9af"
 dependencies = [
  "bincode",
  "bitflags 2.9.1",
@@ -13930,7 +13891,7 @@ dependencies = [
 [[package]]
 name = "solana-sdk-macro"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#682284fb02137d5aaea78c937e071324d762a9af"
 dependencies = [
  "bs58 0.5.1",
  "proc-macro2",
@@ -14391,7 +14352,7 @@ dependencies = [
 [[package]]
 name = "solana-zk-token-sdk"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#2e6ea883bcafbf09778adb21289ef469609b2483"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#682284fb02137d5aaea78c937e071324d762a9af"
 dependencies = [
  "aes-gcm-siv",
  "base64 0.22.1",
@@ -14941,6 +14902,7 @@ dependencies = [
  "l1-block-info",
  "log",
  "num-bigint 0.4.6",
+ "once_cell",
  "op-alloy-rpc-types-engine",
  "serde",
  "serde_json",
