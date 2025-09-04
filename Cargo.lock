@@ -5990,6 +5990,7 @@ name = "fraud-executor"
 version = "0.1.0"
 dependencies = [
  "alloy-eips 0.15.11",
+ "alloy-primitives 1.2.1",
  "hex",
  "l1-block-info",
  "litesvm",
@@ -8044,7 +8045,6 @@ dependencies = [
  "serde_json",
  "solana-sdk",
  "solana-transaction-status",
- "soon-da-provider",
  "soon-derive",
  "soon-primitives",
  "spin 0.10.0",
@@ -14505,6 +14505,7 @@ dependencies = [
  "solana-svm",
  "soon-genesis",
  "soon-monitor",
+ "soon-node-primitives",
  "soon-primitives",
  "soon-storage",
  "soon-verifier",
@@ -14840,6 +14841,7 @@ dependencies = [
  "solana-turbine",
  "solana-vote-program",
  "soon-monitor",
+ "soon-node-primitives",
  "soon-primitives",
  "soon-rpc",
  "soon-scheduler",
@@ -14913,6 +14915,7 @@ dependencies = [
  "soon-mpt-primitives",
  "soon-mpt-trie",
  "soon-network",
+ "soon-node-primitives",
  "soon-primitives",
  "soon-rpc",
  "soon-scheduler",
@@ -14923,6 +14926,36 @@ dependencies = [
  "tokio",
  "tracing",
  "uuid 1.17.0",
+]
+
+[[package]]
+name = "soon-node-primitives"
+version = "0.7.4"
+dependencies = [
+ "alloy-consensus 0.15.11",
+ "alloy-eips 0.15.11",
+ "alloy-primitives 1.2.1",
+ "alloy-rlp",
+ "alloy-sol-types",
+ "bincode",
+ "bridge",
+ "derive_more 0.99.20",
+ "hex-literal",
+ "l1-block-info",
+ "log",
+ "num-bigint 0.4.6",
+ "op-alloy-rpc-types-engine",
+ "serde",
+ "serde_json",
+ "solana-entry",
+ "solana-program",
+ "solana-runtime",
+ "solana-sdk",
+ "solana-transaction-status",
+ "soon-mpt-primitives",
+ "soon-primitives",
+ "spl-token",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -14945,9 +14978,7 @@ dependencies = [
  "op-alloy-rpc-types-engine",
  "serde",
  "serde_json",
- "solana-entry",
  "solana-program",
- "solana-runtime",
  "solana-sdk",
  "solana-transaction-status",
  "soon-mpt-primitives",
@@ -15006,6 +15037,7 @@ dependencies = [
  "soon-mpt-handler",
  "soon-mpt-primitives",
  "soon-mpt-trie",
+ "soon-node-primitives",
  "soon-primitives",
  "soon-storage",
  "soon-verifier",
@@ -15083,6 +15115,7 @@ dependencies = [
  "soon-genesis",
  "soon-mpt-primitives",
  "soon-mpt-trie",
+ "soon-node-primitives",
  "soon-primitives",
  "soon-verifier",
  "spl-token",

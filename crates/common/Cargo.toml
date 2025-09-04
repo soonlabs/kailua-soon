@@ -73,7 +73,6 @@ kona-cli.workspace = true
 kona-host.workspace = true
 rayon.workspace = true
 tempfile.workspace = true
-tokio.workspace = true
 tracing-subscriber.workspace = true
 kailua-build.workspace = true
 bonsai-sdk.workspace = true
