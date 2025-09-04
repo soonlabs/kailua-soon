@@ -76,7 +76,7 @@ pub(crate) struct TokenMetadata {
 impl Default for TokenMetadata {
     fn default() -> Self {
         Self {
-            remote_token: Address::random(),
+            remote_token: Address::ZERO,
             to: Keypair::new(),
             token_name: "Test".to_string(),
             token_symbol: "TST".to_string(),

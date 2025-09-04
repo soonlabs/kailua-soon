@@ -763,7 +763,6 @@ dependencies = [
  "const-hex",
  "derive_more 2.0.1",
  "foldhash",
- "getrandom 0.3.3",
  "hashbrown 0.15.4",
  "indexmap 2.10.0",
  "itoa",
@@ -3143,6 +3142,45 @@ dependencies = [
  "lalrpop",
  "lalrpop-util",
  "regex",
+]
+
+[[package]]
+name = "batcher"
+version = "0.1.0"
+dependencies = [
+ "alloy 0.15.11",
+ "alloy-rlp",
+ "anyhow",
+ "async-trait",
+ "bincode",
+ "clap 4.5.41",
+ "ctrlc",
+ "dirs 4.0.0",
+ "env_logger 0.11.8",
+ "ethers",
+ "futures 0.3.31",
+ "hex",
+ "l1-block-info",
+ "log",
+ "op-alloy-consensus 0.15.4",
+ "op-alloy-rpc-types-engine",
+ "rand 0.8.5",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "solana-client",
+ "solana-sdk",
+ "solana-transaction-status",
+ "soon-da-provider",
+ "soon-derive",
+ "soon-miniz-oxide",
+ "soon-primitives",
+ "soon-rpc",
+ "soon-verifier",
+ "thiserror 1.0.69",
+ "time",
+ "tokio",
+ "tokio-retry",
 ]
 
 [[package]]
@@ -5951,6 +5989,7 @@ checksum = "28dd6caf6059519a65843af8fe2a3ae298b14b80179855aeb4adc2c1934ee619"
 name = "fraud-executor"
 version = "0.1.0"
 dependencies = [
+ "alloy-eips 0.15.11",
  "hex",
  "l1-block-info",
  "litesvm",
@@ -7684,6 +7723,7 @@ dependencies = [
  "alloy-rpc-types-engine",
  "anyhow",
  "async-trait",
+ "batcher",
  "bincode",
  "bonsai-sdk",
  "bridge",
@@ -14546,6 +14586,8 @@ dependencies = [
 name = "soon-l2-chain-provider"
 version = "0.7.4"
 dependencies = [
+ "alloy-eips 0.15.11",
+ "alloy-primitives 1.2.1",
  "async-trait",
  "chrono",
  "futures 0.3.31",
@@ -14713,7 +14755,7 @@ dependencies = [
 name = "soon-mpt-primitives"
 version = "0.7.4"
 dependencies = [
- "alloy 0.15.11",
+ "alloy-primitives 1.2.1",
  "alloy-rlp",
  "alloy-trie 0.6.0",
  "byteorder",
@@ -14729,7 +14771,6 @@ dependencies = [
  "serde",
  "serde_json",
  "smallvec",
- "solana-accounts-db",
  "solana-program",
  "solana-sdk",
  "thiserror 1.0.69",
@@ -14920,6 +14961,7 @@ dependencies = [
 name = "soon-rpc"
 version = "0.7.4"
 dependencies = [
+ "alloy-primitives 1.2.1",
  "anyhow",
  "base64 0.21.7",
  "bincode",
@@ -15005,6 +15047,8 @@ dependencies = [
 name = "soon-storage"
 version = "0.7.4"
 dependencies = [
+ "alloy-eips 0.15.11",
+ "alloy-primitives 1.2.1",
  "assert_matches",
  "bincode",
  "chrono",

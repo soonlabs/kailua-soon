@@ -65,6 +65,7 @@ bridge = { workspace = true, optional = true }
 spl-token = { workspace = true, optional = true }
 crossbeam-channel = { workspace = true, optional = true }
 serde_json = { workspace = true }
+batcher = { workspace = true, optional = true }
 
 [dev-dependencies]
 copy_dir.workspace = true
@@ -90,6 +91,7 @@ __test = [
 	"bridge",
 	"spl-token",
 	"crossbeam-channel",
+	"batcher",
 ]
 
 [lints.rust]
