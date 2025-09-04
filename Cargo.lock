@@ -14790,7 +14790,6 @@ dependencies = [
  "once_cell",
  "rayon",
  "smallvec",
- "solana-accounts-db",
  "solana-program",
  "solana-sdk",
  "soon-mpt-db-api",
@@ -14930,7 +14929,6 @@ dependencies = [
 name = "soon-primitives"
 version = "0.7.4"
 dependencies = [
- "alloy 0.15.11",
  "alloy-consensus 0.15.11",
  "alloy-eips 0.15.11",
  "alloy-primitives 1.2.1",
