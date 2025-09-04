@@ -69,6 +69,7 @@ crossbeam-channel = { workspace = true, optional = true }
 serde_json = { workspace = true }
 batcher = { workspace = true, optional = true }
 bs58 = "0.4.0"
+thiserror.workspace = true
 
 [dev-dependencies]
 copy_dir.workspace = true
@@ -80,7 +81,6 @@ tracing-subscriber.workspace = true
 kailua-build.workspace = true
 bonsai-sdk.workspace = true
 rand.workspace = true
-thiserror.workspace = true
 
 [features]
 default = []

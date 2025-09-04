@@ -30,7 +30,7 @@ use kona_proof::errors::OracleProviderError;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use risc0_zkvm::sha::{Impl as SHA2, Sha256};
 use soon_derive::prelude::L2ChainProvider;
-use soon_primitives::blocks::{BlockInfo, L2BlockHeader, L2BlockInfo};
+use soon_primitives::blocks::{BlockInfo, L2BlockHeader};
 use soon_primitives::rollup_config::SoonRollupConfig;
 use spin::RwLock;
 use std::fmt::Debug;

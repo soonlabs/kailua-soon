@@ -1,47 +1,48 @@
-use super::{
-    fetch_info_and_update_execution_storage_items, new_soon, ExecutionStorageItems, TokenMetadata,
-};
+use super::{new_soon, TokenMetadata};
+use crate::client;
 use crate::client::soon_test::e2e::hints::*;
 use crate::client::soon_test::{to_execution, L1_NUMBER};
+use crate::executor::Execution;
 use alloy_primitives::{keccak256, B256};
 use alloy_rlp::{BytesMut, Encodable};
-use anyhow::{ensure, Result};
+use anyhow::{bail, ensure, Context, Result};
 use crossbeam_channel::Receiver;
 use crossbeam_channel::Sender;
 use fraud_executor::accounts::SoonAccounts;
-use kona_executor::TrieDB;
+use kona_driver::Executor;
+use kona_executor::{L2BlockBuilder, TrieDB};
 use kona_host::MemoryKeyValueStore;
 use kona_host::OnlineHostBackend;
 use kona_host::PreimageServer;
-use kona_preimage::BidirectionalChannel;
-use kona_preimage::HintReader;
-use kona_preimage::OracleServer;
+use kona_preimage::errors::PreimageOracleResult;
 use kona_preimage::PreimageKey;
-use solana_sdk::account::ReadableAccount;
+use kona_preimage::{BidirectionalChannel, CommsClient};
+use kona_preimage::{HintReader, PreimageOracleClient};
+use kona_preimage::{HintWriterClient, OracleServer};
+use kona_proof::executor::KonaExecutor;
+use kona_proof::BootInfo;
 use solana_sdk::native_token::LAMPORTS_PER_SOL;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signature::Signer;
 use solana_sdk::system_transaction;
+use soon_derive::traits::{ChainProvider, L2ChainProvider};
 use soon_mpt_handler::MptHandler;
-use soon_node::derive::driver::L2ChainProviderImmutable;
 use soon_node::node::tests::MockEthL1Node;
 use soon_node::{
     derive::mock::MockInstant,
     executor::{ExecutorOperator, SharedExecutor},
     node::mpt::MptRunner,
-    node::{producer::Producer, tests::create_spl_tx},
+    node::producer::Producer,
 };
 use soon_primitives::blocks::L2BlockHeader;
 use soon_primitives::l2blocks::L2Block;
 use soon_primitives::mpt::MptUpdatingItem;
 use soon_primitives::{
-    blocks::{BlockInfo, L2BlockInfo, RawBlock},
+    blocks::{BlockInfo, L2BlockInfo},
     rollup_config::SoonRollupConfig,
 };
-use spl_token::state::Mint;
-use std::fs;
-use std::path::Path;
+use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::Duration;
 use tempfile::TempDir;
@@ -63,7 +64,7 @@ pub struct E2EKailuaSoonEnvironment {
     pub l1_node: SharedMockL1,
     pub mints: Vec<Keypair>,
     pub chain_provider: E2EChainProvider,
-    pub trie_db: TrieDB<E2EOracle, E2EOracle>,
+    pub oracel: E2EOracle,
     pub soon_path: TempDir,
 }
 
@@ -87,7 +88,6 @@ pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2EKailuaSo
     mpt_runner.clone().run();
     // finalize 0 and 1 slot.
     sender.send(MptUpdatingItem::UpdateFinalizedSlot(0u64))?;
-    executor.finalize(1)?;
     tokio::time::sleep(Duration::from_secs(1)).await;
     let state_root = mpt_runner.inner_handler().query_state_root(0)?;
     let withdrawal_root = mpt_runner.inner_handler().query_withdrawal_root(0)?;
@@ -122,20 +122,6 @@ pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2EKailuaSo
         hint_writer: HintWriter::new(hint.client),
         preimage_reader: OracleReader::new(preimage.host),
     };
-    let trie_db = TrieDB::new(
-        L2BlockHeader {
-            block_info: BlockInfo {
-                hash: B256::ZERO,
-                number: 0,
-                parent_hash: B256::ZERO,
-                timestamp: 0,
-            },
-            account_root: state_root,
-            widthdraw_root: withdrawal_root,
-        },
-        oracel.clone(),
-        oracel.clone(),
-    );
 
     Ok(E2EKailuaSoonEnvironment {
         e2e_producer,
@@ -147,25 +133,37 @@ pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2EKailuaSo
         l1_node,
         mints,
         chain_provider,
-        trie_db,
+        oracel,
         soon_path: temp,
     })
 }
 
 /// promote_multi_tx will promote more than 200 random blocks
 /// including modify `data` and `lamports` of all accounts.
-pub async fn promote_multi_tx(env: &mut E2EKailuaSoonEnvironment) -> Result<()> {
-    let blocks = 50;
-    let executor = env.e2e_producer.get_executor().clone();
-
+pub async fn multi_l2_tx_to_execution(
+    env: &mut E2EKailuaSoonEnvironment,
+) -> Result<Vec<Arc<Execution>>> {
+    let blocks = 50usize;
+    let mut executions = vec![];
+    let mut executor = env.e2e_producer.get_executor().clone();
     let last_blockhash = executor.storage_query(|s| Ok(s.current_bank().last_blockhash()))?;
-    let mut latest_accounts = executor.storage_query(|s| Ok(SoonAccounts::try_from(s)?))?;
-    for account in &latest_accounts.accounts {
-        info!("account {}, lamports: {}, owner:{}, data: {}", account.0.to_string(), account.1.lamports(), account.1.owner(), account.1.data().len());
-    }
 
-    let latest_state_root = latest_accounts.state_root();
-    env.trie_db.reset_trie_node(latest_state_root);
+    let mut boot_info = BootInfo {
+        l1_head: B256::ZERO,
+        agreed_l2_output_root: B256::ZERO,
+        agreed_l2_block_number: 0,
+        claimed_l2_output_root: B256::ZERO,
+        claimed_l2_block_number: blocks as u64 + 1,
+        rollup_config: SoonRollupConfig {
+            sequencer_schedules: vec![(0, env.identity.pubkey())],
+            ..Default::default()
+        },
+        chain_id: 0,
+    };
+    // firstly we need load prepared slot1.
+    let (block_1, block_info) = get_l2_block_by_executor(&mut executor, 1).await?;
+    let execution = to_execution(block_1, B256::ZERO, B256::ZERO, block_info)?;
+    executions.push(Arc::new(execution));
 
     for i in 0..blocks {
         let slot = (i + 2) as u64;
@@ -175,34 +173,28 @@ pub async fn promote_multi_tx(env: &mut E2EKailuaSoonEnvironment) -> Result<()> 
         env.e2e_producer.add_tx(tx)?;
         env.e2e_producer.mine_with_block(None)?;
         env.complete_receiver.try_recv()?;
-
         // finalize at once.
-        executor.finalize(slot)?;
-        let accounts = executor.storage_query(|s| Ok(SoonAccounts::try_from(s)?))?;
-        let diff = latest_accounts.diff(&accounts);
-        info!("hello2? {}", diff.accounts.len());
-        for account in &accounts.accounts {
-        info!("account {}, lamports: {}, owner:{}, data: {}", account.0.to_string(), account.1.lamports(), account.1.owner(), account.1.data().len());
+        executor.finalize(slot - 1)?;
+        let (block, header) = get_l2_block_by_executor(&mut executor, slot).await?;
+        let execution = to_execution(block, B256::ZERO, B256::ZERO, header)?;
+        executions.push(Arc::new(execution));
     }
-
-        let (s, w) = env
-            .trie_db
-            .world_states(diff.accounts.iter().map(|k| (&k.0, &k.1)))?;
-        info!("slot {slot}: {s} {w}");
-        latest_accounts = accounts;
-    }
-    Ok(())
+    Ok(executions)
 }
 
-pub fn get_l2_block_by_executor(executor: &SharedExecutor, slot: u64) -> Result<L2Block> {
-    let blockstore = executor.storage_query(|storage| Ok(storage.blockstore().clone()))?;
-    let block = blockstore.get_complete_block_with_entries(slot, true, true, false)?;
-    Ok(L2Block::try_from(block)?)
+pub async fn get_l2_block_by_executor(
+    executor: &mut SharedExecutor,
+    slot: u64,
+) -> Result<(L2Block, L2BlockInfo)> {
+    let block = executor.block_by_number(slot).await?;
+    info!("finish block {:?}", block);
+    let info = executor.l2_block_info_by_number(slot).await?;
+    Ok((block, info))
 }
 
 pub mod hints {
     use super::*;
-    use anyhow::{bail, Ok};
+    use anyhow::Ok;
     use async_trait::async_trait;
     use solana_sdk::account::{AccountSharedData, WritableAccount};
     use soon_mpt_primitives::constants::KECCAK_EMPTY;
@@ -215,8 +207,6 @@ pub mod hints {
     use kona_host::{HintHandler, OnlineHostBackendCfg, SharedKeyValueStore};
     use kona_proof::{Hint, HintType};
     use soon_node::{derive::driver::L2ChainProviderImmutable, executor::SharedExecutor};
-
-    use crate::client::soon_test::e2e::E2EKailuaSoonEnvironment;
 
     pub struct E2EOnlineHostBackendCfg {}
 
@@ -536,4 +526,100 @@ impl TrieHinter for E2EOracle {
     fn hint_block_time(&self, block_number: u64) -> Result<(), Self::Error> {
         todo!()
     }
+}
+
+#[async_trait::async_trait]
+impl PreimageOracleClient for E2EOracle {
+    async fn get(&self, key: PreimageKey) -> PreimageOracleResult<Vec<u8>> {
+        self.preimage_reader.get(key).await
+    }
+
+    async fn get_exact(&self, key: PreimageKey, buf: &mut [u8]) -> PreimageOracleResult<()> {
+        self.preimage_reader.get_exact(key, buf).await
+    }
+}
+
+#[async_trait::async_trait]
+impl HintWriterClient for E2EOracle {
+    async fn write(&self, hint: &str) -> PreimageOracleResult<()> {
+        self.hint_writer.write(hint).await
+    }
+}
+
+pub fn run_l2_core_client<
+    E,
+    O: CommsClient + Send + Sync,
+    L2: L2ChainProvider + Send + Sync,
+    T: TrieDBProvider + TrieHinter + Clone + Send + Sync,
+>(
+    oracle: O,
+    mut l2_provider: L2,
+    mut trie_provider: T,
+    execution_cache: Vec<Arc<Execution>>,
+) -> anyhow::Result<(BootInfo, B256)>
+where
+    E: L2BlockBuilder<T, T> + Send + Sync,
+    L2: L2ChainProvider<Error = soon_node::Error>,
+{
+    let (boot_info, output_root) = kona_proof::block_on(async move {
+        client::log("BOOT");
+        let boot = BootInfo::load(&oracle).await.context("BootInfo::load")?;
+        let rollup_config = Arc::new(boot.rollup_config.clone());
+
+        client::log("SAFE HEAD");
+        let safe_head = l2_provider
+            .l2_block_info_by_number(boot.agreed_l2_block_number)
+            .await?;
+        let safe_head_header = L2BlockHeader {
+            block_info: safe_head.block_info,
+            account_root: B256::ZERO,
+            widthdraw_root: B256::ZERO,
+        };
+        client::log("SAFE HEAD done");
+
+        if boot.claimed_l2_block_number < safe_head_header.block_info.number {
+            bail!("Invalid claim");
+        }
+        let safe_head_number = safe_head_header.block_info.number;
+        info!(
+            "SAFE HEAD number: {}, claimed_l2_block_number: {}",
+            safe_head_number, boot.claimed_l2_block_number
+        );
+        let expected_output_count = (boot.claimed_l2_block_number - safe_head_number) as usize;
+
+        let mut kona_executor = KonaExecutor::<_, _, E>::new(
+            rollup_config.clone(),
+            trie_provider.clone(),
+            trie_provider.clone(),
+            None,
+        );
+        kona_executor.update_safe_head(safe_head_header)?;
+
+        let mut latest_output_root = boot.agreed_l2_output_root;
+        for execution in execution_cache {
+            info!(
+                "enter execution {}/{}",
+                execution.artifacts.block_info.block_info.number, boot.claimed_l2_block_number
+            );
+            let executor_result = kona_executor
+                .execute_payload(execution.attributes.clone())
+                .await?;
+            latest_output_root = kona_executor
+                .compute_output_root()
+                .context("compute_output_root: Verify post state")?;
+            kona_executor.update_safe_head(L2BlockHeader {
+                block_info: execution.artifacts.block_info.block_info,
+                account_root: executor_result.state_root,
+                widthdraw_root: executor_result.withdraw_root,
+            })?;
+            // Verify post state
+            assert_eq!(execution.claimed_output, latest_output_root);
+            client::log(&format!(
+                "OUTPUT: {}/{}",
+                execution.artifacts.block_info.block_info.number, boot.claimed_l2_block_number
+            ));
+        }
+        Ok((boot, latest_output_root))
+    })?;
+    return Ok((boot_info, output_root));
 }
