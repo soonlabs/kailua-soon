@@ -754,23 +754,23 @@ pub mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_op_sepolia_16491249_16491250() {
+    pub async fn test_soon_local_0_1() {
         setup();
 
         test_stitching(
             BootInfo {
                 l1_head: b256!(
-                    "0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"
+                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
                 ),
                 agreed_l2_output_root: b256!(
-                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
+                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
                 ),
-                agreed_l2_block_number: 16491249,
                 claimed_l2_output_root: b256!(
-                    "0xa130fbfa315391b28668609252e4c09c3df3b77562281b996af30bf056cbb2c1"
+                    "0xc1702320d71294e6c0e4f6a47cc7c40502aec4230f69d3ba6fe57bb5dc96370f"
                 ),
-                claimed_l2_block_number: 16491250,
-                chain_id: 11155420,
+                agreed_l2_block_number: 0,
+                claimed_l2_block_number: 1,
+                chain_id: 0,
                 rollup_config: Default::default(),
             },
             None,
@@ -782,23 +782,23 @@ pub mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_op_sepolia_16491249_16491250_stitched_execution() {
+    pub async fn test_soon_local_0_1_stitched_execution() {
         setup();
 
         test_stitching_executions(
             BootInfo {
                 l1_head: b256!(
-                    "0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"
+                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
                 ),
                 agreed_l2_output_root: b256!(
-                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
+                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
                 ),
-                agreed_l2_block_number: 16491249,
                 claimed_l2_output_root: b256!(
-                    "0xa130fbfa315391b28668609252e4c09c3df3b77562281b996af30bf056cbb2c1"
+                    "0xc1702320d71294e6c0e4f6a47cc7c40502aec4230f69d3ba6fe57bb5dc96370f"
                 ),
-                claimed_l2_block_number: 16491250,
-                chain_id: 11155420,
+                agreed_l2_block_number: 0,
+                claimed_l2_block_number: 1,
+                chain_id: 0,
                 rollup_config: Default::default(),
             },
             None,
@@ -809,29 +809,29 @@ pub mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_op_sepolia_16491249_16491349() {
+    pub async fn test_soon_local_0_50() {
         setup();
 
         test_stitching(
             BootInfo {
                 l1_head: b256!(
-                    "0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"
+                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
                 ),
                 agreed_l2_output_root: b256!(
-                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
+                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
                 ),
-                agreed_l2_block_number: 16491249,
                 claimed_l2_output_root: b256!(
-                    "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
+                    "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
                 ),
-                claimed_l2_block_number: 16491349,
-                chain_id: 11155420,
+                agreed_l2_block_number: 0,
+                claimed_l2_block_number: 50,
+                chain_id: 0,
                 rollup_config: Default::default(),
             },
             Some(PreconditionValidationData::Validity {
-                proposal_l2_head_number: 16491249,
+                proposal_l2_head_number: 0,
                 proposal_output_count: 1,
-                output_block_span: 100,
+                output_block_span: 50,
                 blob_hashes: vec![],
             }),
             vec![],
@@ -842,29 +842,29 @@ pub mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_op_sepolia_16491249_16491349_stitched_executions() {
+    pub async fn test_soon_local_0_50_stitched_executions() {
         setup();
 
         test_stitching_executions(
             BootInfo {
                 l1_head: b256!(
-                    "0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"
+                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
                 ),
                 agreed_l2_output_root: b256!(
-                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
+                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
                 ),
-                agreed_l2_block_number: 16491249,
                 claimed_l2_output_root: b256!(
-                    "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
+                    "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
                 ),
-                claimed_l2_block_number: 16491349,
-                chain_id: 11155420,
+                agreed_l2_block_number: 0,
+                claimed_l2_block_number: 50,
+                chain_id: 0,
                 rollup_config: Default::default(),
             },
             Some(PreconditionValidationData::Validity {
-                proposal_l2_head_number: 16491249,
+                proposal_l2_head_number: 0,
                 proposal_output_count: 1,
-                output_block_span: 100,
+                output_block_span: 50,
                 blob_hashes: vec![],
             }),
         )
@@ -874,23 +874,23 @@ pub mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_op_sepolia_16491249_16491349_execution_only() {
+    pub async fn test_soon_local_0_50_execution_only() {
         setup();
 
         test_stitching_execution_only(
             BootInfo {
                 l1_head: b256!(
-                    "0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"
+                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
                 ),
                 agreed_l2_output_root: b256!(
-                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
+                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
                 ),
-                agreed_l2_block_number: 16491249,
                 claimed_l2_output_root: b256!(
-                    "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
+                    "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
                 ),
-                claimed_l2_block_number: 16491349,
-                chain_id: 11155420,
+                agreed_l2_block_number: 0,
+                claimed_l2_block_number: 50,
+                chain_id: 0,
                 rollup_config: Default::default(),
             },
             None,
@@ -902,29 +902,29 @@ pub mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_op_sepolia_16491249_16491349_stitched_boots() {
+    pub async fn test_soon_local_0_50_stitched_boots() {
         setup();
 
         test_stitching_boots(
             BootInfo {
                 l1_head: b256!(
-                    "0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"
+                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
                 ),
                 agreed_l2_output_root: b256!(
-                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
+                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
                 ),
-                agreed_l2_block_number: 16491249,
                 claimed_l2_output_root: b256!(
-                    "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
+                    "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
                 ),
-                claimed_l2_block_number: 16491349,
-                chain_id: 11155420,
+                agreed_l2_block_number: 0,
+                claimed_l2_block_number: 50,
+                chain_id: 0,
                 rollup_config: Default::default(),
             },
             Some(PreconditionValidationData::Validity {
-                proposal_l2_head_number: 16491249,
+                proposal_l2_head_number: 0,
                 proposal_output_count: 1,
-                output_block_span: 100,
+                output_block_span: 50,
                 blob_hashes: vec![],
             }),
         )
@@ -939,16 +939,16 @@ pub mod tests {
         setup();
 
         let boot_info = BootInfo {
-            l1_head: b256!("0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"),
+            l1_head: b256!("0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"),
             agreed_l2_output_root: b256!(
-                "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
+                "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
             ),
-            agreed_l2_block_number: 16491249,
             claimed_l2_output_root: b256!(
-                "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
+                "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
             ),
-            claimed_l2_block_number: 16491349,
-            chain_id: 11155420,
+            agreed_l2_block_number: 0,
+            claimed_l2_block_number: 50,
+            chain_id: 0,
             rollup_config: Default::default(),
         };
 
@@ -969,9 +969,9 @@ pub mod tests {
             "Stitching Test with Preconditions",
             boot_info.clone(),
             Some(PreconditionValidationData::Validity {
-                proposal_l2_head_number: 16491249,
+                proposal_l2_head_number: 0,
                 proposal_output_count: 1,
-                output_block_span: 100,
+                output_block_span: 50,
                 blob_hashes: vec![],
             }),
             vec![],
@@ -1002,16 +1002,16 @@ pub mod tests {
         setup();
 
         let boot_info = BootInfo {
-            l1_head: b256!("0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"),
+            l1_head: b256!("0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"),
             agreed_l2_output_root: b256!(
-                "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
+                "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
             ),
-            agreed_l2_block_number: 16491249,
             claimed_l2_output_root: b256!(
-                "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
+                "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
             ),
-            claimed_l2_block_number: 16491349,
-            chain_id: 11155420,
+            agreed_l2_block_number: 0,
+            claimed_l2_block_number: 50,
+            chain_id: 0,
             rollup_config: Default::default(),
         };
 
@@ -1022,9 +1022,9 @@ pub mod tests {
             "Sepolia 16491249-16491349 Analysis",
             boot_info.clone(),
             Some(PreconditionValidationData::Validity {
-                proposal_l2_head_number: 16491249,
+                proposal_l2_head_number: 0,
                 proposal_output_count: 1,
-                output_block_span: 100,
+                output_block_span: 50,
                 blob_hashes: vec![],
             }),
             vec![],
@@ -1042,16 +1042,16 @@ pub mod tests {
         setup();
 
         let boot_info = BootInfo {
-            l1_head: b256!("0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"),
+            l1_head: b256!("0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"),
             agreed_l2_output_root: b256!(
-                "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
+                "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
             ),
-            agreed_l2_block_number: 16491249,
             claimed_l2_output_root: b256!(
-                "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
+                "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
             ),
-            claimed_l2_block_number: 16491349,
-            chain_id: 11155420,
+            agreed_l2_block_number: 0,
+            claimed_l2_block_number: 50,
+            chain_id: 0,
             rollup_config: Default::default(),
         };
 
@@ -1071,9 +1071,9 @@ pub mod tests {
             "Scenario 2: With Precondition Validation",
             boot_info.clone(),
             Some(PreconditionValidationData::Validity {
-                proposal_l2_head_number: 16491249,
+                proposal_l2_head_number: 0,
                 proposal_output_count: 1,
-                output_block_span: 100,
+                output_block_span: 50,
                 blob_hashes: vec![],
             }),
             vec![],
