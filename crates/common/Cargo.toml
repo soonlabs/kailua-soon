@@ -24,7 +24,6 @@ hex.workspace = true
 copy_dir = { workspace = true, optional = true }
 kona-host = { workspace = true, optional = true }
 tempfile = { workspace = true, optional = true }
-tokio = { workspace = true, features = ["sync"] }
 
 alloy-consensus.workspace = true
 alloy-eips.workspace = true
@@ -51,6 +50,8 @@ risc0-zkvm.workspace = true
 
 serde.workspace = true
 tracing.workspace = true
+solana-program.workspace = true
+solana-sdk.workspace = true
 
 #SOON
 soon-primitives.workspace = true
@@ -59,7 +60,6 @@ soon-derive.workspace = true
 # for testing
 soon-node = { workspace = true, optional = true }
 soon-storage = { workspace = true, optional = true }
-solana-sdk = { workspace = true, optional = true }
 l1-block-info = { workspace = true, optional = true }
 bridge = { workspace = true, optional = true }
 spl-token = { workspace = true, optional = true }
@@ -70,6 +70,7 @@ soon-mpt-primitives = { workspace = true, optional = true }
 soon-mpt-handler = { workspace = true, optional = true }
 bs58 = "0.4.0"
 thiserror.workspace = true
+tokio = { workspace = true, features = ["sync"], optional = true }
 
 [dev-dependencies]
 copy_dir.workspace = true
@@ -90,8 +91,8 @@ __test = [
 	"tempfile",
 	"soon-node/__test",
 	"soon-storage",
-	"solana-sdk",
 	"l1-block-info",
+	"tokio",
 	"bridge",
 	"spl-token",
 	"crossbeam-channel",

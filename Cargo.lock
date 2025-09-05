@@ -7756,6 +7756,7 @@ dependencies = [
  "rkyv",
  "serde",
  "serde_json",
+ "solana-program",
  "solana-sdk",
  "soon-derive",
  "soon-mpt-handler",
