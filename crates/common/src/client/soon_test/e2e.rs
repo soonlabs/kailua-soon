@@ -38,10 +38,13 @@ use soon_node::{
 };
 use soon_primitives::blocks::L2BlockHeader;
 use soon_primitives::l2blocks::L2Block;
+use soon_primitives::output_root::{self, OutputRoot};
 use soon_primitives::{
     blocks::{BlockInfo, L2BlockInfo},
     rollup_config::SoonRollupConfig,
 };
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::Duration;
@@ -66,6 +69,8 @@ pub struct E2EKailuaSoonEnvironment {
     pub chain_provider: E2EChainProvider,
     pub oracel: E2EOracle,
     pub soon_path: TempDir,
+    pub genesis_state_root: B256,
+    pub genesis_withdrawal_root: B256,
 }
 
 pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2EKailuaSoonEnvironment> {
@@ -135,6 +140,8 @@ pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2EKailuaSo
         chain_provider,
         oracel,
         soon_path: temp,
+        genesis_state_root: state_root,
+        genesis_withdrawal_root: withdrawal_root,
     })
 }
 
@@ -142,27 +149,17 @@ pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2EKailuaSo
 /// including modify `data` and `lamports` of all accounts.
 pub async fn multi_l2_tx_to_execution(
     env: &mut E2EKailuaSoonEnvironment,
-) -> Result<Vec<Arc<Execution>>> {
+) -> Result<(Vec<Arc<Execution>>, HashMap<usize, B256>)> {
     let blocks = 50usize;
     let mut executions = vec![];
     let mut executor = env.e2e_producer.get_executor().clone();
     let last_blockhash = executor.storage_query(|s| Ok(s.current_bank().last_blockhash()))?;
+    let mut agreed_l2_output_roots: HashMap<usize, B256> = HashMap::new();
 
-    let mut boot_info = BootInfo {
-        l1_head: B256::ZERO,
-        agreed_l2_output_root: B256::ZERO,
-        agreed_l2_block_number: 0,
-        claimed_l2_output_root: B256::ZERO,
-        claimed_l2_block_number: blocks as u64 + 1,
-        rollup_config: SoonRollupConfig {
-            sequencer_schedules: vec![(0, env.identity.pubkey())],
-            ..Default::default()
-        },
-        chain_id: 0,
-    };
     // firstly we need load prepared slot1.
     let (block_1, block_info) = get_l2_block_by_executor(&mut executor, 1).await?;
     let execution = to_execution(block_1, B256::ZERO, B256::ZERO, block_info)?;
+    executor.finalize(1)?;
     executions.push(Arc::new(execution));
 
     for i in 0..blocks {
@@ -174,12 +171,30 @@ pub async fn multi_l2_tx_to_execution(
         env.e2e_producer.mine_with_block(None)?;
         env.complete_receiver.try_recv()?;
         // finalize at once.
-        executor.finalize(slot - 1)?;
         let (block, header) = get_l2_block_by_executor(&mut executor, slot).await?;
         let execution = to_execution(block, B256::ZERO, B256::ZERO, header)?;
         executions.push(Arc::new(execution));
+        executor.finalize(slot)?;
+
+        if slot % 50 == 0 {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            let handler = env.mpt_runner.inner_handler();
+            assert_eq!(handler.get_aligned_slot(slot)?, slot);
+            let state_root = handler.query_state_root(slot)?;
+            let withdrawal_root = handler.query_withdrawal_root(slot)?;
+            let block_hash = executor
+                .storage_query(|s| Ok(s.current_bank().last_blockhash()))?
+                .to_bytes();
+            let output_root = OutputRoot {
+                state_root,
+                bridge_storage_root: withdrawal_root,
+                block_hash: B256::from_slice(&block_hash),
+            }
+            .hash();
+            agreed_l2_output_roots.insert(slot as usize, output_root);
+        }
     }
-    Ok(executions)
+    Ok((executions, agreed_l2_output_roots))
 }
 
 pub async fn get_l2_block_by_executor(
@@ -187,14 +202,12 @@ pub async fn get_l2_block_by_executor(
     slot: u64,
 ) -> Result<(L2Block, L2BlockInfo)> {
     let block = executor.block_by_number(slot).await?;
-    info!("finish block {:?}", block);
     let info = executor.l2_block_info_by_number(slot).await?;
     Ok((block, info))
 }
 
 pub mod hints {
     use super::*;
-    use anyhow::Ok;
     use async_trait::async_trait;
     use solana_sdk::account::{AccountSharedData, WritableAccount};
     use soon_mpt_primitives::constants::KECCAK_EMPTY;
@@ -301,11 +314,25 @@ pub mod hints {
         }
 
         fn get_bank_hash(&self, slot: u64) -> Result<Option<String>> {
-            Ok(None)
+            let hash = self
+                .executor
+                .storage_query(|s| Ok(s.blockstore().get_bank_hash(slot)))?;
+            Ok(hash.map(|h| h.to_string()))
         }
 
         fn get_block_time(&self, slot: u64) -> Result<Option<i64>> {
-            Ok(None)
+            let time = if slot == 0 {
+                self.executor
+                    .storage_query(|s| Ok(s.current_bank().genesis_creation_time()))?
+            } else {
+                self.executor.storage_query(|s| {
+                    match s.blockstore().get_rooted_block_time(slot) {
+                        Ok(time) => Ok(time),
+                        Err(e) => Err(soon_node::Error::CommonError(e.to_string())),
+                    }
+                })?
+            };
+            Ok(Some(time))
         }
     }
 
@@ -371,7 +398,7 @@ pub mod hints {
                         let node_hash = keccak256::<&[u8]>(node.as_ref());
                         let key = PreimageKey::new_keccak256(*node_hash);
                         kv_lock.set(key.into(), node.into())?;
-                        Ok(())
+                        Ok::<(), anyhow::Error>(())
                     })?;
                     tried_account
                         .withdrawal_proofs
@@ -380,7 +407,7 @@ pub mod hints {
                             let node_hash = keccak256::<&[u8]>(node.as_ref());
                             let key = PreimageKey::new_keccak256(*node_hash);
                             kv_lock.set(key.into(), node.into())?;
-                            Ok(())
+                            Ok::<(), anyhow::Error>(())
                         })?;
                 }
                 HintType::L2BlockData => {
@@ -408,7 +435,7 @@ pub mod hints {
                     info!("handle L2BankHash request.");
                     let block_number = u64::from_be_bytes(hint.data.as_ref()[..8].try_into()?);
                     let bank_hash = providers.get_bank_hash(block_number)?;
-                    info!("bank_hash:{:?}", bank_hash);
+                    info!("bank_hash on slot {} = {:?}", block_number, bank_hash);
                     let bank_hash_bytes = match bank_hash {
                         Some(hash) => bs58::decode(hash.as_str()).into_vec().unwrap(),
                         None => vec![],
@@ -459,75 +486,6 @@ pub struct E2EOracle {
     pub preimage_reader: OracleReader<NativeChannel>,
 }
 
-impl TrieProvider for E2EOracle {
-    type Error = TestE2EError;
-
-    fn trie_node_by_hash(
-        &self,
-        key: alloy_primitives::B256,
-    ) -> Result<kona_mpt::TrieNode, Self::Error> {
-        todo!()
-    }
-
-    fn bank_hash(&self, block_number: u64) -> Result<alloy_primitives::B256, Self::Error> {
-        todo!()
-    }
-
-    fn block_time(&self, block_number: u64) -> Result<i64, Self::Error> {
-        todo!()
-    }
-}
-
-impl TrieDBProvider for E2EOracle {
-    fn data_by_hash(
-        &self,
-        code_hash: alloy_primitives::B256,
-    ) -> Result<alloy_primitives::Bytes, Self::Error> {
-        unimplemented!("data by hash")
-    }
-}
-
-impl TrieHinter for E2EOracle {
-    type Error = OracleProviderError;
-
-    fn hint_trie_node(&self, hash: alloy_primitives::B256) -> Result<(), Self::Error> {
-        kona_proof::block_on(async move {
-            HintType::L2StateNode
-                .with_data(&[hash.as_slice()])
-                // .with_data(
-                //     self.chain_id
-                //         .map_or_else(Vec::new, |id| id.to_be_bytes().to_vec()),
-                // )
-                .send(&self.hint_writer)
-                .await
-        })
-    }
-
-    fn hint_account_proof(
-        &self,
-        pubkey: &solana_sdk::pubkey::Pubkey,
-        block_number: u64,
-    ) -> Result<(), Self::Error> {
-        kona_proof::block_on(async move {
-            tracing::info!("hint_account_proof, pubkey: {:?}", pubkey);
-            let hashed_address = keccak256(pubkey.as_ref());
-            tracing::info!("hint_account_proof, hashed_address: {:?}", hashed_address);
-            HintType::L2AccountProof
-                .with_data(&[block_number.to_be_bytes().as_ref(), hashed_address.as_ref()])
-                .send(&self.hint_writer)
-                .await
-        })
-    }
-
-    fn hint_bank_hash(&self, block_number: u64) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    fn hint_block_time(&self, block_number: u64) -> Result<(), Self::Error> {
-        todo!()
-    }
-}
-
 #[async_trait::async_trait]
 impl PreimageOracleClient for E2EOracle {
     async fn get(&self, key: PreimageKey) -> PreimageOracleResult<Vec<u8>> {
@@ -546,80 +504,80 @@ impl HintWriterClient for E2EOracle {
     }
 }
 
-pub fn run_l2_core_client<
+pub async fn run_l2_core_client<
     E,
-    O: CommsClient + Send + Sync,
     L2: L2ChainProvider + Send + Sync,
     T: TrieDBProvider + TrieHinter + Clone + Send + Sync,
 >(
-    oracle: O,
     mut l2_provider: L2,
     mut trie_provider: T,
     execution_cache: Vec<Arc<Execution>>,
-) -> anyhow::Result<(BootInfo, B256)>
+    mut agreed_l2_roots: HashMap<usize, B256>,
+    env: &E2EKailuaSoonEnvironment,
+) -> anyhow::Result<()>
 where
     E: L2BlockBuilder<T, T> + Send + Sync,
     L2: L2ChainProvider<Error = soon_node::Error>,
 {
-    let (boot_info, output_root) = kona_proof::block_on(async move {
-        client::log("BOOT");
-        let boot = BootInfo::load(&oracle).await.context("BootInfo::load")?;
-        let rollup_config = Arc::new(boot.rollup_config.clone());
+    let rollup_config = Arc::new(SoonRollupConfig {
+        sequencer_schedules: vec![(0, env.identity.pubkey())],
+        ..Default::default()
+    });
 
-        client::log("SAFE HEAD");
-        let safe_head = l2_provider
-            .l2_block_info_by_number(boot.agreed_l2_block_number)
+    // only number is used on stateless l2 builder,
+    // will use trie_db to hint other hash, etc.
+    let header = L2BlockHeader {
+        block_info: BlockInfo {
+            hash: B256::ZERO,
+            number: 0,
+            parent_hash: B256::ZERO,
+            timestamp: 0,
+        },
+        account_root: env.genesis_state_root,
+        widthdraw_root: env.genesis_withdrawal_root,
+    };
+    let init_db = TrieDB::new(header, trie_provider.clone(), trie_provider.clone());
+
+    let mut kona_executor = KonaExecutor::<_, _, E>::new(
+        rollup_config.clone(),
+        trie_provider.clone(),
+        trie_provider.clone(),
+        Some(E::new(
+            rollup_config,
+            trie_provider,
+            header,
+            SoonAccounts::default(),
+            init_db,
+        )),
+    );
+
+    let total = execution_cache.len();
+    for (idx, execution) in execution_cache.into_iter().enumerate() {
+        info!("enter execution {}/{}", idx, total);
+        let executor_result = kona_executor
+            .execute_payload(execution.attributes.clone())
             .await?;
-        let safe_head_header = L2BlockHeader {
-            block_info: safe_head.block_info,
-            account_root: B256::ZERO,
-            widthdraw_root: B256::ZERO,
-        };
-        client::log("SAFE HEAD done");
+        let new_output_root = kona_executor
+            .compute_output_root()
+            .context("compute_output_root: Verify post state")?;
+        kona_executor.update_safe_head(L2BlockHeader {
+            block_info: execution.artifacts.block_info.block_info,
+            account_root: executor_result.state_root,
+            widthdraw_root: executor_result.withdraw_root,
+        })?;
 
-        if boot.claimed_l2_block_number < safe_head_header.block_info.number {
-            bail!("Invalid claim");
+        let slot = idx + 1;
+        match agreed_l2_roots.entry(slot) {
+            Entry::Occupied(occupied_entry) => {
+                info!(
+                    "output at {}, {} vs {}",
+                    slot,
+                    occupied_entry.get(),
+                    new_output_root
+                );
+            }
+            Entry::Vacant(vacant_entry) => {}
         }
-        let safe_head_number = safe_head_header.block_info.number;
-        info!(
-            "SAFE HEAD number: {}, claimed_l2_block_number: {}",
-            safe_head_number, boot.claimed_l2_block_number
-        );
-        let expected_output_count = (boot.claimed_l2_block_number - safe_head_number) as usize;
-
-        let mut kona_executor = KonaExecutor::<_, _, E>::new(
-            rollup_config.clone(),
-            trie_provider.clone(),
-            trie_provider.clone(),
-            None,
-        );
-        kona_executor.update_safe_head(safe_head_header)?;
-
-        let mut latest_output_root = boot.agreed_l2_output_root;
-        for execution in execution_cache {
-            info!(
-                "enter execution {}/{}",
-                execution.artifacts.block_info.block_info.number, boot.claimed_l2_block_number
-            );
-            let executor_result = kona_executor
-                .execute_payload(execution.attributes.clone())
-                .await?;
-            latest_output_root = kona_executor
-                .compute_output_root()
-                .context("compute_output_root: Verify post state")?;
-            kona_executor.update_safe_head(L2BlockHeader {
-                block_info: execution.artifacts.block_info.block_info,
-                account_root: executor_result.state_root,
-                widthdraw_root: executor_result.withdraw_root,
-            })?;
-            // Verify post state
-            assert_eq!(execution.claimed_output, latest_output_root);
-            client::log(&format!(
-                "OUTPUT: {}/{}",
-                execution.artifacts.block_info.block_info.number, boot.claimed_l2_block_number
-            ));
-        }
-        Ok((boot, latest_output_root))
-    })?;
-    return Ok((boot_info, output_root));
+    }
+    Ok(())
 }

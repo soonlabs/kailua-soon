@@ -462,7 +462,10 @@ where
     if let Some(computed_output) = output_hash {
         // With sufficient data, the input l2_claim must be true
         info!("============================");
-        info!("boot.claimed_l2_output_root:{}", boot.claimed_l2_output_root);
+        info!(
+            "boot.claimed_l2_output_root:{}",
+            boot.claimed_l2_output_root
+        );
         info!("computed_output:{}", computed_output);
         info!("============================");
         assert_eq!(boot.claimed_l2_output_root, computed_output);
@@ -572,7 +575,7 @@ pub mod tests {
     use crate::test::TestOracle;
     use alloy_primitives::B256;
     use kona_cli::init_tracing_subscriber;
-    use kona_executor::OffchainL2Builder;
+    use kona_executor::{OffchainL2Builder, TrieDB};
     use kona_proof::l1::OracleBlobProvider;
     use kona_proof::BootInfo;
     use litesvm::accounts_callback::MemoryAccountsCallback;
@@ -803,7 +806,7 @@ pub mod tests {
         init_tracing_subscriber(3, None::<EnvFilter>)?;
         let mut env = init_soon_env(None).await?;
         info!("finish init env");
-        let executions = multi_l2_tx_to_execution(&mut env).await?;
+        let (executions, agreed_l2_roots) = multi_l2_tx_to_execution(&mut env).await?;
         info!("finish init executions");
         let trie_provider = OracleL2ChainProvider::new(
             B256::ZERO,
@@ -814,12 +817,14 @@ pub mod tests {
             Arc::new(env.oracel.clone()),
         );
 
-        run_l2_core_client::<StatelessL2Builder<_, _>, _, _, _>(
-            env.oracel.clone(),
+        run_l2_core_client::<StatelessL2Builder<_, _>, _, _>(
             env.e2e_producer.get_executor().clone(),
             trie_provider,
             executions,
-        )?;
+            agreed_l2_roots,
+            &env,
+        )
+        .await?;
         Ok(())
     }
 }
