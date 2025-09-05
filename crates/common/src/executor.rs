@@ -168,6 +168,7 @@ impl<E: Executor + Send + Sync + Debug> Executor for CachedExecutor<E> {
         {
             let artifacts = self.cache.pop().unwrap().artifacts.clone();
             log(&format!("CACHE {}", artifacts.block_info.block_info.number));
+            self.reset(); // reset the executor so that when call `update_safe_head` it will create a new trie db
             self.update_safe_head(L2BlockHeader {
                 block_info: artifacts.block_info.block_info,
                 account_root: artifacts.state_root,
@@ -206,6 +207,10 @@ impl<E: Executor + Send + Sync + Debug> Executor for CachedExecutor<E> {
     /// This method will return an error if the executor fails to compute the output root.
     fn compute_output_root(&mut self) -> Result<B256, Self::Error> {
         self.executor.compute_output_root()
+    }
+
+    fn reset(&mut self) {
+        self.executor.reset();
     }
 }
 

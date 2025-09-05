@@ -162,45 +162,6 @@ where
     )
 }
 
-pub fn run_core_client_0<
-    E,
-    O: CommsClient + FlushableCache + Send + Sync + Debug,
-    B: BlobProvider + Send + Sync + Debug + Clone,
->(
-    precondition_validation_data_hash: B256,
-    oracle: Arc<O>,
-    stream: Arc<O>,
-    beacon: B,
-    execution_cache: Vec<Arc<Execution>>,
-    collection_target: Option<Arc<Mutex<Vec<Execution>>>>,
-) -> anyhow::Result<(BootInfo, B256)>
-where
-    <B as BlobProvider>::Error: Debug,
-    E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug,
-{
-    let clone_oracle = oracle.clone();
-    let (l1_provider, l2_provider, da_provider) =
-        kona_proof::block_on(async move { initialize_providers(clone_oracle, stream).await })?;
-
-    run_core_client_ex::<
-        E,
-        O,
-        B,
-        OracleL1ChainProvider<O>,
-        OracleL2ChainProvider<O>,
-        OracleDaProvider<O>,
-    >(
-        precondition_validation_data_hash,
-        oracle,
-        beacon,
-        l1_provider,
-        l2_provider,
-        da_provider,
-        execution_cache,
-        collection_target,
-    )
-}
-
 #[allow(clippy::too_many_arguments)]
 pub fn run_core_client_ex<
     E,
@@ -893,6 +854,49 @@ pub mod tests {
                 rollup_config: Default::default(),
             },
             None,
+        )
+        .context("test_derivation")?;
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    pub async fn test_soon_local_with_execution_0_1() -> anyhow::Result<()> {
+        init_tracing_subscriber(4, None::<EnvFilter>)?;
+        let executions = test_derivation(
+            BootInfo {
+                l1_head: b256!(
+                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
+                ),
+                agreed_l2_output_root: b256!(
+                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
+                ),
+                claimed_l2_output_root: b256!(
+                    "0xc1702320d71294e6c0e4f6a47cc7c40502aec4230f69d3ba6fe57bb5dc96370f"
+                ),
+                agreed_l2_block_number: 0,
+                claimed_l2_block_number: 1,
+                chain_id: 0,
+                rollup_config: Default::default(),
+            },
+            None,
+        )
+        .context("test_derivation")?;
+
+        test_execution(
+            BootInfo {
+                l1_head: B256::ZERO,
+                agreed_l2_output_root: b256!(
+                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
+                ),
+                claimed_l2_output_root: b256!(
+                    "0xc1702320d71294e6c0e4f6a47cc7c40502aec4230f69d3ba6fe57bb5dc96370f"
+                ),
+                agreed_l2_block_number: 0,
+                claimed_l2_block_number: 1,
+                chain_id: 0,
+                rollup_config: Default::default(),
+            },
+            executions,
         )
         .context("test_derivation")?;
         Ok(())

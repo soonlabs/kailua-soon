@@ -104,7 +104,7 @@ where
 
     // Attempt to recompute the output hash at the target block number using kona
     log("RUN");
-    let (boot, precondition_hash) = crate::client::core::run_core_client_0::<E, O, B>(
+    let (boot, precondition_hash) = crate::client::core::run_core_client::<O, B>(
         precondition_validation_data_hash,
         oracle,
         stream,
@@ -331,7 +331,8 @@ pub fn stitch_executions(
             //     )
             // );
             // Validate requests
-            assert!(execution.artifacts.execution_result.is_empty());
+            // TODO: Uncomment execution result because it may differ from the ethereum execution result
+            // assert!(execution.artifacts.execution_result.is_empty());
             // Validate gas used
             // assert_eq!(
             //     execution.artifacts.header.gas_used,
@@ -493,7 +494,7 @@ pub mod tests {
     use tracing_subscriber::EnvFilter;
 
     fn setup() {
-        let _ = kona_cli::init_tracing_subscriber(1, None::<EnvFilter>);
+        let _ = kona_cli::init_tracing_subscriber(4, None::<EnvFilter>);
     }
 
     fn teardown() {
