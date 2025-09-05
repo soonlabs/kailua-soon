@@ -460,7 +460,10 @@ where
     if let Some(computed_output) = output_hash {
         // With sufficient data, the input l2_claim must be true
         info!("============================");
-        info!("boot.claimed_l2_output_root:{}", boot.claimed_l2_output_root);
+        info!(
+            "boot.claimed_l2_output_root:{}",
+            boot.claimed_l2_output_root
+        );
         info!("computed_output:{}", computed_output);
         info!("============================");
         assert_eq!(boot.claimed_l2_output_root, computed_output);
@@ -565,7 +568,7 @@ pub mod tests {
     use crate::precondition::PreconditionValidationData;
     use crate::test::mock::MockOracle;
     use crate::test::TestOracle;
-    use alloy_primitives::B256;
+    use alloy_primitives::{b256, B256};
     use kona_cli::init_tracing_subscriber;
     use kona_executor::OffchainL2Builder;
     use kona_proof::l1::OracleBlobProvider;
@@ -578,6 +581,8 @@ pub mod tests {
         boot_info: BootInfo,
         precondition_validation_data: Option<PreconditionValidationData>,
     ) -> anyhow::Result<Vec<Arc<Execution>>> {
+        info!("boot info rollup config: {:?}", boot_info.rollup_config);
+
         let oracle = Arc::new(TestOracle::new(boot_info.clone()));
         let (expected_precondition_hash, precondition_validation_data_hash) =
             if let Some(data) = precondition_validation_data {
@@ -585,13 +590,38 @@ pub mod tests {
             } else {
                 Default::default()
             };
-        derive_to_execution::<StatelessL2Builder<_, _>, _, _>(
-            boot_info,
-            oracle.clone(),
-            OracleBlobProvider::new(oracle),
+        let collection_target = Arc::new(Mutex::new(Vec::new()));
+        let (result_boot_info, precondition_hash) = run_core_client(
             precondition_validation_data_hash,
-            expected_precondition_hash,
+            oracle.clone(),
+            oracle.clone(),
+            OracleBlobProvider::new(oracle.clone()),
+            vec![],
+            Some(collection_target.clone()),
         )
+        .context("run_core_client")?;
+
+        assert_eq!(result_boot_info.l1_head, boot_info.l1_head);
+        assert_eq!(
+            result_boot_info.agreed_l2_output_root,
+            boot_info.agreed_l2_output_root
+        );
+        assert_eq!(
+            result_boot_info.claimed_l2_output_root,
+            boot_info.claimed_l2_output_root
+        );
+        assert_eq!(
+            result_boot_info.claimed_l2_block_number,
+            boot_info.claimed_l2_block_number
+        );
+        assert_eq!(result_boot_info.chain_id, boot_info.chain_id);
+
+        assert_eq!(expected_precondition_hash, precondition_hash);
+
+        let execution_cache =
+            recover_collected_executions(collection_target, boot_info.claimed_l2_output_root);
+
+        Ok(execution_cache)
     }
 
     pub fn test_derivation_ex<
@@ -792,4 +822,174 @@ pub mod tests {
         )?;
         Ok(())
     }
+
+    #[tokio::test(flavor = "multi_thread")]
+    pub async fn test_soon_local_0_1() -> anyhow::Result<()> {
+        init_tracing_subscriber(4, None::<EnvFilter>)?;
+        test_derivation(
+            BootInfo {
+                l1_head: b256!(
+                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
+                ),
+                agreed_l2_output_root: b256!(
+                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
+                ),
+                claimed_l2_output_root: b256!(
+                    "0xc1702320d71294e6c0e4f6a47cc7c40502aec4230f69d3ba6fe57bb5dc96370f"
+                ),
+                agreed_l2_block_number: 0,
+                claimed_l2_block_number: 1,
+                chain_id: 0,
+                rollup_config: test_rollup_config()?,
+            },
+            None,
+        )
+        .context("test_derivation")?;
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    pub async fn test_soon_local_0_50() -> anyhow::Result<()> {
+        init_tracing_subscriber(4, None::<EnvFilter>)?;
+        test_derivation(
+            BootInfo {
+                l1_head: b256!(
+                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
+                ),
+                agreed_l2_output_root: b256!(
+                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
+                ),
+                claimed_l2_output_root: b256!(
+                    "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
+                ),
+                agreed_l2_block_number: 0,
+                claimed_l2_block_number: 50,
+                chain_id: 0,
+                rollup_config: test_rollup_config()?,
+            },
+            None,
+        )
+        .context("test_derivation")?;
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    pub async fn test_soon_local_with_execution_0_50() -> anyhow::Result<()> {
+        init_tracing_subscriber(4, None::<EnvFilter>)?;
+        let executions = test_derivation(
+            BootInfo {
+                l1_head: b256!(
+                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
+                ),
+                agreed_l2_output_root: b256!(
+                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
+                ),
+                claimed_l2_output_root: b256!(
+                    "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
+                ),
+                agreed_l2_block_number: 0,
+                claimed_l2_block_number: 50,
+                chain_id: 0,
+                rollup_config: test_rollup_config()?,
+            },
+            None,
+        )
+        .context("test_derivation")?;
+
+        test_execution(
+            BootInfo {
+                l1_head: B256::ZERO,
+                agreed_l2_output_root: b256!(
+                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
+                ),
+                claimed_l2_output_root: b256!(
+                    "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
+                ),
+                agreed_l2_block_number: 0,
+                claimed_l2_block_number: 50,
+                chain_id: 0,
+                rollup_config: test_rollup_config()?,
+            },
+            executions,
+        )
+        .context("test_derivation")?;
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    pub async fn test_soon_local_0_50_validity() -> anyhow::Result<()> {
+        init_tracing_subscriber(4, None::<EnvFilter>)?;
+        test_derivation(
+            BootInfo {
+                l1_head: b256!(
+                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
+                ),
+                agreed_l2_output_root: b256!(
+                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
+                ),
+                claimed_l2_output_root: b256!(
+                    "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
+                ),
+                agreed_l2_block_number: 0,
+                claimed_l2_block_number: 50,
+                chain_id: 0,
+                rollup_config: test_rollup_config()?,
+            },
+            Some(PreconditionValidationData::Validity {
+                proposal_l2_head_number: 0,
+                proposal_output_count: 1,
+                output_block_span: 50,
+                blob_hashes: vec![],
+            }),
+        )
+        .context("test_derivation")?;
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    pub async fn test_soon_local_0_50_insufficient() -> anyhow::Result<()> {
+        init_tracing_subscriber(4, None::<EnvFilter>)?;
+        // data wasn't published at l1 origin
+        test_derivation(
+            BootInfo {
+                l1_head: b256!(
+                    "0x78228b4f2d59ae1820b8b8986a875630cb32d88b298d78d0f25bcac8f3bdfbf3"
+                ),
+                agreed_l2_output_root: b256!(
+                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
+                ),
+                claimed_l2_output_root: B256::ZERO,
+                agreed_l2_block_number: 0,
+                claimed_l2_block_number: 50,
+                chain_id: 0,
+                rollup_config: test_rollup_config()?,
+            },
+            None,
+        )
+        .context("test_derivation")?;
+        Ok(())
+    }
+}
+
+pub fn test_rollup_config() -> anyhow::Result<soon_primitives::rollup_config::SoonRollupConfig> {
+    let mut cfg = soon_primitives::rollup_config::SoonRollupConfig::new_for_genesis(
+        11155111,
+        "0x66fd78e4a4aa03c19ac199c5af7a019429f98950".parse()?,
+        10,
+    );
+
+    cfg.batch_inbox_address = "0xff00000000000000000000000000000000042069".parse()?;
+    cfg.optimism_portal_address = "0x7978da3b9f3582172f364e67637ea9a83cebaf47".parse()?;
+    cfg.l1_standard_bridge = "0xbae3180dc70f2536fe74532e62aea2a8781a4461".parse()?;
+    cfg.l1_cross_domain_messenger = "0xcd5f709ab641488e1a375513782bc268efdb5d22".parse()?;
+    cfg.max_frame_size = 2000;
+    cfg.channel_size = 3000;
+    cfg.shred_version = Some(62156);
+    cfg.genesis_hash = Some("7UrQ9acNkM1mHxubCN7xXFxreiPtxJC7ftMgX6DEHB3Y".parse()?);
+    cfg.sequencer_schedules = vec![
+        (0, "11111111111111111111111111111111".parse()?),
+        (1, "9AjNBjtReEkGucMr1LMT7uXtYFd1aLk4uEbhN1Ye2QPH".parse()?),
+    ];
+
+    Ok(cfg)
 }
