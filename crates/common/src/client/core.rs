@@ -29,7 +29,6 @@ use kona_proof::l1::OraclePipeline;
 use kona_proof::l2::{CursorSetter, OracleL2ChainProvider};
 use kona_proof::sync::new_oracle_pipeline_cursor;
 use kona_proof::{BootInfo, FlushableCache, HintType};
-use solana_sdk::signature::Signer;
 use soon_derive::prelude::{ChainProvider, DAProvider};
 use soon_derive::sources::DAServerSource;
 use soon_derive::traits::{BlobProvider, L2ChainProvider};

@@ -51,6 +51,7 @@ risc0-zkvm.workspace = true
 serde.workspace = true
 tracing.workspace = true
 solana-program.workspace = true
+solana-sdk.workspace = true
 
 #SOON
 soon-primitives.workspace = true
@@ -59,7 +60,6 @@ soon-derive.workspace = true
 # for testing
 soon-node = { workspace = true, optional = true }
 soon-storage = { workspace = true, optional = true }
-solana-sdk = { workspace = true, optional = true }
 l1-block-info = { workspace = true, optional = true }
 bridge = { workspace = true, optional = true }
 spl-token = { workspace = true, optional = true }
@@ -91,7 +91,6 @@ __test = [
 	"tempfile",
 	"soon-node/__test",
 	"soon-storage",
-	"solana-sdk",
 	"l1-block-info",
 	"bridge",
 	"spl-token",
