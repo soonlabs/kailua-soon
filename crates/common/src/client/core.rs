@@ -840,7 +840,7 @@ pub mod tests {
                 agreed_l2_block_number: 0,
                 claimed_l2_block_number: 1,
                 chain_id: 0,
-                rollup_config: test_rollup_config()?,
+                rollup_config: Default::default(),
             },
             None,
         )
@@ -865,7 +865,7 @@ pub mod tests {
                 agreed_l2_block_number: 0,
                 claimed_l2_block_number: 50,
                 chain_id: 0,
-                rollup_config: test_rollup_config()?,
+                rollup_config: Default::default(),
             },
             None,
         )
@@ -890,7 +890,7 @@ pub mod tests {
                 agreed_l2_block_number: 0,
                 claimed_l2_block_number: 50,
                 chain_id: 0,
-                rollup_config: test_rollup_config()?,
+                rollup_config: Default::default(),
             },
             None,
         )
@@ -908,7 +908,7 @@ pub mod tests {
                 agreed_l2_block_number: 0,
                 claimed_l2_block_number: 50,
                 chain_id: 0,
-                rollup_config: test_rollup_config()?,
+                rollup_config: Default::default(),
             },
             executions,
         )
@@ -933,7 +933,7 @@ pub mod tests {
                 agreed_l2_block_number: 0,
                 claimed_l2_block_number: 50,
                 chain_id: 0,
-                rollup_config: test_rollup_config()?,
+                rollup_config: Default::default(),
             },
             Some(PreconditionValidationData::Validity {
                 proposal_l2_head_number: 0,
@@ -962,34 +962,36 @@ pub mod tests {
                 agreed_l2_block_number: 0,
                 claimed_l2_block_number: 50,
                 chain_id: 0,
-                rollup_config: test_rollup_config()?,
+                rollup_config: Default::default(),
             },
             None,
         )
         .context("test_derivation")?;
         Ok(())
     }
-}
 
-pub fn test_rollup_config() -> anyhow::Result<soon_primitives::rollup_config::SoonRollupConfig> {
-    let mut cfg = soon_primitives::rollup_config::SoonRollupConfig::new_for_genesis(
-        11155111,
-        "0x66fd78e4a4aa03c19ac199c5af7a019429f98950".parse()?,
-        10,
-    );
+    // Rollup config for backup, the serialized data is stored in testdata/rollup_config.json
+    pub fn test_rollup_config() -> anyhow::Result<soon_primitives::rollup_config::SoonRollupConfig>
+    {
+        let mut cfg = soon_primitives::rollup_config::SoonRollupConfig::new_for_genesis(
+            11155111,
+            "0x66fd78e4a4aa03c19ac199c5af7a019429f98950".parse()?,
+            10,
+        );
 
-    cfg.batch_inbox_address = "0xff00000000000000000000000000000000042069".parse()?;
-    cfg.optimism_portal_address = "0x7978da3b9f3582172f364e67637ea9a83cebaf47".parse()?;
-    cfg.l1_standard_bridge = "0xbae3180dc70f2536fe74532e62aea2a8781a4461".parse()?;
-    cfg.l1_cross_domain_messenger = "0xcd5f709ab641488e1a375513782bc268efdb5d22".parse()?;
-    cfg.max_frame_size = 2000;
-    cfg.channel_size = 3000;
-    cfg.shred_version = Some(62156);
-    cfg.genesis_hash = Some("7UrQ9acNkM1mHxubCN7xXFxreiPtxJC7ftMgX6DEHB3Y".parse()?);
-    cfg.sequencer_schedules = vec![
-        (0, "11111111111111111111111111111111".parse()?),
-        (1, "9AjNBjtReEkGucMr1LMT7uXtYFd1aLk4uEbhN1Ye2QPH".parse()?),
-    ];
+        cfg.batch_inbox_address = "0xff00000000000000000000000000000000042069".parse()?;
+        cfg.optimism_portal_address = "0x7978da3b9f3582172f364e67637ea9a83cebaf47".parse()?;
+        cfg.l1_standard_bridge = "0xbae3180dc70f2536fe74532e62aea2a8781a4461".parse()?;
+        cfg.l1_cross_domain_messenger = "0xcd5f709ab641488e1a375513782bc268efdb5d22".parse()?;
+        cfg.max_frame_size = 2000;
+        cfg.channel_size = 3000;
+        cfg.shred_version = Some(62156);
+        cfg.genesis_hash = Some("7UrQ9acNkM1mHxubCN7xXFxreiPtxJC7ftMgX6DEHB3Y".parse()?);
+        cfg.sequencer_schedules = vec![
+            (0, "11111111111111111111111111111111".parse()?),
+            (1, "9AjNBjtReEkGucMr1LMT7uXtYFd1aLk4uEbhN1Ye2QPH".parse()?),
+        ];
 
-    Ok(cfg)
+        Ok(cfg)
+    }
 }
