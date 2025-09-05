@@ -27,6 +27,7 @@ rkyv = "0.8.9"
 substrate-bn = "=0.6.0"
 
 kailua-common = { path = "../../../crates/common" }
+kona-executor = { path = "../../../../kona-soon/crates/proof/executor" }
 
 risc0-zkvm = { version = "2.1.0", features = ["std", "heap-embedded-alloc", "unstable"] }
 
@@ -47,9 +48,10 @@ tiny-keccak = { git = "https://github.com/risc0/tiny-keccak", tag = "tiny-keccak
 curve25519-dalek = { git = "https://github.com/risc0/curve25519-dalek.git", tag = "curve25519-4.1.2-risczero.0" }
 ed25519-dalek = { git = "https://github.com/risc0/curve25519-dalek.git", tag = "curve25519-4.1.2-risczero.0" }
 
-
-
 # solana related
 solana_rbpf = { git = "https://github.com/soonlabs/rbpf", branch = "feat/risc0-zkvm" }
 solana-program = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
 solana-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
+solana-zk-token-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
+#solana-curve25519 = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
+solana-zk-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }

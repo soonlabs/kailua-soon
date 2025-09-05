@@ -36,7 +36,7 @@ pub async fn soon_to_execution_cache(
 ) -> Result<(BootInfo, MockOracle)> {
     let mut mock_l1_node = MockEthL1Node::new(L1_NUMBER, 12);
     let temp = tempfile::tempdir()?;
-    let (mut producer, identity, metadata, complete_receiver) =
+    let (mut producer, identity, metadata, complete_receiver, _) =
         new_soon(temp.path(), relative_to_soon, &mut mock_l1_node)?;
 
     let (boot_info, executions, oracle_storage_items) = blocks_to_execution_cache(

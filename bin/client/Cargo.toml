@@ -68,10 +68,3 @@ rebuild-fpvm = ["kailua-build/rebuild-fpvm"]
 # Feature for offline generator tool
 test-tools = ["kailua-common/__test"]
 
-[[bin]]
-name = "kailua-offline"
-path = "src/bins/offline.rs"
-
-[[bin]]
-name = "soon-offline-generator"
-path = "src/bins/offgen.rs"

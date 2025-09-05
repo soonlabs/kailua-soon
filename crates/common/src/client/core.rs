@@ -34,6 +34,7 @@ use soon_derive::sources::DAServerSource;
 use soon_derive::traits::{BlobProvider, L2ChainProvider};
 use soon_primitives::blocks::L2BlockHeader;
 use soon_primitives::output_root::OutputRoot;
+use soon_primitives::rollup_config::SoonRollupConfig;
 use std::fmt::Debug;
 use std::mem::take;
 use std::sync::{Arc, Mutex};
@@ -521,6 +522,9 @@ pub fn recover_collected_executions(
 #[cfg_attr(coverage_nightly, coverage(off))]
 pub mod tests {
     use super::*;
+    use crate::client::soon_test::e2e::{
+        init_soon_env, multi_l2_tx_to_execution, run_l2_core_client,
+    };
     use crate::client::soon_test::{
         derive_to_execution, initialize_test_providers, soon_to_derivation,
         soon_to_execution_cache, TestDaProvider, TestOracleL1ChainProvider,
@@ -535,6 +539,7 @@ pub mod tests {
     use kona_proof::l1::OracleBlobProvider;
     use kona_proof::BootInfo;
     use litesvm::accounts_callback::MemoryAccountsCallback;
+    use solana_sdk::signer::Signer;
     use std::sync::Arc;
     use tracing_subscriber::EnvFilter;
 
@@ -1074,5 +1079,30 @@ pub mod tests {
         ];
 
         Ok(cfg)
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    pub async fn test_e2e_core_from_soon() -> anyhow::Result<()> {
+        init_tracing_subscriber(3, None::<EnvFilter>)?;
+        let mut env = init_soon_env(None).await?;
+        info!("finish init env");
+        let executions = multi_l2_tx_to_execution(&mut env).await?;
+        info!("finish init executions");
+        let trie_provider = OracleL2ChainProvider::new(
+            B256::ZERO,
+            Arc::new(SoonRollupConfig {
+                sequencer_schedules: vec![(0, env.identity.pubkey())],
+                ..Default::default()
+            }),
+            Arc::new(env.oracel.clone()),
+        );
+
+        run_l2_core_client::<StatelessL2Builder<_, _>, _, _, _>(
+            env.oracel.clone(),
+            env.e2e_producer.get_executor().clone(),
+            trie_provider,
+            executions,
+        )?;
+        Ok(())
     }
 }
