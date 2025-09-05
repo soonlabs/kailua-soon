@@ -54,8 +54,6 @@ tracing.workspace = true
 
 #SOON
 soon-primitives.workspace = true
-soon-mpt-primitives.workspace = true
-soon-mpt-handler.workspace = true
 soon-derive.workspace = true
 
 # for testing
@@ -68,6 +66,8 @@ spl-token = { workspace = true, optional = true }
 crossbeam-channel = { workspace = true, optional = true }
 serde_json = { workspace = true }
 batcher = { workspace = true, optional = true }
+soon-mpt-primitives = { workspace = true, optional = true }
+soon-mpt-handler = { workspace = true, optional = true }
 bs58 = "0.4.0"
 thiserror.workspace = true
 
@@ -96,6 +96,8 @@ __test = [
 	"spl-token",
 	"crossbeam-channel",
 	"batcher",
+	"soon-mpt-primitives",
+	"soon-mpt-handler",
 ]
 
 [lints.rust]

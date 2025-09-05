@@ -35,6 +35,7 @@ use std::sync::Mutex;
 use std::{collections::HashMap, path::Path, sync::Arc};
 
 pub(crate) mod derivation;
+#[cfg(feature = "__test")]
 pub(crate) mod e2e;
 pub(crate) mod execution;
 pub(crate) mod providers;

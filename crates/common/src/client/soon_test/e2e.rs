@@ -28,6 +28,7 @@ use solana_sdk::signature::Signer;
 use solana_sdk::system_transaction;
 use soon_derive::traits::{ChainProvider, L2ChainProvider};
 use soon_mpt_handler::MptHandler;
+use soon_mpt_primitives::update::MptUpdatingItem;
 use soon_node::node::tests::MockEthL1Node;
 use soon_node::{
     derive::mock::MockInstant,
@@ -37,7 +38,6 @@ use soon_node::{
 };
 use soon_primitives::blocks::L2BlockHeader;
 use soon_primitives::l2blocks::L2Block;
-use soon_primitives::mpt::MptUpdatingItem;
 use soon_primitives::{
     blocks::{BlockInfo, L2BlockInfo},
     rollup_config::SoonRollupConfig,
