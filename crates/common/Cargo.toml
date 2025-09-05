@@ -81,7 +81,7 @@ tracing-subscriber.workspace = true
 kailua-build.workspace = true
 bonsai-sdk.workspace = true
 rand.workspace = true
-tokio = { workspace = true, default-features = false, features = ["sync"] }
+tokio = { workspace = true, features = ["sync"] }
 
 [features]
 default = []
