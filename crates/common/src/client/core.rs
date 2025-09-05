@@ -694,13 +694,38 @@ pub mod tests {
         boot_info: BootInfo,
         execution_cache: Vec<Arc<Execution>>,
     ) -> anyhow::Result<B256> {
+        // Ensure boot info triggers execution only
+        assert!(boot_info.l1_head.is_zero());
+        let expected_precondition_hash = exec_precondition_hash(execution_cache.as_slice());
+
         let oracle = Arc::new(TestOracle::new(boot_info.clone()));
-        test_execution_ex::<StatelessL2Builder<_, _>, _, _>(
-            boot_info,
-            execution_cache,
+        let (result_boot_info, precondition_hash) = run_core_client(
+            B256::ZERO,
             oracle.clone(),
-            OracleBlobProvider::new(oracle),
+            oracle.clone(),
+            OracleBlobProvider::new(oracle.clone()),
+            execution_cache,
+            None,
         )
+        .expect("run_core_client");
+
+        assert_eq!(result_boot_info.l1_head, boot_info.l1_head);
+        assert_eq!(
+            result_boot_info.agreed_l2_output_root,
+            boot_info.agreed_l2_output_root
+        );
+        assert_eq!(
+            result_boot_info.claimed_l2_output_root,
+            boot_info.claimed_l2_output_root
+        );
+        assert_eq!(
+            result_boot_info.claimed_l2_block_number,
+            boot_info.claimed_l2_block_number
+        );
+        assert_eq!(result_boot_info.chain_id, boot_info.chain_id);
+        assert_eq!(precondition_hash, expected_precondition_hash);
+
+        Ok(precondition_hash)
     }
 
     pub fn test_execution_ex<
@@ -967,6 +992,58 @@ pub mod tests {
             None,
         )
         .context("test_derivation")?;
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    pub async fn test_soon_local_0_50_insufficient_fail() -> anyhow::Result<()> {
+        init_tracing_subscriber(4, None::<EnvFilter>)?;
+        // data wasn't published at l1 origin
+        test_derivation(
+            BootInfo {
+                l1_head: b256!(
+                    "0x78228b4f2d59ae1820b8b8986a875630cb32d88b298d78d0f25bcac8f3bdfbf3"
+                ),
+                agreed_l2_output_root: b256!(
+                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
+                ),
+                claimed_l2_output_root: b256!(
+                    "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
+                ),
+                agreed_l2_block_number: 0,
+                claimed_l2_block_number: 50,
+                chain_id: 0,
+                rollup_config: Default::default(),
+            },
+            None,
+        )
+        .unwrap_err();
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    pub async fn test_soon_local_0_0() -> anyhow::Result<()> {
+        init_tracing_subscriber(4, None::<EnvFilter>)?;
+        let executions = test_derivation(
+            BootInfo {
+                l1_head: b256!(
+                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
+                ),
+                agreed_l2_output_root: b256!(
+                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
+                ),
+                claimed_l2_output_root: b256!(
+                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
+                ),
+                agreed_l2_block_number: 0,
+                claimed_l2_block_number: 0,
+                chain_id: 0,
+                rollup_config: Default::default(),
+            },
+            None,
+        )
+        .context("test_derivation")?;
+        assert!(executions.is_empty());
         Ok(())
     }
 
