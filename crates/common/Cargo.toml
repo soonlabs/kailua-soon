@@ -70,6 +70,7 @@ soon-mpt-primitives = { workspace = true, optional = true }
 soon-mpt-handler = { workspace = true, optional = true }
 bs58 = "0.4.0"
 thiserror.workspace = true
+tokio = { workspace = true, features = ["sync"], optional = true }
 
 [dev-dependencies]
 copy_dir.workspace = true
@@ -81,7 +82,6 @@ tracing-subscriber.workspace = true
 kailua-build.workspace = true
 bonsai-sdk.workspace = true
 rand.workspace = true
-tokio = { workspace = true, features = ["sync"] }
 
 [features]
 default = []
@@ -92,6 +92,7 @@ __test = [
 	"soon-node/__test",
 	"soon-storage",
 	"l1-block-info",
+	"tokio",
 	"bridge",
 	"spl-token",
 	"crossbeam-channel",
