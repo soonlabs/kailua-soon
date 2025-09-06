@@ -150,7 +150,7 @@ pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2EKailuaSo
 pub async fn multi_l2_tx_to_execution(
     env: &mut E2EKailuaSoonEnvironment,
 ) -> Result<(Vec<Arc<Execution>>, HashMap<usize, B256>)> {
-    let blocks = 50usize;
+    let blocks = 500usize;
     let mut executions = vec![];
     let mut executor = env.e2e_producer.get_executor().clone();
     let last_blockhash = executor.storage_query(|s| Ok(s.current_bank().last_blockhash()))?;
@@ -257,35 +257,32 @@ pub mod hints {
         fn get_tried_account_proof(&self, address: B256, slot: u64) -> Result<AccountWithTrie> {
             let slot = self.mpt.get_aligned_slot(slot)?;
             let state_proof = self.mpt.proof_of_state_root(address, slot)?;
-            if !state_proof.encoded_account.is_some() {
-                return Ok(AccountWithTrie {
-                    block_number: 0,
-                    proofs: vec![],
-                    withdrawal_proofs: vec![],
-                    account: None,
-                });
+
+            let mut raw_account = None;
+            let mut owner = "".to_string();
+            match state_proof.raw_account {
+                None => {}
+                Some(account) => {
+                    owner = account.owner.to_string();
+                    let mut raw_inner =
+                        AccountSharedData::new(0, 0, &Pubkey::from(account.owner.0.to_bytes()));
+                    raw_inner.set_lamports(account.lamports);
+                    raw_inner.set_executable(account.executable);
+                    raw_inner.set_rent_epoch(account.rent_epoch);
+                    if account.data != KECCAK_EMPTY {
+                        let raw = self
+                            .mpt
+                            .query_historical_raw_account(address, slot)?
+                            .unwrap();
+                        raw_inner.set_data_from_slice(&raw.data.as_slice());
+                    }
+                    raw_account = Some(WrappedSolanaAccount(raw_inner));
+                }
             }
 
-            let account = state_proof.raw_account.unwrap();
-            let mut raw_account =
-                AccountSharedData::new(0, 0, &Pubkey::from(account.owner.0.to_bytes()));
-            raw_account.set_lamports(account.lamports);
-            raw_account.set_executable(account.executable);
-            raw_account.set_rent_epoch(account.rent_epoch);
-            if account.data != KECCAK_EMPTY {
-                let raw = self
-                    .mpt
-                    .query_historical_raw_account(address, slot)?
-                    .unwrap();
-                raw_account.set_data_from_slice(&raw.data.as_slice());
-            }
-
-            let bridge = Pubkey::try_from(
-                bs58::decode("Bridge1111111111111111111111111111111111111").into_vec()?,
-            )
-            .unwrap();
+            let bridge = "Bridge1111111111111111111111111111111111111".to_string();
             let mut withdrawal_proofs = vec![];
-            if account.owner.0.to_string() == bridge.to_string() {
+            if owner == bridge {
                 let p = self.mpt.proof_of_withdrawal_root(address, slot)?;
                 withdrawal_proofs = p.proof.into_iter().map(|b| b.to_vec()).collect::<Vec<_>>();
             }
@@ -298,7 +295,7 @@ pub mod hints {
                     .map(|b| b.to_vec())
                     .collect::<Vec<_>>(),
                 withdrawal_proofs,
-                account: Some(WrappedSolanaAccount(raw_account)),
+                account: raw_account,
             })
         }
 
@@ -384,6 +381,12 @@ pub mod hints {
 
                     let tried_account =
                         providers.get_tried_account_proof(hashed_address, block_number)?;
+                    info!(
+                        "l2 addr {}, account {}, proof {}",
+                        hashed_address,
+                        tried_account.account.is_some(),
+                        tried_account.proofs.len()
+                    );
                     // need to write account + trie proof node into kv.
                     let mut out_buf = BytesMut::default();
                     if let Some(account) = tried_account.account {
@@ -569,11 +572,10 @@ where
         let slot = idx + 1;
         match agreed_l2_roots.entry(slot) {
             Entry::Occupied(occupied_entry) => {
-                info!(
-                    "output at {}, {} vs {}",
-                    slot,
-                    occupied_entry.get(),
-                    new_output_root
+                assert_eq!(
+                    *occupied_entry.get(),
+                    new_output_root,
+                    "slot at {slot} not same"
                 );
             }
             Entry::Vacant(vacant_entry) => {}
