@@ -105,16 +105,16 @@ pub mod tests {
     #[test]
     fn test_stateless_client() -> anyhow::Result<()> {
         let mut boot_info = BootInfo {
-            l1_head: b256!("0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"),
+            l1_head: b256!("0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"),
             agreed_l2_output_root: b256!(
-                "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
+                "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
             ),
             claimed_l2_output_root: b256!(
-                "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
+                "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
             ),
-            agreed_l2_block_number: 16491249,
-            claimed_l2_block_number: 16491349,
-            chain_id: 11155420,
+            agreed_l2_block_number: 0,
+            claimed_l2_block_number: 50,
+            chain_id: 0,
             rollup_config: Default::default(),
         };
         let stitched_executions = test_derivation(boot_info.clone(), None)

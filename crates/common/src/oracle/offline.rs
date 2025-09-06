@@ -183,7 +183,7 @@ impl OfflineOracle<OfflineKeyValueStore> {
             claimed_l2_output_root: boot_info.claimed_l2_output_root,
             claimed_l2_block_number: boot_info.claimed_l2_block_number,
             l2_chain_id: Some(boot_info.chain_id),
-            // rollup_config_path: None, // no support for custom chains
+            rollup_config_path: Some(source_db_path.join("rollup_config.json")), // custom chains
             ..Default::default()
         });
         // Create a cloned disk store in a temp dir

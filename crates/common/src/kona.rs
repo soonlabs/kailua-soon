@@ -26,7 +26,7 @@ use kona_proof::HintType;
 use soon_derive::traits::ChainProvider;
 use soon_primitives::blocks::{BlockInfo, L1Header, L1Transaction};
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use std::sync::RwLock;
 
 /// The oracle-backed L1 chain provider for the client program.
 /// Forked from [kona_proof::l1::OracleL1ChainProvider]
@@ -104,10 +104,12 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
     ///   RLP decoding fails.
     async fn header_by_hash(&self, hash: B256) -> Result<L1Header, Self::Error> {
         // Use cached headers
-        let headers_map = self.headers_map.read().await;
-        let headers = self.headers.read().await;
-        if let Some(index) = headers_map.get(&hash) {
-            return Ok(headers[*index].clone().unseal().into());
+        {
+            let headers_map = self.headers_map.read().unwrap();
+            let headers = self.headers.read().unwrap();
+            if let Some(index) = headers_map.get(&hash) {
+                return Ok(headers[*index].clone().unseal().into());
+            }
         }
 
         // Fetch the header RLP from the oracle.
@@ -170,7 +172,7 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
 
         // Check if the block number is in range. If not, we can fail early.
         {
-            let headers = self.headers.read().await;
+            let headers = self.headers.read().unwrap();
             if block_number > headers[0].number {
                 return Err(OracleProviderError::BlockNumberPastHead(
                     block_number,
@@ -181,15 +183,15 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
 
         // Calculate header index
         let header_index = {
-            let headers = self.headers.read().await;
+            let headers = self.headers.read().unwrap();
             (headers[0].number - block_number) as usize
         };
 
         // Walk back the block headers to the desired block number.
         loop {
             let need_more_headers = {
-                let headers_map = self.headers_map.read().await;
-                let headers = self.headers.read().await;
+                let headers_map = self.headers_map.read().unwrap();
+                let headers = self.headers.read().unwrap();
                 headers_map.len() <= header_index
             };
 
@@ -199,8 +201,8 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
 
             // Get the parent hash of the last cached header
             let header_hash = {
-                let headers = self.headers.read().await;
-                let headers_map = self.headers_map.read().await;
+                let headers = self.headers.read().unwrap();
+                let headers_map = self.headers_map.read().unwrap();
                 headers[headers_map.len() - 1].parent_hash
             };
 
@@ -208,15 +210,15 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
 
             // Acquire write locks to modify both collections
             {
-                let mut headers_map = self.headers_map.write().await;
-                let mut headers = self.headers.write().await;
+                let mut headers_map = self.headers_map.write().unwrap();
+                let mut headers = self.headers.write().unwrap();
                 headers_map.insert(header_hash, headers.len());
                 headers.push(header.seal(header_hash));
             }
         }
 
         // Get the final header
-        let headers = self.headers.read().await;
+        let headers = self.headers.read().unwrap();
         let header = &headers[header_index];
 
         Ok(BlockInfo {
