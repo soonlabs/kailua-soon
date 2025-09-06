@@ -26,6 +26,9 @@ use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signature::Signer;
 use solana_sdk::system_transaction;
+use solana_sdk::system_instruction;
+use solana_sdk::system_program;
+use solana_sdk::transaction::Transaction;
 use soon_derive::traits::{ChainProvider, L2ChainProvider};
 use soon_mpt_handler::MptHandler;
 use soon_mpt_primitives::update::MptUpdatingItem;
@@ -166,7 +169,67 @@ pub async fn multi_l2_tx_to_execution(
         let slot = (i + 2) as u64;
         let from = env.mints[i % env.mints.len()].insecure_clone();
         let to = env.mints[(i + 1) % env.mints.len()].pubkey();
-        let tx = system_transaction::transfer(&from, &to, LAMPORTS_PER_SOL, last_blockhash);
+        
+        // Create different transaction types based on index to enrich testing
+        let tx = match i % 4 {
+            0 => {
+                // Standard transfer transaction
+                system_transaction::transfer(&from, &to, LAMPORTS_PER_SOL, last_blockhash)
+            },
+            1 => {
+                // Create account transaction
+                let new_account = Keypair::new();
+                let space = 0; // Default space for system program
+                let lamports = LAMPORTS_PER_SOL / 100; // Minimal rent-exempt amount
+                let create_instruction = system_instruction::create_account(
+                    &from.pubkey(),
+                    &new_account.pubkey(),
+                    lamports,
+                    space,
+                    &system_program::id(),
+                );
+                let mut tx = Transaction::new_with_payer(&[create_instruction], Some(&from.pubkey()));
+                tx.sign(&[&from, &new_account], last_blockhash);
+                tx
+            },
+            2 => {
+                // Allocate space transaction
+                let target_account = env.mints[(i + 2) % env.mints.len()].insecure_clone();
+                let allocate_instruction = system_instruction::allocate(&target_account.pubkey(), 100);
+                let mut tx = Transaction::new_with_payer(&[allocate_instruction], Some(&from.pubkey()));
+                tx.sign(&[&from, &target_account], last_blockhash);
+                tx
+            },
+            3 => {
+                // Assign account to system program transaction
+                let target_account = env.mints[(i + 3) % env.mints.len()].insecure_clone();
+                let assign_instruction = system_instruction::assign(&target_account.pubkey(), &system_program::id());
+                let mut tx = Transaction::new_with_payer(&[assign_instruction], Some(&from.pubkey()));
+                tx.sign(&[&from, &target_account], last_blockhash);
+                tx
+            },
+            4 => {
+                // Delete account transaction (transfer all remaining balance to close the account)
+                let target_account = env.mints[(i + 4) % env.mints.len()].insecure_clone();
+                // Query the account balance first to transfer all of it
+                let account_balance = match env.e2e_producer.get_executor().storage_query(|s| {
+                    Ok(s.current_bank().get_balance(&target_account.pubkey()))
+                }) {
+                    Ok(balance) => balance,
+                    Err(_) => LAMPORTS_PER_SOL / 1000, // fallback amount
+                };
+                
+                // Transfer all balance to effectively delete the account
+                if account_balance > 0 {
+                    system_transaction::transfer(&target_account, &to, account_balance, last_blockhash)
+                } else {
+                    // If no balance, just do a minimal transfer
+                    system_transaction::transfer(&from, &to, LAMPORTS_PER_SOL / 1000, last_blockhash)
+                }
+            },
+            _ => unreachable!(),
+        };
+        
         env.e2e_producer.add_tx(tx)?;
         env.e2e_producer.mine_with_block(None)?;
         env.complete_receiver.try_recv()?;
