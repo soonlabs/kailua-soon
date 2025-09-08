@@ -421,13 +421,13 @@ where
     // Check claimed_l2_output_root correctness
     if let Some(computed_output) = output_hash {
         // With sufficient data, the input l2_claim must be true
-        info!("============================");
-        info!(
+        client::log("============================");
+        client::log(&format!(
             "boot.claimed_l2_output_root:{}",
             boot.claimed_l2_output_root
-        );
-        info!("computed_output:{}", computed_output);
-        info!("============================");
+        ));
+        client::log(&format!("computed_output:{}", computed_output));
+        client::log("============================");
         assert_eq!(boot.claimed_l2_output_root, computed_output);
     } else if !boot.claimed_l2_output_root.is_zero() {
         // We use the zero claim hash to denote that the data as of l1 head is insufficient
