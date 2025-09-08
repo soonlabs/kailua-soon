@@ -15,12 +15,12 @@
 use alloy_eips::eip7685::Requests;
 use alloy_evm::block::BlockExecutionResult;
 use alloy_primitives::B256;
-use solana_program::fee_calculator::FeeRateGovernor;
 use fraud_executor::outcome::BlockBuildingOutcome;
 use op_alloy_consensus::OpReceiptEnvelope;
 use rkyv::rancor::Fallible;
 use rkyv::with::{ArchiveWith, DeserializeWith, SerializeWith};
 use rkyv::{Archive, Archived, Place, Resolver};
+use solana_program::fee_calculator::FeeRateGovernor;
 use soon_primitives::blocks::L2BlockInfo;
 
 pub struct BlockBuildingOutcomeRkyv;
