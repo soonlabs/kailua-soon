@@ -11362,9 +11362,9 @@ dependencies = [
 
 [[package]]
 name = "risc0-binfmt"
-version = "2.0.2"
+version = "2.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62eb7025356a233c1bc267c458a2ce56fcfc89b136d813c8a77be14ef1eaf2b1"
+checksum = "f84c73972691d73955126d3d889c47e7f20900a69c74d775c9eab7c25d10b3d9"
 dependencies = [
  "anyhow",
  "borsh 1.5.7",
@@ -11381,9 +11381,9 @@ dependencies = [
 
 [[package]]
 name = "risc0-build"
-version = "2.2.0"
+version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "714776c8ccf3e206ecf499dab6561259beef6e7a82dfb49ccf5c911c7350dd5e"
+checksum = "b4079b9f8d1e20704071374ec8aa58eddc8adcd6586d109436a39a852e1ddf16"
 dependencies = [
  "anyhow",
  "cargo_metadata 0.19.2",
@@ -11420,9 +11420,9 @@ dependencies = [
 
 [[package]]
 name = "risc0-circuit-keccak"
-version = "3.0.0"
+version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0094af5a57b020388a03bdd3834959c7d62723f1687be81414ade25104d93263"
+checksum = "dea46e2318b068d7937f52db38736f315c051914f295021a537ee40e2cadaa36"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -11458,9 +11458,9 @@ dependencies = [
 
 [[package]]
 name = "risc0-circuit-recursion"
-version = "3.0.0"
+version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76ebded45c902c2b6939924a1cddd1d06b5d1d4ad1531e8798ebfee78f9c038d"
+checksum = "ed32703f8da8131eaeae0a5249220fe1ecf242dd5808334d3a7b4533c5e8b0a1"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -11497,9 +11497,9 @@ dependencies = [
 
 [[package]]
 name = "risc0-circuit-rv32im"
-version = "3.0.0"
+version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15030849f8356f01f23c74b37dbfa4283100b594eb634109993e9e005ef45f64"
+checksum = "7c814ffb4f44d1ce7674e00b9afb99e639168028b544f70df3acc38c07f2bb10"
 dependencies = [
  "anyhow",
  "auto_ops",
@@ -11577,9 +11577,9 @@ dependencies = [
 
 [[package]]
 name = "risc0-groth16"
-version = "2.0.2"
+version = "2.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cf5d0b673d5fc67a89147c2e9c53134707dcc8137a43d1ef06b4ff68e99b74f"
+checksum = "2bd680a5d563facc0572ecbc9f934a5fcc3a258d2c067ae37460496e6c618fac"
 dependencies = [
  "anyhow",
  "ark-bn254 0.5.0",
@@ -11614,19 +11614,20 @@ dependencies = [
 
 [[package]]
 name = "risc0-zkos-v1compat"
-version = "2.0.1"
+version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f76c479b69d1987cb54ac72dcc017197296fdcd6daf78fafc10cbbd3a167a7de"
+checksum = "840c2228803557a8b7dc035a8f196516b6fd68c9dc6ac092f0c86241b5b1bafb"
 dependencies = [
  "include_bytes_aligned",
  "no_std_strings",
+ "risc0-zkvm-platform",
 ]
 
 [[package]]
 name = "risc0-zkp"
-version = "2.0.2"
+version = "2.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a287e9cd6d7b3b38eeb49c62090c46a1935922309fbd997a9143ed8c43c8f3cb"
+checksum = "355de69bdd62c99a48497fbf67501665a2eb9c4ed205549e7af3cdb83b40ef12"
 dependencies = [
  "anyhow",
  "blake2",
@@ -11656,9 +11657,9 @@ dependencies = [
 
 [[package]]
 name = "risc0-zkvm"
-version = "2.2.0"
+version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c59aaf1898f2f5d526a79d53dbe6288aeb1ce52a17184b85af84d06dedb1a367"
+checksum = "4f11546479f0e247b4683609f7d6ef2036af3112a4c81cac74c2dc5524382833"
 dependencies = [
  "addr2line 0.22.0",
  "anyhow",
@@ -11703,15 +11704,17 @@ dependencies = [
 
 [[package]]
 name = "risc0-zkvm-platform"
-version = "2.0.3"
+version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cae9cb2c2f6cab2dfa395ea6e2576713929040c7fb0c5f4150d13e1119d18686"
+checksum = "cfaa10feba15828c788837ddde84b994393936d8f5715228627cfe8625122a40"
 dependencies = [
  "bytemuck",
  "cfg-if 1.0.1",
  "getrandom 0.2.16",
  "getrandom 0.3.3",
  "libm",
+ "num_enum",
+ "paste",
  "stability",
 ]
 
@@ -13174,7 +13177,7 @@ dependencies = [
 [[package]]
 name = "solana-curve25519"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#682284fb02137d5aaea78c937e071324d762a9af"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
 dependencies = [
  "bytemuck",
  "bytemuck_derive",
@@ -13543,7 +13546,7 @@ dependencies = [
 [[package]]
 name = "solana-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#682284fb02137d5aaea78c937e071324d762a9af"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
 dependencies = [
  "ark-bn254 0.4.0",
  "ark-ec 0.4.2",
@@ -13890,7 +13893,7 @@ dependencies = [
 [[package]]
 name = "solana-sdk"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#682284fb02137d5aaea78c937e071324d762a9af"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
 dependencies = [
  "bincode",
  "bitflags 2.9.1",
@@ -13938,7 +13941,7 @@ dependencies = [
 [[package]]
 name = "solana-sdk-macro"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#682284fb02137d5aaea78c937e071324d762a9af"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
 dependencies = [
  "bs58 0.5.1",
  "proc-macro2",
@@ -14399,7 +14402,7 @@ dependencies = [
 [[package]]
 name = "solana-zk-token-sdk"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#682284fb02137d5aaea78c937e071324d762a9af"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
 dependencies = [
  "aes-gcm-siv",
  "base64 0.22.1",

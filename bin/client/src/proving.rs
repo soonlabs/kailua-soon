@@ -256,6 +256,7 @@ pub async fn seek_fpvm_proof(
         )
         .await?
     };
+    println!("-----PROOF: {:?}", proof);
 
     // Save proof file to disk
     save_proof_to_disk(&proof).await;

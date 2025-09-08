@@ -190,12 +190,6 @@ pub async fn multi_l2_tx_to_execution(
                     space,
                     &system_program::id(),
                 );
-                info!(
-                    "slot {} create new {:?}, payer {:?}",
-                    slot,
-                    new_account.pubkey(),
-                    from.pubkey()
-                );
                 let mut tx =
                     Transaction::new_with_payer(&[create_instruction], Some(&from.pubkey()));
                 tx.sign(&[&from, &new_account], last_blockhash);

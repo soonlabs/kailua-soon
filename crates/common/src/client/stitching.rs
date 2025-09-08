@@ -114,9 +114,13 @@ where
     )
     .expect("Failed to compute output hash.");
 
+    log("LOAD_STITCHING_JOURNALS");
+
     // Verify proofs recursively for boundless composition
     #[cfg(target_os = "zkvm")]
     let proven_fpvm_journals = load_stitching_journals(fpvm_image_id);
+
+    log("RUN STITCH_EXECUTIONS");
 
     // Stitch recursively composed execution-only proofs
     stitch_executions(
@@ -128,8 +132,10 @@ where
         &proven_fpvm_journals,
     );
 
+    log("RUN STITCH_BOOT_INFO");
+
     // Stitch recursively composed proofs
-    stitch_boot_info(
+    let proof_journal = stitch_boot_info(
         &boot,
         fpvm_image_id,
         payout_recipient_address,
@@ -137,7 +143,11 @@ where
         stitched_boot_info,
         #[cfg(target_os = "zkvm")]
         &proven_fpvm_journals,
-    )
+    );
+
+    log("RUN RETURN");
+
+    proof_journal
 }
 
 /// Loads and verifies stitching journals for a given FPVM image.

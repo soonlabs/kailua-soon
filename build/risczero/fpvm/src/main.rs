@@ -50,6 +50,7 @@ fn main() {
     let proof_journal = run_stateless_client::<_, StatelessL2Builder<_, _>>(witness);
 
 
+    log(&format!("PROOF JOURNAL: {:?}", proof_journal));
     // Prevent provability of insufficient data
     assert!(
         !proof_journal.claimed_l2_output_root.is_zero(),

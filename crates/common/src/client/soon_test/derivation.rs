@@ -1,6 +1,4 @@
-use crate::client::soon_test::{
-    fetch_info_and_update_execution_storage_items, L1_NUMBER,
-};
+use crate::client::soon_test::{fetch_info_and_update_execution_storage_items, L1_NUMBER};
 use crate::{oracle::WitnessOracle, test::mock::MockOracle};
 use alloy_primitives::bytes::BytesMut;
 use alloy_primitives::{address, keccak256, Address, B256};
