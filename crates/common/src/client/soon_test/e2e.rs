@@ -21,14 +21,13 @@ use kona_preimage::{HintReader, PreimageOracleClient};
 use kona_preimage::{HintWriterClient, OracleServer};
 use kona_proof::executor::KonaExecutor;
 use kona_proof::BootInfo;
-use solana_sdk::account::ReadableAccount;
 use solana_sdk::native_token::LAMPORTS_PER_SOL;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signature::Signer;
+use solana_sdk::system_transaction;
 use solana_sdk::system_instruction;
 use solana_sdk::system_program;
-use solana_sdk::system_transaction;
 use solana_sdk::transaction::Transaction;
 use soon_derive::traits::{ChainProvider, L2ChainProvider};
 use soon_mpt_handler::MptHandler;
@@ -157,7 +156,7 @@ pub async fn multi_l2_tx_to_execution(
     let blocks = 500usize;
     let mut executions = vec![];
     let mut executor = env.e2e_producer.get_executor().clone();
-    let mut last_blockhash = executor.storage_query(|s| Ok(s.current_bank().last_blockhash()))?;
+    let last_blockhash = executor.storage_query(|s| Ok(s.current_bank().last_blockhash()))?;
     let mut agreed_l2_output_roots: HashMap<usize, B256> = HashMap::new();
 
     // firstly we need load prepared slot1.
@@ -170,14 +169,13 @@ pub async fn multi_l2_tx_to_execution(
         let slot = (i + 2) as u64;
         let from = env.mints[i % env.mints.len()].insecure_clone();
         let to = env.mints[(i + 1) % env.mints.len()].pubkey();
-        last_blockhash = executor.storage_query(|s| Ok(s.current_bank().last_blockhash()))?;
-
+        
         // Create different transaction types based on index to enrich testing
         let tx = match i % 4 {
             0 => {
                 // Standard transfer transaction
                 system_transaction::transfer(&from, &to, LAMPORTS_PER_SOL, last_blockhash)
-            }
+            },
             1 => {
                 // Create account transaction
                 let new_account = Keypair::new();
@@ -194,60 +192,45 @@ pub async fn multi_l2_tx_to_execution(
                     Transaction::new_with_payer(&[create_instruction], Some(&from.pubkey()));
                 tx.sign(&[&from, &new_account], last_blockhash);
                 tx
-            }
+            },
             2 => {
                 // Allocate space transaction
                 let target_account = env.mints[(i + 2) % env.mints.len()].insecure_clone();
-                let allocate_instruction =
-                    system_instruction::allocate(&target_account.pubkey(), 100);
-                let mut tx =
-                    Transaction::new_with_payer(&[allocate_instruction], Some(&from.pubkey()));
+                let allocate_instruction = system_instruction::allocate(&target_account.pubkey(), 100);
+                let mut tx = Transaction::new_with_payer(&[allocate_instruction], Some(&from.pubkey()));
                 tx.sign(&[&from, &target_account], last_blockhash);
                 tx
-            }
+            },
             3 => {
                 // Assign account to system program transaction
                 let target_account = env.mints[(i + 3) % env.mints.len()].insecure_clone();
-                let assign_instruction =
-                    system_instruction::assign(&target_account.pubkey(), &system_program::id());
-                let mut tx =
-                    Transaction::new_with_payer(&[assign_instruction], Some(&from.pubkey()));
+                let assign_instruction = system_instruction::assign(&target_account.pubkey(), &system_program::id());
+                let mut tx = Transaction::new_with_payer(&[assign_instruction], Some(&from.pubkey()));
                 tx.sign(&[&from, &target_account], last_blockhash);
                 tx
-            }
+            },
             4 => {
                 // Delete account transaction (transfer all remaining balance to close the account)
                 let target_account = env.mints[(i + 4) % env.mints.len()].insecure_clone();
                 // Query the account balance first to transfer all of it
-                let account_balance =
-                    match env.e2e_producer.get_executor().storage_query(|s| {
-                        Ok(s.current_bank().get_balance(&target_account.pubkey()))
-                    }) {
-                        Ok(balance) => balance,
-                        Err(_) => LAMPORTS_PER_SOL / 1000, // fallback amount
-                    };
-
+                let account_balance = match env.e2e_producer.get_executor().storage_query(|s| {
+                    Ok(s.current_bank().get_balance(&target_account.pubkey()))
+                }) {
+                    Ok(balance) => balance,
+                    Err(_) => LAMPORTS_PER_SOL / 1000, // fallback amount
+                };
+                
                 // Transfer all balance to effectively delete the account
                 if account_balance > 0 {
-                    system_transaction::transfer(
-                        &target_account,
-                        &to,
-                        account_balance,
-                        last_blockhash,
-                    )
+                    system_transaction::transfer(&target_account, &to, account_balance, last_blockhash)
                 } else {
                     // If no balance, just do a minimal transfer
-                    system_transaction::transfer(
-                        &from,
-                        &to,
-                        LAMPORTS_PER_SOL / 1000,
-                        last_blockhash,
-                    )
+                    system_transaction::transfer(&from, &to, LAMPORTS_PER_SOL / 1000, last_blockhash)
                 }
-            }
+            },
             _ => unreachable!(),
         };
-
+        
         env.e2e_producer.add_tx(tx)?;
         env.e2e_producer.mine_with_block(None)?;
         env.complete_receiver.try_recv()?;
@@ -335,11 +318,7 @@ pub mod hints {
             })
         }
 
-        pub(crate) fn get_tried_account_proof(
-            &self,
-            address: B256,
-            slot: u64,
-        ) -> Result<AccountWithTrie> {
+        fn get_tried_account_proof(&self, address: B256, slot: u64) -> Result<AccountWithTrie> {
             let slot = self.mpt.get_aligned_slot(slot)?;
             let state_proof = self.mpt.proof_of_state_root(address, slot)?;
 
@@ -641,56 +620,22 @@ where
 
     let total = execution_cache.len();
     for (idx, execution) in execution_cache.into_iter().enumerate() {
-        let slot = idx + 1;
         info!("enter execution {}/{}", idx, total);
         let executor_result = kona_executor
             .execute_payload(execution.attributes.clone())
             .await?;
-        info!(
-            "slot {slot}, result: {}",
-            executor_result.execution_result[0].is_ok()
-        );
         let new_output_root = kona_executor
             .compute_output_root()
             .context("compute_output_root: Verify post state")?;
+        kona_executor.update_safe_head(L2BlockHeader {
+            block_info: execution.artifacts.block_info.block_info,
+            account_root: executor_result.state_root,
+            widthdraw_root: executor_result.withdraw_root,
+        })?;
+
+        let slot = idx + 1;
         match agreed_l2_roots.entry(slot) {
             Entry::Occupied(occupied_entry) => {
-                if *occupied_entry.get() != new_output_root {
-                    let accounts_diff = kona_executor.inner_builder().unwrap().account_diff();
-                    info!(
-                        "root not same on {slot}, accounts = {}",
-                        accounts_diff.accounts.len()
-                    );
-                    for (key, account) in &accounts_diff.accounts {
-                        let addr = keccak256(key);
-                        let raw = env
-                            .chain_provider
-                            .get_tried_account_proof(addr, slot as u64)?
-                            .account
-                            .unwrap();
-                        if raw.0.rent_epoch() != account.rent_epoch() {
-                            info!("{:?} not same on rent_epoch", key);
-                        }
-                        if raw.0.owner() != account.owner() {
-                            info!("{:?} not same on owner", key);
-                        }
-                        if raw.0.data() != account.data() {
-                            info!("{:?} not same on data", key);
-                        }
-                        if raw.0.lamports() != account.lamports() {
-                            info!(
-                                "{:?} not same on lamports, {} vs {}",
-                                key,
-                                raw.0.lamports(),
-                                account.lamports()
-                            );
-                        }
-                        if raw.0.executable() != account.executable() {
-                            info!("{:?} not same on executable", key);
-                        }
-                    }
-                }
-
                 assert_eq!(
                     *occupied_entry.get(),
                     new_output_root,
@@ -699,12 +644,6 @@ where
             }
             Entry::Vacant(vacant_entry) => {}
         }
-
-        kona_executor.update_safe_head(L2BlockHeader {
-            block_info: execution.artifacts.block_info.block_info,
-            account_root: executor_result.state_root,
-            widthdraw_root: executor_result.withdraw_root,
-        })?;
     }
     Ok(())
 }
