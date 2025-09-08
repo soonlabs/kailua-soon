@@ -29,7 +29,7 @@ substrate-bn = "=0.6.0"
 kailua-common = { path = "../../../crates/common" }
 kona-executor = { path = "../../../../kona-soon/crates/proof/executor" }
 
-risc0-zkvm = { version = "2.1.0", features = ["std", "heap-embedded-alloc", "unstable"] }
+risc0-zkvm = { version = "2.3.2", features = ["std", "heap-embedded-alloc", "unstable"] }
 
 [features]
 disable-dev-mode = [
