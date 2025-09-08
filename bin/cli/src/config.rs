@@ -14,7 +14,7 @@
 
 use crate::stall::Stall;
 use crate::KAILUA_GAME_TYPE;
-use alloy::primitives::address;
+use alloy::primitives::{address, B256};
 use alloy::providers::ProviderBuilder;
 use anyhow::Context;
 use kailua_build::{KAILUA_FPVM_ELF, KAILUA_FPVM_ID};
@@ -27,7 +27,7 @@ use opentelemetry::global::tracer;
 use opentelemetry::trace::{FutureExt, Status, TraceContextExt, Tracer};
 use risc0_zkvm::compute_image_id;
 use risc0_zkvm::sha::Digest;
-use tracing::debug;
+use tracing::info;
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct ConfigArgs {
@@ -51,8 +51,9 @@ pub async fn config(args: ConfigArgs) -> anyhow::Result<()> {
 
     let config = await_tel!(context, fetch_rollup_config(&args.soon_node_url, None))
         .context("fetch_rollup_config")?;
-    debug!("{config:?}");
+    info!("{config:?}");
     let rollup_config_hash = config_hash(&config).expect("Configuration hash derivation error");
+    println!("rollup_config_hash: {:?}", B256::from(rollup_config_hash));
 
     let eth_rpc_provider =
         ProviderBuilder::new().connect_http(args.eth_rpc_url.as_str().try_into()?);
@@ -78,7 +79,7 @@ pub async fn config(args: ConfigArgs) -> anyhow::Result<()> {
         hex::encode_upper(stored_image_id.as_bytes())
     );
     let computed_image_id = compute_image_id(KAILUA_FPVM_ELF).context("compute_image_id")?;
-    println!("computed_image_id: {}", computed_image_id.as_words());
+    println!("computed_image_id: {:?}", computed_image_id.as_words());
     assert_eq!(computed_image_id, stored_image_id);
     // report elf size
     println!("FPVM_ELF_SIZE: {}", KAILUA_FPVM_ELF.len());

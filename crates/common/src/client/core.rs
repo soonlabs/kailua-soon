@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::config::config_hash;
 use crate::executor::{exec_precondition_hash, new_execution_cursor, CachedExecutor, Execution};
 use crate::kona::OracleL1ChainProvider;
 use crate::{client, precondition};
@@ -196,6 +197,11 @@ where
             .await
             .context("BootInfo::load")?;
         let rollup_config = Arc::new(boot.rollup_config.clone());
+        client::log(&format!("rollup_config: {:?}", rollup_config));
+        client::log(&format!(
+            "rollup_config_hash: {:?}",
+            config_hash(&boot.rollup_config)
+        ));
 
         // The claimed L2 block number must be greater than or equal to the L2 safe head.
         // Fetch the safe head's block header.

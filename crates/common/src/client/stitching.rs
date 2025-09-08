@@ -450,6 +450,11 @@ pub fn stitch_boot_info(
         precondition_hash,
         boot,
     );
+    log(&format!("rollup_config: {:?}", boot.rollup_config));
+    log(&format!(
+        "rollup_config_hash: {:?}",
+        B256::from(crate::config::config_hash(&boot.rollup_config).unwrap())
+    ));
 
     for stitched_boot in stitched_boot_info {
         // Require equivalence in reference head
