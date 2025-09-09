@@ -22,6 +22,7 @@ use alloy::primitives::{Address, B256};
 use anyhow::{bail, Context};
 use kailua_client::await_tel;
 use kailua_common::blobs::BlobFetchRequest;
+use kailua_common::config::config_hash;
 use kailua_common::precondition::PreconditionValidationData;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::FutureExt;

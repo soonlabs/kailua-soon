@@ -24,6 +24,7 @@ use kailua_client::proof::{proof_file_name, read_proof_file};
 use kailua_client::proving::ProvingError;
 use kailua_common::boot::StitchedBootInfo;
 use kailua_common::client::stitching::{split_executions, stitch_boot_info};
+use kailua_common::config::config_hash;
 use kailua_common::executor::{exec_precondition_hash, Execution};
 use kona_proof::BootInfo;
 use risc0_zkvm::Receipt;
@@ -354,8 +355,10 @@ pub async fn compute_cached_proof(
         claimed_l2_block_number: args.kona.claimed_l2_block_number,
         //TODO l2 chain id
         chain_id: 0,
-        rollup_config,
+        rollup_config: rollup_config.clone(),
     };
+    let rollup_config_hash =
+        config_hash(&rollup_config).expect("Configuration hash derivation error");
 
     // Print complete boot information
     println!("=== Boot Information ===");
@@ -366,6 +369,7 @@ pub async fn compute_cached_proof(
     println!("claimed_l2_block_number: {}", boot.claimed_l2_block_number);
     println!("chain_id: {}", boot.chain_id);
     println!("rollup_config: {:?}", boot.rollup_config);
+    println!("rollup_config_hash: {:?}", B256::from(rollup_config_hash));
     println!("========================");
 
     // Construct expected journal

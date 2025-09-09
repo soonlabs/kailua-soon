@@ -12,6 +12,7 @@ categories.workspace = true
 
 [build-dependencies]
 risc0-build.workspace = true
+risc0-zkvm.workspace = true
 
 [package.metadata.risc0]
 methods = ["fpvm"]
