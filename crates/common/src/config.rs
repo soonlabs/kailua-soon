@@ -209,10 +209,6 @@ pub fn config_hash(rollup_config: &SoonRollupConfig) -> anyhow::Result<[u8; 32]>
         //TODO add shred_version/genesis_hash/upgrade_schedules/sequencer_schedules
     ]
     .concat();
-    #[cfg(target_os = "zkvm")]
-    risc0_zkvm::guest::env::log(&format!("--------------------------------rollup_config_bytes: {:?}", hex::encode_upper(rollup_config_bytes.as_slice())));
-    #[cfg(not(target_os = "zkvm"))]
-    tracing::info!("--------------------------------rollup_config_bytes: {:?}", hex::encode_upper(rollup_config_bytes.as_slice()));
     let digest = SHA2::hash_bytes(rollup_config_bytes.as_slice());
     Ok::<[u8; 32], anyhow::Error>(digest.as_bytes().try_into().expect("infallible"))
 }

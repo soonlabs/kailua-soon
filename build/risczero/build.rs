@@ -31,18 +31,6 @@ fn main() {
             };
             std::collections::HashMap::from([("kailua-fpvm", {
                 let opts = risc0_build::GuestOptions::default();
-                // Build a reproducible ELF file using docker under the release profile
-                #[cfg(not(any(feature = "debug-guest-build", debug_assertions)))]
-                let opts = {
-                    let mut opts = opts;
-                    opts.use_docker = Some(
-                        risc0_build::DockerOptionsBuilder::default()
-                            .root_dir(root_dir)
-                            .build()
-                            .unwrap(),
-                    );
-                    opts
-                };
                 // Disable dev-mode receipts from being validated inside the guest
                 #[cfg(any(
                     feature = "disable-dev-mode",
@@ -57,10 +45,10 @@ fn main() {
             })])
         };
 
-        let is_docker = build_opts["kailua-fpvm"].use_docker.is_some();
+        //let is_docker = build_opts["kailua-fpvm"].use_docker.is_some();
         risc0_build::embed_methods_with_options(build_opts);
 
-        let src_bin_path = get_source_bin_dir(is_docker);
+        let src_bin_path = get_source_bin_dir(false);
         let target_dir = get_target_dir();
         let target_bin_path = target_dir.join("kailua-fpvm.bin");
         let target_code_path = target_dir.join("methods.rs");
