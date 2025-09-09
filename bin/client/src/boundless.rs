@@ -235,7 +235,7 @@ pub async fn run_boundless_client(
         KAILUA_FPVM_ID,
         Predicate::digest_match(proof_journal.digest()),
     )
-    .with_groth16_proof();
+        .with_groth16_proof();
 
     // Check if an unexpired request had already been made recently
     let boundless_wallet_address = boundless_client.local_signer.as_ref().unwrap().address();
@@ -296,8 +296,8 @@ pub async fn run_boundless_client(
             args.boundless_order_check_interval,
             request.expires_at(),
         )
-        .await
-        .map_err(|e| ProvingError::OtherError(anyhow!(e)));
+            .await
+            .map_err(|e| ProvingError::OtherError(anyhow!(e)));
     }
 
     // Preflight execution to get cycle count
@@ -321,9 +321,9 @@ pub async fn run_boundless_client(
         let session_info = default_executor().execute(env, KAILUA_FPVM_ELF)?;
         Ok::<_, anyhow::Error>(session_info)
     })
-    .await
-    .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
-    .map_err(|e| ProvingError::ExecutionError(anyhow!(e)))?;
+        .await
+        .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
+        .map_err(|e| ProvingError::ExecutionError(anyhow!(e)))?;
     let mcycles_count = session_info
         .segments
         .iter()
@@ -416,8 +416,8 @@ pub async fn run_boundless_client(
         args.boundless_order_check_interval,
         expires_at,
     )
-    .await
-    .map_err(|e| ProvingError::OtherError(anyhow!(e)))
+        .await
+        .map_err(|e| ProvingError::OtherError(anyhow!(e)))
 }
 
 pub async fn retrieve_proof<P: Provider<Ethereum> + 'static + Clone, S: StorageProvider>(
