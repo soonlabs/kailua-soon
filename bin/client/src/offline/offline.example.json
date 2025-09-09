@@ -138,5 +138,6 @@
   "native_client": true,
   "offchain_oracle": false,
   "precondition_validation_data": null,
-  "source_db_path": "/home/raindust/github/soon/kailua-soon/crates/common/testdata"
+  "source_db_path": "/home/raindust/github/soon/kailua-soon/crates/common/testdata",
+  "target_db_path": "/tmp/kailua_offline_test_data"
 }

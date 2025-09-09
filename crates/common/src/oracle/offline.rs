@@ -188,12 +188,31 @@ impl OfflineOracle<OfflineKeyValueStore> {
         });
         // Create a cloned disk store in a temp dir
         let dest = if let Some(target_db_path) = target_db_path {
+            if !target_db_path.exists() {
+                std::fs::create_dir_all(&target_db_path).unwrap_or_else(|e| {
+                    panic!(
+                        "Failed to create target directory {}: {}",
+                        target_db_path.display(),
+                        e
+                    )
+                });
+            }
             let dest = target_db_path.join("testdata");
-            copy_dir(source_db_path.clone(), &dest).unwrap_or_else(|_| {
+            if dest.exists() {
+                std::fs::remove_dir_all(&dest).unwrap_or_else(|e| {
+                    panic!(
+                        "Failed to remove target directory {}: {}",
+                        dest.display(),
+                        e
+                    )
+                });
+            }
+            copy_dir(source_db_path.clone(), &dest).unwrap_or_else(|e| {
                 panic!(
-                    "Failed to copy testdata from {} to {}",
+                    "Failed to copy testdata from {} to {}: {}",
                     source_db_path.display(),
-                    dest.display()
+                    dest.display(),
+                    e
                 )
             });
             dest
