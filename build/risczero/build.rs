@@ -57,10 +57,10 @@ fn main() {
             })])
         };
 
-        let is_docker = build_opts["kailua-fpvm"].use_docker.is_some();
+        //let is_docker = build_opts["kailua-fpvm"].use_docker.is_some();
         risc0_build::embed_methods_with_options(build_opts);
 
-        let src_bin_path = get_source_bin_dir(is_docker);
+        let src_bin_path = get_source_bin_dir(false);
         let target_dir = get_target_dir();
         let target_bin_path = target_dir.join("kailua-fpvm.bin");
         let target_code_path = target_dir.join("methods.rs");
