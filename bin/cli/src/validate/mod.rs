@@ -24,7 +24,7 @@ use alloy::primitives::{Address, FixedBytes, B256};
 use anyhow::{anyhow, bail, Context};
 use kailua_build::KAILUA_FPVM_ID;
 use kailua_client::args::parse_address;
-// use kailua_client::boundless::BoundlessArgs;
+use kailua_client::boundless::BoundlessArgs;
 use kailua_client::proof::{proof_file_name, read_proof_file};
 use kailua_client::telemetry::TelemetryArgs;
 use kailua_client::{await_tel, await_tel_res};
@@ -75,8 +75,8 @@ pub struct ValidateArgs {
     #[clap(long, env, value_parser = parse_address)]
     pub kailua_anchor_address: Option<Address>,
 
-    // #[clap(flatten)]
-    // pub boundless: BoundlessArgs,
+    #[clap(flatten)]
+    pub boundless: BoundlessArgs,
     #[clap(flatten)]
     pub telemetry: TelemetryArgs,
 }

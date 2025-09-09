@@ -138,7 +138,7 @@ risc0-ethereum-contracts = "2.1.0"
 risc0-zkvm = { version = "2.3.2", features = ["unstable"] }
 
 # Boundless
-boundless-market = "0.11.0"
+boundless-market = "0.8.0"
 
 # for testing
 solana-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }

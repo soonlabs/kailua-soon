@@ -99,10 +99,9 @@ pub fn create_proving_args(
         ]);
     }
     // boundless args
-    //TODO boundless check
-    // if let Some(market) = &args.boundless.market {
-    //     proving_args.extend(market.to_arg_vec(&args.boundless.storage));
-    // }
+    if let Some(market) = &args.boundless.market {
+        proving_args.extend(market.to_arg_vec(&args.boundless.storage));
+    }
     // data directory
     let data_dir = data_dir.join(format!(
         "{}-{}",
