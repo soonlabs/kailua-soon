@@ -119,6 +119,22 @@ devnet-validate fastforward="100" target="debug" verbosity="" da_proxy="http://1
       --validator-key {{validator}} \
       {{verbosity}}
 
+devnet-validate-boundless fastforward="100" target="debug" verbosity="" da_proxy="http://127.0.0.1:8080/" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/validate" validator="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d", set_verifier_address="0xcb9D14347b1e816831ECeE46EC199144F360B55c" market_address="0x13337C76fE2d1750246B68781ecEe164643b98Ec":
+    ./target/{{target}}/kailua-cli validate \
+        --fast-forward-target {{fastforward}} \
+        --eth-rpc-url {{l1_rpc}} \
+        --beacon-rpc-url {{l1_beacon_rpc}} \
+        --soon-node-url {{l2_rpc}} \
+        --da-proxy-url {{da_proxy}} \
+        --kailua-host ./target/{{target}}/kailua-host \
+        --data-dir {{data_dir}} \
+        --validator-key {{validator}} \
+        --boundless-rpc-url ${BOUNDLESS_RPC_URL} \
+        --boundless-wallet-key ${BOUNDLESS_WALLET_KEY} \
+        --boundless-set-verifier-address {{set_verifier_address}} \
+        --boundless-market-address {{market_address}} \
+        {{verbosity}}
+
 devnet-prove block_number block_count="1" target="debug" verbosity="" data=".localtestdata": (prove block_number block_count "http://localhost:8545" "http://localhost:5052" "http://localhost:9545" "http://localhost:7545" data target verbosity)
 
 bench l1_rpc l1_beacon_rpc l2_rpc da_proxy data start length range count target="release" verbosity="":
