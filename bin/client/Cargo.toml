@@ -59,6 +59,10 @@ soon-derive.workspace = true
 soon-primitives.workspace = true
 soon-l2-chain-provider.workspace = true
 
+[[bin]]
+name = "kailua-offline"
+path = "src/bins/offline.rs"
+
 [features]
 default = ["test-tools"]
 prove = ["risc0-zkvm/prove"]
@@ -68,4 +72,3 @@ disable-dev-mode = ["risc0-zkvm/disable-dev-mode"]
 rebuild-fpvm = ["kailua-build/rebuild-fpvm"]
 # Feature for offline generator tool
 test-tools = ["kailua-common/__test"]
-
