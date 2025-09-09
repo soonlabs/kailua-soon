@@ -4,10 +4,10 @@ set fallback := true
 default:
   @just --list
 
-build +ARGS="--debug -F prove -F disable-dev-mode --locked":
+build +ARGS=" -F prove -F disable-dev-mode --locked":
   cargo build {{ARGS}}
 
-build-fpvm +ARGS="--debug -F prove -F disable-dev-mode -F rebuild-fpvm --locked":
+build-fpvm +ARGS=" -F prove -F disable-dev-mode -F rebuild-fpvm --locked":
   cargo build {{ARGS}}
 
 fmt:
