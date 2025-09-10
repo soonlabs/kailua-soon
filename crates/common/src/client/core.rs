@@ -820,8 +820,8 @@ pub mod tests {
         Ok(())
     }
 
-    #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_soon_local_0_1() -> anyhow::Result<()> {
+    #[test]
+    pub fn test_soon_local_0_1() -> anyhow::Result<()> {
         init_tracing_subscriber(4, None::<EnvFilter>)?;
         test_derivation(
             BootInfo {
@@ -845,8 +845,33 @@ pub mod tests {
         Ok(())
     }
 
-    #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_soon_local_0_50() -> anyhow::Result<()> {
+    #[test]
+    pub fn test_soon_local_1_2() -> anyhow::Result<()> {
+        init_tracing_subscriber(4, None::<EnvFilter>)?;
+        test_derivation(
+            BootInfo {
+                l1_head: b256!(
+                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
+                ),
+                agreed_l2_output_root: b256!(
+                    "0xc1702320d71294e6c0e4f6a47cc7c40502aec4230f69d3ba6fe57bb5dc96370f"
+                ),
+                claimed_l2_output_root: b256!(
+                    "0x0039039b552fc6ff5449697f739a9d2a2cbe91a7e24b7f34c287fbc179196acc"
+                ),
+                agreed_l2_block_number: 1,
+                claimed_l2_block_number: 2,
+                chain_id: 0,
+                rollup_config: Default::default(),
+            },
+            None,
+        )
+        .unwrap_err();
+        Ok(())
+    }
+
+    #[test]
+    pub fn test_soon_local_0_50() -> anyhow::Result<()> {
         init_tracing_subscriber(4, None::<EnvFilter>)?;
         test_derivation(
             BootInfo {
@@ -870,8 +895,8 @@ pub mod tests {
         Ok(())
     }
 
-    #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_soon_local_with_execution_0_1() -> anyhow::Result<()> {
+    #[test]
+    pub fn test_soon_local_with_execution_0_1() -> anyhow::Result<()> {
         init_tracing_subscriber(4, None::<EnvFilter>)?;
         let executions = test_derivation(
             BootInfo {
@@ -913,8 +938,8 @@ pub mod tests {
         Ok(())
     }
 
-    #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_soon_local_with_execution_0_50() -> anyhow::Result<()> {
+    #[test]
+    pub fn test_soon_local_with_execution_0_50() -> anyhow::Result<()> {
         init_tracing_subscriber(4, None::<EnvFilter>)?;
         let executions = test_derivation(
             BootInfo {
@@ -956,8 +981,8 @@ pub mod tests {
         Ok(())
     }
 
-    #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_soon_local_0_50_validity() -> anyhow::Result<()> {
+    #[test]
+    pub fn test_soon_local_0_50_validity() -> anyhow::Result<()> {
         init_tracing_subscriber(4, None::<EnvFilter>)?;
         test_derivation(
             BootInfo {
@@ -986,8 +1011,8 @@ pub mod tests {
         Ok(())
     }
 
-    #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_soon_local_0_50_insufficient() -> anyhow::Result<()> {
+    #[test]
+    pub fn test_soon_local_0_50_insufficient() -> anyhow::Result<()> {
         init_tracing_subscriber(4, None::<EnvFilter>)?;
         // data wasn't published at l1 origin
         test_derivation(
@@ -1010,8 +1035,8 @@ pub mod tests {
         Ok(())
     }
 
-    #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_soon_local_0_50_insufficient_fail() -> anyhow::Result<()> {
+    #[test]
+    pub fn test_soon_local_0_50_insufficient_fail() -> anyhow::Result<()> {
         init_tracing_subscriber(4, None::<EnvFilter>)?;
         // data wasn't published at l1 origin
         test_derivation(
@@ -1036,8 +1061,8 @@ pub mod tests {
         Ok(())
     }
 
-    #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_soon_local_0_0() -> anyhow::Result<()> {
+    #[test]
+    pub fn test_soon_local_0_0() -> anyhow::Result<()> {
         init_tracing_subscriber(4, None::<EnvFilter>)?;
         let executions = test_derivation(
             BootInfo {
