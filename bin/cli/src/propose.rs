@@ -186,16 +186,16 @@ pub async fn propose(args: ProposeArgs, data_dir: PathBuf) -> anyhow::Result<()>
             bail!("Canonical tip proposal missing from database!");
         };
 
-        // Query soon-node to get latest safe l2 head
+        // Query soon-node to get latest finalized l2 head
         let sync_status = await_tel!(
             context,
             tracer,
             "sync_status",
             retry_res_ctx_timeout!(agent.provider.l2_provider.sync_status().await)
         );
-        debug!(
-            "sync_status[safe_l2] {:?}",
-            &sync_status["l2State"]["safeL2"]
+        info!(
+            "sync_status[finalizedL2] {:?}",
+            &sync_status["l2State"]["finalizedL2"]
         );
         let proposal_block_number =
             canonical_tip.output_block_number + agent.deployment.blocks_per_proposal();
