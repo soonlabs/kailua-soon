@@ -179,7 +179,7 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
         };
         io_field_elements.push(hash_to_fe(output_hash));
     }
-    let sidecar = Proposal::create_sidecar(&io_field_elements)?;
+    let _sidecar = Proposal::create_sidecar(&io_field_elements)?;
 
     // Calculate required duplication counter
     let mut dupe_counter = 0u64;

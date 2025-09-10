@@ -35,6 +35,7 @@ use kailua_host::channel::AsyncChannel;
 use kailua_host::config::fetch_rollup_config;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::{FutureExt, TraceContextExt, Tracer};
+#[allow(deprecated)]
 use risc0_zkvm::{is_dev_mode, Receipt};
 use std::path::PathBuf;
 use std::time::Duration;
@@ -42,7 +43,7 @@ use tokio::process::Command;
 use tokio::sync::mpsc::Sender;
 use tokio::time::sleep;
 use tokio::{spawn, try_join};
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct ValidateArgs {
@@ -243,6 +244,7 @@ pub async fn handle_proving_tasks(
         // Prove via kailua-host (re dev mode/bonsai: env vars inherited!)
         let mut kailua_host_command = Command::new(&kailua_host);
         // get fake receipts when building under devnet
+        #[allow(deprecated)]
         if is_dev_mode() {
             kailua_host_command.env("RISC0_DEV_MODE", "1");
         }

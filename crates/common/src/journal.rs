@@ -15,7 +15,7 @@
 use crate::boot::StitchedBootInfo;
 use alloy_primitives::{Address, B256};
 use kona_proof::BootInfo;
-use risc0_zkvm::Receipt;
+use risc0_zkvm::{Journal, Receipt};
 use serde::{Deserialize, Serialize};
 
 /// Represents a (provable) state transition of a rollup ledger.

@@ -12,23 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::borrow::Cow;
 use crate::proving::{ProvingArgs, ProvingError};
-use alloy::network::Ethereum;
 use alloy::transports::http::reqwest::Url;
-use alloy_primitives::utils::parse_ether;
 use alloy_primitives::{Address, U256};
 use anyhow::{anyhow, bail, Context};
 use boundless_market::alloy::providers::Provider;
 use boundless_market::alloy::signers::local::PrivateKeySigner;
-use boundless_market::client::{Client, ClientBuilder};
-use boundless_market::contracts::{
-    Input, Offer, Predicate, ProofRequest, RequestId, RequestStatus, Requirements,
-};
-use boundless_market::input::InputBuilder;
-use boundless_market::storage::{StorageProvider, StorageProviderConfig, StorageProviderType};
+use boundless_market::alloy::eips::BlockNumberOrTag;
+use boundless_market::client::Client;
+use boundless_market::contracts::{Predicate, RequestId, RequestStatus, Requirements};
+use boundless_market::storage::{StorageProviderConfig, StorageProviderType};
+use boundless_market::{Deployment, GuestEnvBuilder};
+use boundless_market::request_builder::OfferParams;
 use clap::Parser;
 use kailua_build::{KAILUA_FPVM_ELF, KAILUA_FPVM_ID};
 use kailua_common::journal::ProofJournal;
+use risc0_ethereum_contracts::selector::Selector;
 use risc0_zkvm::sha::Digestible;
 use risc0_zkvm::{default_executor, ExecutorEnv, Journal, Receipt};
 use std::time::Duration;
@@ -42,7 +42,7 @@ pub struct BoundlessArgs {
     pub market: Option<MarketProviderConfig>,
     /// Storage provider for elf and input
     #[clap(flatten)]
-    pub storage: Option<StorageProviderConfig>,
+    pub storage: StorageProviderConfig,
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -56,59 +56,91 @@ pub struct MarketProviderConfig {
     #[clap(long, env)]
     #[arg(required = false)]
     pub boundless_wallet_key: PrivateKeySigner,
-    /// Submit the request offchain via the provided order stream service url.
+
+    /// EIP-155 chain ID of the network hosting Boundless.
+    ///
+    /// This parameter takes precedent over all other deployment arguments if set to a known value
+    #[clap(long, env, required = false)]
+    pub boundless_chain_id: Option<u64>,
+    /// Address of the [BoundlessMarket] contract.
+    ///
+    /// [BoundlessMarket]: crate::contracts::IBoundlessMarket
+    #[clap(long, env, required = false)]
+    pub boundless_market_address: Option<Address>,
+    /// Address of the [RiscZeroVerifierRouter] contract.
+    ///
+    /// The verifier router implements [IRiscZeroVerifier]. Each network has a canonical router,
+    /// that is deployed by the core team. You can additionally deploy and manage your own verifier
+    /// instead. See the [Boundless docs for more details].
+    ///
+    /// [RiscZeroVerifierRouter]: https://github.com/risc0/risc0-ethereum/blob/main/contracts/src/RiscZeroVerifierRouter.sol
+    /// [IRiscZeroVerifier]: https://github.com/risc0/risc0-ethereum/blob/main/contracts/src/IRiscZeroVerifier.sol
+    /// [Boundless docs for more details]: https://docs.beboundless.xyz/developers/smart-contracts/verifier-contracts
+    #[clap(
+        long,
+        env = "VERIFIER_ADDRESS",
+        required = false,
+        long_help = "Address of the RiscZeroVerifierRouter contract"
+    )]
+    pub boundless_verifier_router_address: Option<Address>,
+    /// Address of the [RiscZeroSetVerifier] contract.
+    ///
+    /// [RiscZeroSetVerifier]: https://github.com/risc0/risc0-ethereum/blob/main/contracts/src/RiscZeroSetVerifier.sol
+    #[clap(long, env, required = false)]
+    pub boundless_set_verifier_address: Option<Address>,
+    /// Address of the stake token contract. The staking token is an ERC-20.
+    #[clap(long, env, required = false)]
+    pub boundless_stake_token_address: Option<Address>,
+    /// URL for the offchain [order stream service].
+    ///
+    /// [order stream service]: crate::order_stream_client
     #[clap(
         long,
         env,
-        requires = "boundless_order_stream_url",
-        default_value_t = false
+        required = false,
+        long_help = "URL for the offchain order stream service"
     )]
-    pub boundless_offchain: bool,
-    /// Offchain order stream service URL to submit offchain requests to.
-    #[clap(long, env)]
-    pub boundless_order_stream_url: Option<Url>,
-    /// Address of the RiscZeroSetVerifier contract.
-    #[clap(long, env)]
-    #[arg(required = false)]
-    pub boundless_set_verifier_address: Address,
-    /// Address of the BoundlessMarket contract.
-    #[clap(long, env)]
-    #[arg(required = false)]
-    pub boundless_market_address: Address,
+    pub boundless_order_stream_url: Option<Cow<'static, str>>,
+
     /// Number of transactions to lookback at
     #[clap(long, env)]
     #[arg(required = false, default_value_t = 5)]
     pub boundless_lookback: u32,
-    /// Starting price per megacycle of the proving order
-    #[clap(long, env)]
-    #[arg(required = false, default_value = "0.0001")]
-    pub boundless_order_min_price_eth: String,
-    /// Maximum price per megacycle of the proving order
-    #[clap(long, env)]
-    #[arg(required = false, default_value = "0.0002")]
-    pub boundless_order_max_price_eth: String,
-    /// Time in seconds before order pricing increases
-    #[clap(long, env)]
-    #[arg(required = false, default_value_t = 60)]
-    pub boundless_order_ramp_up_period: u32,
-    /// Multiplier for order fulfillment timeout after locking
-    #[clap(long, env)]
-    #[arg(required = false, default_value_t = 3.0)]
+
+    /// Starting price (wei) per cycle of the proving order
+    #[clap(long, env, required = false, default_value = "0")]
+    pub boundless_cycle_min_wei: U256,
+    /// Maximum price (wei) per cycle of the proving order
+    #[clap(long, env, required = false, default_value = "200000000")]
+    pub boundless_cycle_max_wei: U256,
+    /// Stake (USDC) per gigacycle of the proving order
+    #[clap(long, env, required = false, default_value = "1000")]
+    pub boundless_mega_cycle_stake: U256,
+    /// Multiplier for delay before order price starts ramping up.
+    #[clap(long, env, required = false, default_value_t = 0.1)]
+    pub boundless_order_bid_delay_factor: f64,
+    /// Multiplier for order price to ramp up from min to max.
+    #[clap(long, env, required = false, default_value_t = 0.25)]
+    pub boundless_order_ramp_up_factor: f64,
+    /// Multiplier for order fulfillment timeout (seconds/segment) after locking
+    #[clap(long, env, required = false, default_value_t = 3.0)]
     pub boundless_order_lock_timeout_factor: f64,
-    /// Multiplier for order expiry timeout after creation
-    #[clap(long, env)]
-    #[arg(required = false, default_value_t = 10.0)]
-    pub boundless_order_timeout_factor: f64,
+    /// Multiplier for order expiry timeout (seconds/segment) after lock timeout
+    #[clap(long, env, required = false, default_value_t = 2.0)]
+    pub boundless_order_expiry_factor: f64,
     /// Time in seconds between attempts to check order status
-    #[clap(long, env)]
-    #[arg(required = false, default_value_t = 12)]
+    #[clap(long, env, required = false, default_value_t = 12)]
     pub boundless_order_check_interval: u64,
+
+    /// Time in seconds between attempts to submit new orders
+    #[clap(long, env, required = false, default_value_t = 12)]
+    pub boundless_order_submission_cooldown: u64,
 }
 
 impl MarketProviderConfig {
     pub fn to_arg_vec(
         &self,
-        storage_provider_config: &Option<StorageProviderConfig>,
+        storage_provider_config: &StorageProviderConfig,
     ) -> Vec<String> {
         let mut proving_args = Vec::new();
         proving_args.extend(vec![
@@ -116,27 +148,56 @@ impl MarketProviderConfig {
             self.boundless_rpc_url.to_string(),
             String::from("--boundless-wallet-key"),
             self.boundless_wallet_key.to_bytes().to_string(),
-            String::from("--boundless-set-verifier-address"),
-            self.boundless_set_verifier_address.to_string(),
-            String::from("--boundless-market-address"),
-            self.boundless_market_address.to_string(),
             String::from("--boundless-lookback"),
             self.boundless_lookback.to_string(),
-            String::from("--boundless-order-min-price-eth"),
-            self.boundless_order_min_price_eth.to_string(),
-            String::from("--boundless-order-max-price-eth"),
-            self.boundless_order_max_price_eth.to_string(),
-            String::from("--boundless-order-ramp-up-period"),
-            self.boundless_order_ramp_up_period.to_string(),
+            String::from("--boundless-cycle-min-wei"),
+            self.boundless_cycle_min_wei.to_string(),
+            String::from("--boundless-cycle-max-wei"),
+            self.boundless_cycle_max_wei.to_string(),
+            String::from("--boundless-mega-cycle-stake"),
+            self.boundless_mega_cycle_stake.to_string(),
+            String::from("--boundless-order-bid-delay-factor"),
+            self.boundless_order_bid_delay_factor.to_string(),
+            String::from("--boundless-order-ramp-up-factor"),
+            self.boundless_order_ramp_up_factor.to_string(),
             String::from("--boundless-order-lock-timeout-factor"),
             self.boundless_order_lock_timeout_factor.to_string(),
-            String::from("--boundless-order-timeout-factor"),
-            self.boundless_order_timeout_factor.to_string(),
+            String::from("--boundless-order-expiry-factor"),
+            self.boundless_order_expiry_factor.to_string(),
             String::from("--boundless-order-check-interval"),
             self.boundless_order_check_interval.to_string(),
+            String::from("--boundless-order-submission-cooldown"),
+            self.boundless_order_submission_cooldown.to_string(),
         ]);
-        if self.boundless_offchain {
-            proving_args.push(String::from("--boundless-offchain"));
+        if let Some(chain_id) = &self.boundless_chain_id {
+            proving_args.extend(vec![
+                String::from("--boundless-chain-id"),
+                chain_id.to_string(),
+            ]);
+        }
+        if let Some(address) = &self.boundless_market_address {
+            proving_args.extend(vec![
+                String::from("--boundless-market-address"),
+                address.to_string(),
+            ]);
+        }
+        if let Some(address) = &self.boundless_verifier_router_address {
+            proving_args.extend(vec![
+                String::from("--boundless-verifier-router-address"),
+                address.to_string(),
+            ]);
+        }
+        if let Some(address) = &self.boundless_set_verifier_address {
+            proving_args.extend(vec![
+                String::from("--boundless-set-verifier-address"),
+                address.to_string(),
+            ]);
+        }
+        if let Some(address) = &self.boundless_stake_token_address {
+            proving_args.extend(vec![
+                String::from("--boundless-stake-token-address"),
+                address.to_string(),
+            ]);
         }
         if let Some(url) = &self.boundless_order_stream_url {
             proving_args.extend(vec![
@@ -144,58 +205,57 @@ impl MarketProviderConfig {
                 url.to_string(),
             ]);
         }
-        if let Some(storage_cfg) = storage_provider_config {
-            match &storage_cfg.storage_provider {
-                StorageProviderType::S3 => {
-                    proving_args.extend(vec![
-                        String::from("--storage-provider"),
-                        String::from("s3"),
-                        String::from("--s3-access-key"),
-                        storage_cfg.s3_access_key.clone().unwrap(),
-                        String::from("--s3-secret-key"),
-                        storage_cfg.s3_secret_key.clone().unwrap(),
-                        String::from("--s3-bucket"),
-                        storage_cfg.s3_bucket.clone().unwrap(),
-                        String::from("--s3-url"),
-                        storage_cfg.s3_url.clone().unwrap(),
-                        String::from("--aws-region"),
-                        storage_cfg.aws_region.clone().unwrap(),
-                    ]);
-                }
-                StorageProviderType::Pinata => {
-                    proving_args.extend(vec![
-                        String::from("--storage-provider"),
-                        String::from("pinata"),
-                        String::from("--pinata-jwt"),
-                        storage_cfg.pinata_jwt.clone().unwrap(),
-                    ]);
-                    if let Some(pinata_api_url) = &storage_cfg.pinata_api_url {
-                        proving_args.extend(vec![
-                            String::from("--pinata-api-url"),
-                            pinata_api_url.to_string(),
-                        ]);
-                    }
-                    if let Some(ipfs_gateway_url) = &storage_cfg.ipfs_gateway_url {
-                        proving_args.extend(vec![
-                            String::from("--ipfs-gateway-url"),
-                            ipfs_gateway_url.to_string(),
-                        ]);
-                    }
-                }
-                StorageProviderType::File => {
-                    proving_args.extend(vec![
-                        String::from("--storage-provider"),
-                        String::from("file"),
-                    ]);
-                    if let Some(file_path) = &storage_cfg.file_path {
-                        proving_args.extend(vec![
-                            String::from("--file-path"),
-                            file_path.to_str().unwrap().to_string(),
-                        ]);
-                    }
-                }
-                _ => unimplemented!("Unknown storage provider."),
+
+        match &storage_provider_config.storage_provider {
+            StorageProviderType::S3 => {
+                proving_args.extend(vec![
+                    String::from("--storage-provider"),
+                    String::from("s3"),
+                    String::from("--s3-access-key"),
+                    storage_provider_config.s3_access_key.clone().unwrap(),
+                    String::from("--s3-secret-key"),
+                    storage_provider_config.s3_secret_key.clone().unwrap(),
+                    String::from("--s3-bucket"),
+                    storage_provider_config.s3_bucket.clone().unwrap(),
+                    String::from("--s3-url"),
+                    storage_provider_config.s3_url.clone().unwrap(),
+                    String::from("--aws-region"),
+                    storage_provider_config.aws_region.clone().unwrap(),
+                ]);
             }
+            StorageProviderType::Pinata => {
+                proving_args.extend(vec![
+                    String::from("--storage-provider"),
+                    String::from("pinata"),
+                    String::from("--pinata-jwt"),
+                    storage_provider_config.pinata_jwt.clone().unwrap(),
+                ]);
+                if let Some(pinata_api_url) = &storage_provider_config.pinata_api_url {
+                    proving_args.extend(vec![
+                        String::from("--pinata-api-url"),
+                        pinata_api_url.to_string(),
+                    ]);
+                }
+                if let Some(ipfs_gateway_url) = &storage_provider_config.ipfs_gateway_url {
+                    proving_args.extend(vec![
+                        String::from("--ipfs-gateway-url"),
+                        ipfs_gateway_url.to_string(),
+                    ]);
+                }
+            }
+            StorageProviderType::File => {
+                proving_args.extend(vec![
+                    String::from("--storage-provider"),
+                    String::from("file"),
+                ]);
+                if let Some(file_path) = &storage_provider_config.file_path {
+                    proving_args.extend(vec![
+                        String::from("--file-path"),
+                        file_path.to_str().unwrap().to_string(),
+                    ]);
+                }
+            }
+            _ => unimplemented!("Unknown storage provider."),
         }
         proving_args
     }
@@ -203,7 +263,7 @@ impl MarketProviderConfig {
 
 pub async fn run_boundless_client(
     args: MarketProviderConfig,
-    storage: Option<StorageProviderConfig>,
+    storage: StorageProviderConfig,
     journal: ProofJournal,
     witness_frames: Vec<Vec<u8>>,
     stitched_proofs: Vec<Receipt>,
@@ -212,20 +272,39 @@ pub async fn run_boundless_client(
     info!("Running boundless client.");
     let proof_journal = Journal::new(journal.encode_packed());
 
+    // Override deployment configuration if set
+    let market_deployment = args
+        .boundless_chain_id
+        .and_then(Deployment::from_chain_id)
+        .or_else(|| {
+            let mut builder = Deployment::builder();
+            if let Some(boundless_market_address) = args.boundless_market_address {
+                builder.boundless_market_address(boundless_market_address);
+            };
+            if let Some(boundless_verifier_router_address) =
+                args.boundless_verifier_router_address
+            {
+                builder.verifier_router_address(boundless_verifier_router_address);
+            };
+            if let Some(boundless_set_verifier_address) = args.boundless_set_verifier_address {
+                builder.set_verifier_address(boundless_set_verifier_address);
+            };
+            if let Some(boundless_stake_token_address) = args.boundless_stake_token_address {
+                builder.stake_token_address(boundless_stake_token_address);
+            };
+            if let Some(boundless_order_stream_url) = args.boundless_order_stream_url.clone() {
+                builder.order_stream_url(boundless_order_stream_url);
+            };
+            builder.build().ok()
+        });
+
     // Instantiate client
-    let boundless_client = ClientBuilder::default()
+    let boundless_client = Client::builder()
         .with_private_key(args.boundless_wallet_key)
         .with_rpc_url(args.boundless_rpc_url)
-        .with_boundless_market_address(args.boundless_market_address)
-        .with_set_verifier_address(args.boundless_set_verifier_address)
-        .with_storage_provider_config(storage)
-        .await
+        .with_deployment(market_deployment)
+        .with_storage_provider_config(&storage)
         .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
-        .with_order_stream_url(
-            args.boundless_offchain
-                .then_some(args.boundless_order_stream_url)
-                .flatten(),
-        )
         .build()
         .await
         .map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
@@ -235,10 +314,11 @@ pub async fn run_boundless_client(
         KAILUA_FPVM_ID,
         Predicate::digest_match(proof_journal.digest()),
     )
-        .with_groth16_proof();
+        // manually choose latest Groth16 receipt selector
+        .with_selector((Selector::groth16_latest() as u32).into());
 
     // Check if an unexpired request had already been made recently
-    let boundless_wallet_address = boundless_client.local_signer.as_ref().unwrap().address();
+    let boundless_wallet_address = boundless_client.signer.as_ref().unwrap().address();
     let boundless_wallet_nonce = boundless_client
         .provider()
         .get_transaction_count(boundless_wallet_address)
@@ -260,8 +340,6 @@ pub async fn run_boundless_client(
             .boundless_market
             .get_submitted_request(request_id, None)
             .await
-            .context("get_submitted_request")
-            .map_err(|e| ProvingError::OtherError(anyhow!(e)))
         else {
             // No request for that nonce
             continue;
@@ -291,7 +369,7 @@ pub async fn run_boundless_client(
         }
 
         return retrieve_proof(
-            boundless_client,
+            &boundless_client,
             request_id,
             args.boundless_order_check_interval,
             request.expires_at(),
@@ -324,12 +402,6 @@ pub async fn run_boundless_client(
         .await
         .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
         .map_err(|e| ProvingError::ExecutionError(anyhow!(e)))?;
-    let mcycles_count = session_info
-        .segments
-        .iter()
-        .map(|segment| 1 << segment.po2)
-        .sum::<u64>()
-        .div_ceil(1_000_000);
 
     // todo: remember this storage location to avoid duplicate uploads
     // Upload the ELF to the storage provider so that it can be fetched by the market.
@@ -344,7 +416,7 @@ pub async fn run_boundless_client(
         .map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
     info!("Uploaded image to {}", image_url);
     // Upload input
-    let mut builder = InputBuilder::new();
+    let mut builder = GuestEnvBuilder::new();
     for frame in &witness_frames {
         builder = builder.write_frame(frame);
     }
@@ -363,47 +435,74 @@ pub async fn run_boundless_client(
         .await
         .map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
     info!("Uploaded input to {input_url}");
-    let request_input = Input::url(input_url);
-    let request = ProofRequest::builder()
-        .with_image_url(image_url.as_str())
-        .with_input(request_input)
+
+    let boundless_rpc_time = boundless_client
+        .provider()
+        .get_block_by_number(BlockNumberOrTag::Latest)
+        .await
+        .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
+        .ok_or_else(|| ProvingError::OtherError(anyhow!("Failed to fetch latest block from Boundless RPC")))?
+        .header
+        .timestamp;
+
+    let cycle_count = session_info
+        .segments
+        .iter()
+        .map(|segment| 1 << segment.po2)
+        .sum::<u64>();
+    let segment_count = cycle_count.div_ceil(1_000_000) as f64;
+    let cycles = U256::from(cycle_count);
+    let min_price = args.boundless_cycle_min_wei * cycles;
+    let max_price = args.boundless_cycle_max_wei * cycles;
+    let bid_delay_time = (args.boundless_order_bid_delay_factor * segment_count) as u64;
+    let corrected_lock_timeout_factor =
+        args.boundless_order_ramp_up_factor + args.boundless_order_lock_timeout_factor;
+    let corrected_expiry_factor =
+        corrected_lock_timeout_factor + args.boundless_order_expiry_factor;
+    let request = boundless_client
+        .new_request()
+        .with_journal(proof_journal)
+        .with_cycles(cycle_count)
+        .with_program_url(image_url)
+        .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
+        .with_input_url(input_url)
+        .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
         .with_requirements(requirements)
         .with_offer(
-            Offer::default()
-                .with_min_price_per_mcycle(
-                    parse_ether(&args.boundless_order_min_price_eth)
-                        .map_err(|e| ProvingError::OtherError(anyhow!(e)))?,
-                    mcycles_count,
-                )
-                .with_max_price_per_mcycle(
-                    parse_ether(&args.boundless_order_max_price_eth)
-                        .map_err(|e| ProvingError::OtherError(anyhow!(e)))?,
-                    mcycles_count,
-                )
-                .with_ramp_up_period(args.boundless_order_ramp_up_period)
-                .with_lock_stake_per_mcycle(
-                    parse_ether(&args.boundless_order_max_price_eth)
-                        .map_err(|e| ProvingError::OtherError(anyhow!(e)))?,
-                    mcycles_count,
-                )
-                .with_lock_timeout(
-                    (args.boundless_order_lock_timeout_factor * mcycles_count as f64) as u32,
-                )
-                .with_timeout((args.boundless_order_timeout_factor * mcycles_count as f64) as u32),
+            OfferParams::builder()
+                .min_price(min_price)
+                .max_price(max_price)
+                .bidding_start(boundless_rpc_time + bid_delay_time)
+                .lock_stake(args.boundless_mega_cycle_stake * cycles)
+                .ramp_up_period((args.boundless_order_ramp_up_factor * segment_count) as u32)
+                .lock_timeout((corrected_lock_timeout_factor * segment_count) as u32)
+                .timeout((corrected_expiry_factor * segment_count) as u32)
+                .build()
+                .map_err(|e| ProvingError::OtherError(anyhow!(e)))?,
         )
-        .with_request_id(RequestId::new(
-            boundless_wallet_address,
-            boundless_wallet_nonce,
-        ))
-        .build()
-        .map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
+        .with_request_id(RequestId::new(boundless_wallet_address, boundless_wallet_nonce));
 
     // Send the request and wait for it to be completed.
-    let (request_id, expires_at) = boundless_client
-        .submit_request(&request)
-        .await
-        .map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
-    info!("Boundless request 0x{request_id:x} submitted");
+    let (request_id, expires_at) = if args.boundless_order_stream_url.is_some() {
+        info!("Submitting offchain request.");
+        boundless_client
+            .submit_offchain(request.clone())
+            .await
+            .context("Client::submit_offchain()")
+            .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
+    } else {
+        info!("Submitting onchain request.");
+        boundless_client
+            .submit_onchain(request.clone())
+            .await
+            .context("Client::submit_onchain()")
+            .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
+    };
+    info!(
+        "Boundless request 0x{request_id:x} submitted. ({} sec cooldown).",
+        args.boundless_order_submission_cooldown
+    );
+    tokio::time::sleep(Duration::from_secs(args.boundless_order_submission_cooldown)).await;
 
     if proving_args.skip_await_proof {
         warn!("Skipping awaiting proof on Boundless and exiting process.");
@@ -411,7 +510,7 @@ pub async fn run_boundless_client(
     }
 
     retrieve_proof(
-        boundless_client,
+        &boundless_client,
         request_id,
         args.boundless_order_check_interval,
         expires_at,
@@ -420,8 +519,8 @@ pub async fn run_boundless_client(
         .map_err(|e| ProvingError::OtherError(anyhow!(e)))
 }
 
-pub async fn retrieve_proof<P: Provider<Ethereum> + 'static + Clone, S: StorageProvider>(
-    boundless_client: Client<P, S>,
+pub async fn retrieve_proof(
+    boundless_client: &Client,
     request_id: U256,
     interval: u64,
     expires_at: u64,

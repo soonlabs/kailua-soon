@@ -20,6 +20,7 @@ use human_bytes::human_bytes;
 use kailua_build::{KAILUA_FPVM_ELF, KAILUA_FPVM_ID};
 use risc0_zkvm::serde::to_vec;
 use risc0_zkvm::sha::Digest;
+#[allow(deprecated)]
 use risc0_zkvm::{is_dev_mode, InnerReceipt, Receipt};
 use std::time::Duration;
 use tracing::info;
