@@ -4,10 +4,10 @@ set fallback := true
 default:
   @just --list
 
-build +ARGS="--release -F prove -F disable-dev-mode --locked":
+build +ARGS=" -F prove -F disable-dev-mode --locked":
   cargo build {{ARGS}}
 
-build-fpvm +ARGS="--release -F prove -F disable-dev-mode -F rebuild-fpvm --locked":
+build-fpvm +ARGS=" -F prove -F disable-dev-mode -F rebuild-fpvm --locked":
   cargo build {{ARGS}}
 
 fmt:
@@ -162,35 +162,30 @@ prove block_number block_count l1_rpc l1_beacon_rpc l2_rpc da_proxy data target=
   DA_PROXY_URL="{{da_proxy}}"
 
   L2_BLOCK_NUMBER={{block_number}}
-  CLAIMED_L2_BLOCK_NUMBER=$((L2_BLOCK_NUMBER + {{block_count}} - 1))
-
-  # Query the chain id
-  echo "Fetching chain id"
-  L2_CHAIN_ID=$(cast chain-id --rpc-url $L2_NODE_ADDRESS)
+  CLAIMED_L2_BLOCK_NUMBER=$((L2_BLOCK_NUMBER + {{block_count}}))
 
   # Get output root for block
   echo "Fetching data for block #$CLAIMED_L2_BLOCK_NUMBER..."
-  CLAIMED_L2_OUTPUT_ROOT=$(cast rpc --rpc-url $OP_NODE_ADDRESS "optimism_outputAtBlock" $(cast 2h $CLAIMED_L2_BLOCK_NUMBER) | jq -r .outputRoot)
+  CLAIMED_L2_OUTPUT_ROOT=$(cast rpc --rpc-url $SOON_NODE_URL "outputAtBlock" $(cast 2h $CLAIMED_L2_BLOCK_NUMBER) | jq -r .outputRoot)
   # Get the info for the origin l1 block
-  L1_ORIGIN_NUM=$(cast rpc --rpc-url $OP_NODE_ADDRESS "optimism_outputAtBlock" $(cast 2h $CLAIMED_L2_BLOCK_NUMBER) | jq -r .blockRef.l1origin.number)
+  L1_ORIGIN_NUM=$(cast rpc --rpc-url $SOON_NODE_URL "outputAtBlock" $(cast 2h $CLAIMED_L2_BLOCK_NUMBER) | jq -r .blockRef.l1origin.number)
   L1_HEAD=$(cast block --rpc-url $L1_NODE_ADDRESS $((L1_ORIGIN_NUM + {{seq_window}})) --json | jq -r .hash)
 
   # Get the info for the parent l2 block
   echo "Fetching data for parent of block #$L2_BLOCK_NUMBER..."
-  AGREED_L2_OUTPUT_ROOT=$(cast rpc --rpc-url $OP_NODE_ADDRESS "optimism_outputAtBlock" $(cast 2h $((L2_BLOCK_NUMBER - 1))) | jq -r .outputRoot)
+  AGREED_L2_OUTPUT_ROOT=$(cast rpc --rpc-url $SOON_NODE_URL "outputAtBlock" $(cast 2h $L2_BLOCK_NUMBER) | jq -r .outputRoot)
 
   echo "Running host program with zk client program..."
   ./target/{{target}}/kailua-host {{verbosity}} \
-    --op-node-address $OP_NODE_ADDRESS \
+    --l2_node_address $SOON_NODE_URL \
     --l1-head $L1_HEAD \
     --agreed-l2-block-number $L2_BLOCK_NUMBER \
     --agreed-l2-output-root $AGREED_L2_OUTPUT_ROOT \
     --claimed-l2-output-root $CLAIMED_L2_OUTPUT_ROOT \
     --claimed-l2-block-number $CLAIMED_L2_BLOCK_NUMBER \
-    --l2-chain-id $L2_CHAIN_ID \
+    --l2-chain-id 0 \
     --l1-node-address $L1_NODE_ADDRESS \
     --l1-beacon-address $L1_BEACON_ADDRESS \
-    --soon-node-url $SOON_NODE_URL \
     --da-proxy-url $DA_PROXY_URL \
     --data-dir {{data}} \
     --native
