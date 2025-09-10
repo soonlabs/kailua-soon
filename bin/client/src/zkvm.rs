@@ -16,6 +16,7 @@ use crate::proving::ProvingError;
 use crate::proving::{KailuaProveInfo, KailuaSessionStats};
 use anyhow::{anyhow, Context};
 use kailua_build::{KAILUA_FPVM_ELF, KAILUA_FPVM_ID};
+#[allow(deprecated)]
 use risc0_zkvm::{default_prover, is_dev_mode, ExecutorEnv, InnerReceipt, ProverOpts, Receipt};
 use tracing::info;
 use tracing::log::warn;
@@ -85,6 +86,7 @@ pub fn build_zkvm_env<'a>(
         builder.write_frame(frame);
     }
     // Dev-mode for recursive proofs
+    #[allow(deprecated)]
     if is_dev_mode() {
         builder.env_var("RISC0_DEV_MODE", "1");
     }

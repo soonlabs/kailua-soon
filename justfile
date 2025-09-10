@@ -119,7 +119,7 @@ devnet-validate fastforward="100" target="debug" verbosity="" da_proxy="http://1
       --validator-key {{validator}} \
       {{verbosity}}
 
-devnet-validate-boundless fastforward="100" target="debug" verbosity="" da_proxy="http://127.0.0.1:8080/" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/validate" validator="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d" set_verifier_address="0x1Ab08498CfF17b9723ED67143A050c8E8c2e3104" market_address="0x6B7ABa661041164b8dB98E30AE1454d2e9D5f14b":
+devnet-validate-boundless fastforward="100" target="debug" verbosity="" da_proxy="http://127.0.0.1:8080/" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/validate" validator="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
     ./target/{{target}}/kailua-cli validate \
         --fast-forward-target {{fastforward}} \
         --eth-rpc-url {{l1_rpc}} \
@@ -131,8 +131,11 @@ devnet-validate-boundless fastforward="100" target="debug" verbosity="" da_proxy
         --validator-key {{validator}} \
         --boundless-rpc-url ${BOUNDLESS_RPC_URL} \
         --boundless-wallet-key ${BOUNDLESS_WALLET_KEY} \
-        --boundless-set-verifier-address {{set_verifier_address}} \
-        --boundless-market-address {{market_address}} \
+        --boundless-market-address 0x6B7ABa661041164b8dB98E30AE1454d2e9D5f14b \
+        --boundless-verifier-router-address 0x0b144e07a0826182b6b59788c34b32bfa86fb711 \
+        --boundless-set-verifier-address 0x1Ab08498CfF17b9723ED67143A050c8E8c2e3104 \
+        --boundless-stake-token-address 0x036CbD53842c5426634e7929541eC2318f3dCF7e \
+        --boundless-order-stream-url https://base-sepolia.beboundless.xyz \
         --storage-provider pinata \
         --pinata-jwt ${BOUNDLESS_PINATA_JWT} \
         {{verbosity}}

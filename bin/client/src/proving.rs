@@ -33,7 +33,6 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
-use tokio::sync::{Mutex, OwnedSemaphorePermit, Semaphore};
 use tracing::{error, info, warn};
 
 /// The size of the LRU cache in the oracle.

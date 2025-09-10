@@ -22,14 +22,13 @@ use alloy::primitives::{Address, B256};
 use anyhow::{bail, Context};
 use kailua_client::await_tel;
 use kailua_common::blobs::BlobFetchRequest;
-use kailua_common::config::config_hash;
 use kailua_common::precondition::PreconditionValidationData;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::FutureExt;
 use opentelemetry::trace::{TraceContextExt, Tracer};
 use risc0_zkvm::sha::Digestible;
 use risc0_zkvm::InnerReceipt;
-use soon_primitives::blocks::{str_block_hash_to, BlockInfo};
+use soon_primitives::blocks::BlockInfo;
 use std::path::PathBuf;
 use tracing::{debug, info};
 
@@ -221,7 +220,7 @@ pub async fn request_fault_proof(
     l1_head: B256,
 ) -> anyhow::Result<()> {
     let tracer = tracer("kailua");
-    let context = opentelemetry::Context::current_with_span(tracer.start("request_fault_proof"));
+    let _context = opentelemetry::Context::current_with_span(tracer.start("request_fault_proof"));
 
     let Some(fault) = proposal.fault() else {
         bail!("Proposal {} does not diverge from canon.", proposal.index);
