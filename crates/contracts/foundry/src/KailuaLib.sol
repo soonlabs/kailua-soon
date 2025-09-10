@@ -97,6 +97,14 @@ event Proven(bytes32 indexed signature, ProofStatus indexed status);
 /// @param amount The new required bond amount
 event BondUpdated(uint256 amount);
 
+/// @notice Emitted when a vanguard is added
+/// @param vanguard The address of the added vanguard
+event VanguardAdded(address indexed vanguard);
+
+/// @notice Emitted when a vanguard is removed
+/// @param vanguard The address of the removed vanguard
+event VanguardRemoved(address indexed vanguard);
+
 interface IKailuaTreasury {
     /// @notice Returns the game index at which proposer was proven faulty
     function eliminationRound(address proposer) external view returns (uint256);

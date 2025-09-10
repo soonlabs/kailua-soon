@@ -79,9 +79,9 @@ pub struct FastTrackArgs {
     #[clap(flatten)]
     pub guardian_signer: Option<GuardianSignerArgs>,
 
-    /// Address of the vanguard to set
+    /// Addresses of the vanguards to set (comma-separated)
     #[clap(long, env)]
-    pub vanguard_address: Option<String>,
+    pub vanguard_addresses: Option<String>,
 
     /// Whether to set Kailua as the OptimismPortal's respected game type
     #[clap(long, env)]
@@ -271,21 +271,28 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
     }
 
     // Set the vanguard parameters if provided
-    if let Some(vanguard_address_string) = args.vanguard_address {
-        let vanguard_address = Address::from_str(&vanguard_address_string)?;
-        // let vanguard_advantage = args.vanguard_advantage.unwrap_or(u64::MAX >> 4);
-        info!("Assigning proposal vanguard in KailuaTreasury.");
+    if let Some(vanguard_addresses_string) = args.vanguard_addresses {
+        let vanguard_addresses: Vec<Address> = vanguard_addresses_string
+            .split(',')
+            .map(|addr| addr.trim())
+            .filter(|addr| !addr.is_empty())
+            .map(|addr| Address::from_str(addr))
+            .collect::<Result<Vec<_>, _>>()?;
+        
+        info!("Assigning {} proposal vanguards in KailuaTreasury.", vanguard_addresses.len());
 
-        await_tel_res!(
-            context,
-            tracer,
-            "KailuaTreasury::assignVanguard",
-            crate::transact::safe::exec_safe_txn(
-                kailua_treasury_implementation.assignVanguard(vanguard_address),
-                &factory_owner_safe,
-                owner_address,
-            )
-        )?;
+        for vanguard_address in vanguard_addresses {
+            await_tel_res!(
+                context,
+                tracer,
+                "KailuaTreasury::assignVanguard",
+                crate::transact::safe::exec_safe_txn(
+                    kailua_treasury_implementation.assignVanguard(vanguard_address),
+                    &factory_owner_safe,
+                    owner_address,
+                )
+            )?;
+        }
     }
 
     // Create new treasury instance from target block number

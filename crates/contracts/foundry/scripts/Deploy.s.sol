@@ -77,7 +77,7 @@ contract DeployScript is Script {
         treasury.setParticipationBond(participationBond);
         dgf.setImplementation(gameType, game);
         // OPTIONAL
-        treasury.assignVanguard(vanguardAddress, vanguardAdvantage);
+        treasury.assignVanguard(vanguardAddress);
         optimismPortal.setRespectedGameType(gameType);
     }
 }

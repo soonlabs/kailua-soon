@@ -234,8 +234,8 @@ contract KailuaTreasury is KailuaTournament, IKailuaTreasury {
     /// @notice The last proposal made by each proposer
     mapping(address => KailuaTournament) public lastProposal;
 
-    /// @notice The leading proposer that can extend the proposal tree
-    address public vanguard;
+    /// @notice Mapping to track which addresses are vanguards
+    mapping(address => bool) public vanguards;
 
     /// @notice Boolean flag to prevent re-entrant calls
     bool internal isLocked;
@@ -250,6 +250,13 @@ contract KailuaTreasury is KailuaTournament, IKailuaTreasury {
     modifier onlyFactoryOwner() {
         OwnableUpgradeable factoryContract = OwnableUpgradeable(address(DISPUTE_GAME_FACTORY));
         require(msg.sender == factoryContract.owner(), "not owner");
+        _;
+    }
+
+    modifier onlyVanguard() {
+        if (!vanguards[msg.sender]) {
+            revert OnlyVanguard();
+        }
         _;
     }
 
@@ -315,15 +322,23 @@ contract KailuaTreasury is KailuaTournament, IKailuaTreasury {
         emit BondUpdated(amount);
     }
 
-    /// @notice Updates the vanguard address and advantage duration
+    /// @notice Removes a vanguard address
+    function removeVanguard(address _vanguard) external onlyFactoryOwner {
+        vanguards[_vanguard] = false;
+        emit VanguardRemoved(_vanguard);
+    }
+
+    /// @notice Adds a vanguard address
     function assignVanguard(address _vanguard) external onlyFactoryOwner {
-        vanguard = _vanguard;
+        vanguards[_vanguard] = true;
+        emit VanguardAdded(_vanguard);
     }
 
     /// @notice Checks the proposer's bonded amount and creates a new proposal through the factory
     function propose(Claim _rootClaim, bytes calldata _extraData)
         external
         payable
+        onlyVanguard
         returns (KailuaTournament tournament)
     {
         // Check proposer honesty

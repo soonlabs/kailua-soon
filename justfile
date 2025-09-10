@@ -68,7 +68,7 @@ devnet-config target="debug" verbosity="" l1_rpc="http://127.0.0.1:8545" l2_rpc=
       --soon-node-url {{l2_rpc}} \
       --otlp-collector
 
-devnet-upgrade timeout="3600" advantage="60" target="debug" verbosity="" l1_rpc="http://127.0.0.1:8545" l2_rpc="http://127.0.0.1:8899" vanguard="0x055A514d608c28F9F90eD2A6977f76e9DB08aFaD" deployer="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d" owner="0xc49af0e1e397697bd6a917a076d5cf4be42b91dfe307f7f3a07a07f9d50a3b89" guardian="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
+devnet-upgrade timeout="3600" advantage="60" target="debug" verbosity="" l1_rpc="http://127.0.0.1:8545" l2_rpc="http://127.0.0.1:8899" vanguard="0x055A514d608c28F9F90eD2A6977f76e9DB08aFaD,0xc43608EfC12A961879e2F9F159f3667351284b3E" deployer="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d" owner="0xc49af0e1e397697bd6a917a076d5cf4be42b91dfe307f7f3a07a07f9d50a3b89" guardian="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
   RISC0_DEV_MODE=1 ./target/{{target}}/kailua-cli fast-track \
       --eth-rpc-url {{l1_rpc}} \
       --soon-node-url {{l2_rpc}} \
@@ -80,7 +80,7 @@ devnet-upgrade timeout="3600" advantage="60" target="debug" verbosity="" l1_rpc=
       --deployer-key {{deployer}} \
       --owner-key {{owner}} \
       --guardian-key {{guardian}} \
-      --vanguard-address {{vanguard}} \
+      --vanguard-addresses {{vanguard}} \
       --respect-kailua-proposals \
       {{verbosity}}
 

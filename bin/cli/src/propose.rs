@@ -233,9 +233,6 @@ pub async fn propose(args: ProposeArgs, data_dir: PathBuf) -> anyhow::Result<()>
             continue;
         }
 
-        // Wait for vanguard to make submission
-        // let vanguard = await_tel!(context, fetch_vanguard(&agent));
-
         // Prepare proposal
         let Some(proposed_output_root) = agent.outputs.get(&proposed_block_number).copied() else {
             error!("Could not fetch output claim.");
@@ -641,15 +638,6 @@ pub fn unresolved_canonical_proposal(agent: &SyncAgent) -> anyhow::Result<Option
     };
     // Return successor
     Ok(last_resolved_proposal.successor)
-}
-
-pub async fn fetch_vanguard(agent: &SyncAgent) -> Address {
-    let tracer = tracer("kailua");
-    let context = opentelemetry::Context::current_with_span(tracer.start("fetch_vanguard"));
-    KailuaTreasury::new(agent.deployment.treasury, &agent.provider.l1_provider)
-        .vanguard()
-        .stall_with_context(context.clone(), "KailuaTreasury::vanguard")
-        .await
 }
 
 pub async fn fetch_participation_bond(agent: &SyncAgent) -> U256 {

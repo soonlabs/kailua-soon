@@ -84,11 +84,12 @@ contract ProposeTest is KailuaTest {
         vm.prank(address(0xbeef));
         vm.expectRevert("not owner");
         treasury.assignVanguard(address(0x007));
-        vm.assertEq(treasury.vanguard(), address(this));
+        vm.assertEq(treasury.vanguards(address(this)), true);
 
-        // Assign vanguard
+        // Assign new vanguard
+        treasury.removeVanguard(address(this));
         treasury.assignVanguard(address(0x007));
-        vm.assertEq(treasury.vanguard(), address(0x007));
+        vm.assertEq(treasury.vanguards(address(0x007)), true);
 
         vm.warp(
             game.GENESIS_TIME_STAMP()
@@ -102,14 +103,14 @@ contract ProposeTest is KailuaTest {
             abi.encodePacked(uint64(128), anchorIndex, uint64(0))
         );
         // Success with vanguard
-        vm.prank(treasury.vanguard());
+        vm.prank(address(0x007));
         KailuaTournament proposal_128_0 = treasury.propose(
             Claim.wrap(0x0001010000010100000010100000101000001010000010100000010100000101),
             abi.encodePacked(uint64(128), anchorIndex, uint64(0))
         );
         // Success after vanguard
         treasury.assignVanguard(address(0x01));
-        vm.prank(treasury.vanguard());
+        vm.prank(address(0x01));
         KailuaTournament proposal_128_1 = treasury.propose(
             Claim.wrap(0x000101000001010000001010000010100000101000001010000001010000010F),
             abi.encodePacked(uint64(128), anchorIndex, uint64(0))
@@ -186,6 +187,7 @@ contract ProposeTest is KailuaTest {
         vm.assertEq(treasury.lastResolved(), address(anchor));
         proposal_128_0.resolve();
         vm.assertEq(treasury.lastResolved(), address(proposal_128_0));
+        treasury.assignVanguard(address(0x0));
         vm.startPrank(address(0x0));
         vm.expectRevert(ClaimAlreadyResolved.selector);
         treasury.propose(
@@ -381,6 +383,7 @@ contract ProposeTest is KailuaTest {
             Claim.wrap(rootClaim),
             uint64(treasury.l2BlockNumber())
         );
+        new_treasury.assignVanguard(address(this));
         // Anchoring
         factory.setImplementation(GameType.wrap(1337), IDisputeGame(address(new_treasury)));
 
