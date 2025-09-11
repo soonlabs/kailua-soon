@@ -111,13 +111,13 @@ pub struct MarketProviderConfig {
     #[clap(long, env, required = false, default_value = "0")]
     pub boundless_cycle_min_wei: U256,
     /// Maximum price (wei) per cycle of the proving order
-    #[clap(long, env, required = false, default_value = "2000000")]
+    #[clap(long, env, required = false, default_value = "200000")]
     pub boundless_cycle_max_wei: U256,
     /// Stake (USDC) per million cycles of the proving order
     #[clap(long, env, required = false, default_value = "1000")]
     pub boundless_mega_mcycle_stake: U256,
     /// Multiplier for delay before order price starts ramping up.
-    #[clap(long, env, required = false, default_value_t = 0.5)]
+    #[clap(long, env, required = false, default_value_t = 1.0)]
     pub boundless_order_bid_delay_factor: f64,
     /// Multiplier for order price to ramp up from min to max.
     #[clap(long, env, required = false, default_value_t = 3.0)]
