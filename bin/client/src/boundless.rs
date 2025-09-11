@@ -111,16 +111,16 @@ pub struct MarketProviderConfig {
     #[clap(long, env, required = false, default_value = "0")]
     pub boundless_cycle_min_wei: U256,
     /// Maximum price (wei) per cycle of the proving order
-    #[clap(long, env, required = false, default_value = "200000000")]
+    #[clap(long, env, required = false, default_value = "200000")]
     pub boundless_cycle_max_wei: U256,
-    /// Stake (USDC) per gigacycle of the proving order
-    #[clap(long, env, required = false, default_value = "1000")]
-    pub boundless_mega_cycle_stake: U256,
+    /// Stake (USDC) per million cycles of the proving order
+    #[clap(long, env, required = false, default_value = "10")]
+    pub boundless_mega_mcycle_stake: U256,
     /// Multiplier for delay before order price starts ramping up.
-    #[clap(long, env, required = false, default_value_t = 0.1)]
+    #[clap(long, env, required = false, default_value_t = 0.2)]
     pub boundless_order_bid_delay_factor: f64,
     /// Multiplier for order price to ramp up from min to max.
-    #[clap(long, env, required = false, default_value_t = 0.25)]
+    #[clap(long, env, required = false, default_value_t = 2.0)]
     pub boundless_order_ramp_up_factor: f64,
     /// Multiplier for order fulfillment timeout (seconds/segment) after locking
     #[clap(long, env, required = false, default_value_t = 3.0)]
@@ -131,10 +131,6 @@ pub struct MarketProviderConfig {
     /// Time in seconds between attempts to check order status
     #[clap(long, env, required = false, default_value_t = 12)]
     pub boundless_order_check_interval: u64,
-
-    /// Time in seconds between attempts to submit new orders
-    #[clap(long, env, required = false, default_value_t = 12)]
-    pub boundless_order_submission_cooldown: u64,
 }
 
 impl MarketProviderConfig {
@@ -154,8 +150,8 @@ impl MarketProviderConfig {
             self.boundless_cycle_min_wei.to_string(),
             String::from("--boundless-cycle-max-wei"),
             self.boundless_cycle_max_wei.to_string(),
-            String::from("--boundless-mega-cycle-stake"),
-            self.boundless_mega_cycle_stake.to_string(),
+            String::from("--boundless-mega-mcycle-stake"),
+            self.boundless_mega_mcycle_stake.to_string(),
             String::from("--boundless-order-bid-delay-factor"),
             self.boundless_order_bid_delay_factor.to_string(),
             String::from("--boundless-order-ramp-up-factor"),
@@ -166,8 +162,6 @@ impl MarketProviderConfig {
             self.boundless_order_expiry_factor.to_string(),
             String::from("--boundless-order-check-interval"),
             self.boundless_order_check_interval.to_string(),
-            String::from("--boundless-order-submission-cooldown"),
-            self.boundless_order_submission_cooldown.to_string(),
         ]);
         if let Some(chain_id) = &self.boundless_chain_id {
             proving_args.extend(vec![
@@ -452,6 +446,7 @@ pub async fn run_boundless_client(
         .sum::<u64>();
     let segment_count = cycle_count.div_ceil(1_000_000) as f64;
     let cycles = U256::from(cycle_count);
+    let mcycles = cycles.div_ceil(U256::from(1_000_000));
     let min_price = args.boundless_cycle_min_wei * cycles;
     let max_price = args.boundless_cycle_max_wei * cycles;
     let bid_delay_time = (args.boundless_order_bid_delay_factor * segment_count) as u64;
@@ -473,7 +468,7 @@ pub async fn run_boundless_client(
                 .min_price(min_price)
                 .max_price(max_price)
                 .bidding_start(boundless_rpc_time + bid_delay_time)
-                .lock_stake(args.boundless_mega_cycle_stake * cycles)
+                .lock_stake(args.boundless_mega_mcycle_stake * mcycles)
                 .ramp_up_period((args.boundless_order_ramp_up_factor * segment_count) as u32)
                 .lock_timeout((corrected_lock_timeout_factor * segment_count) as u32)
                 .timeout((corrected_expiry_factor * segment_count) as u32)
@@ -498,11 +493,6 @@ pub async fn run_boundless_client(
             .context("Client::submit_onchain()")
             .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
     };
-    info!(
-        "Boundless request 0x{request_id:x} submitted. ({} sec cooldown).",
-        args.boundless_order_submission_cooldown
-    );
-    tokio::time::sleep(Duration::from_secs(args.boundless_order_submission_cooldown)).await;
 
     if proving_args.skip_await_proof {
         warn!("Skipping awaiting proof on Boundless and exiting process.");
