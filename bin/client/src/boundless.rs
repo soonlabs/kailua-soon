@@ -117,7 +117,7 @@ pub struct MarketProviderConfig {
     #[clap(long, env, required = false, default_value = "1000")]
     pub boundless_mega_mcycle_stake: U256,
     /// Multiplier for delay before order price starts ramping up.
-    #[clap(long, env, required = false, default_value_t = 1.0)]
+    #[clap(long, env, required = false, default_value_t = 2.0)]
     pub boundless_order_bid_delay_factor: f64,
     /// Multiplier for order price to ramp up from min to max.
     #[clap(long, env, required = false, default_value_t = 3.0)]

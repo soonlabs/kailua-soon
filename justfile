@@ -131,10 +131,10 @@ devnet-validate-boundless fastforward="100" target="release" verbosity="" da_pro
         --validator-key {{validator}} \
         --boundless-rpc-url ${BOUNDLESS_RPC_URL} \
         --boundless-wallet-key ${BOUNDLESS_WALLET_KEY} \
-        --boundless-market-address 0x6B7ABa661041164b8dB98E30AE1454d2e9D5f14b \
+        --boundless-market-address 0x26759dbB201aFbA361Bec78E097Aa3942B0b4AB8 \
         --boundless-verifier-router-address 0x0b144e07a0826182b6b59788c34b32bfa86fb711 \
         --boundless-set-verifier-address 0x1Ab08498CfF17b9723ED67143A050c8E8c2e3104 \
-        --boundless-stake-token-address 0x036CbD53842c5426634e7929541eC2318f3dCF7e \
+        --boundless-stake-token-address 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 \
         --storage-provider pinata \
         --pinata-jwt ${BOUNDLESS_PINATA_JWT} \
         {{verbosity}}
