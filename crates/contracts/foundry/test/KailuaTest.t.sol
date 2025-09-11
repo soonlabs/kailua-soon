@@ -19,7 +19,7 @@ import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 
 import "../src/vendor/FlatOPImportV1.4.0.sol";
-import "../src/vendor/FlatR0ImportV2.0.2.sol";
+import "../src/vendor/FlatR0ImportV2.2.0.sol";
 
 import "../src/KailuaLib.sol";
 import "../src/KailuaTournament.sol";
