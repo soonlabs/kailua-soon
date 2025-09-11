@@ -20,7 +20,7 @@ use soon_primitives::system::SystemConfig;
 use std::fmt::Debug;
 
 pub const CONTROL_ROOT: B256 =
-    b256!("539032186827b06719244873b17b2d4c122e2d02cfb1994fe958b2523b844576");
+    b256!("ce52bf56033842021af3cf6db8a50d1b7535c125a34f1a22c6fdcf002c5a1529");
 pub const BN254_CONTROL_ID: B256 =
     b256!("04446e66d300eb7fb45c9726bb53c793dda407a62e9601618bb43c5c14657ac0");
 
