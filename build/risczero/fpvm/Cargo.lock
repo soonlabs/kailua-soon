@@ -6002,7 +6002,6 @@ dependencies = [
  "op-alloy-consensus",
  "op-alloy-rpc-types-engine",
  "solana-sdk",
- "solana-transaction-status",
  "soon-miniz-oxide",
  "soon-primitives",
  "thiserror 1.0.64",
