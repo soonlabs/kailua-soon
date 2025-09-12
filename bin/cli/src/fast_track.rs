@@ -503,6 +503,7 @@ pub async fn deploy_verifier<P1: Provider<N>, P2: Provider<N>, N: Network>(
     );
 
     // Deploy mock verifier
+    #[allow(deprecated)]
     #[cfg(feature = "devnet")]
     if risc0_zkvm::is_dev_mode() {
         // Deploy MockVerifier contract
