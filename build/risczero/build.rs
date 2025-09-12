@@ -14,8 +14,8 @@
 
 use std::env;
 use std::ffi::OsStr;
-use std::path::PathBuf;
 use std::fmt::Write as _;
+use std::path::PathBuf;
 
 fn main() {
     if cfg!(feature = "rebuild-fpvm") {
@@ -59,9 +59,22 @@ fn main() {
         let image_id = risc0_zkvm::compute_image_id(&bin).unwrap();
         // override the methods.rs file to point to the new binary
         let mut methods = String::new();
-        writeln!(&mut methods, "pub const KAILUA_FPVM_ELF: &[u8] = include_bytes!(\"./kailua-fpvm.bin\");").unwrap();
-        writeln!(&mut methods, "pub const KAILUA_FPVM_PATH: &str = \"./kailua-fpvm.bin\";").unwrap();
-        writeln!(&mut methods, "pub const KAILUA_FPVM_ID: [u32; 8] = {:?};", image_id.as_words()).unwrap();
+        writeln!(
+            &mut methods,
+            "pub const KAILUA_FPVM_ELF: &[u8] = include_bytes!(\"./kailua-fpvm.bin\");"
+        )
+        .unwrap();
+        writeln!(
+            &mut methods,
+            "pub const KAILUA_FPVM_PATH: &str = \"./kailua-fpvm.bin\";"
+        )
+        .unwrap();
+        writeln!(
+            &mut methods,
+            "pub const KAILUA_FPVM_ID: [u32; 8] = {:?};",
+            image_id.as_words()
+        )
+        .unwrap();
         std::fs::write(&target_code_path, &methods).unwrap();
     }
 
@@ -101,9 +114,9 @@ fn get_out_dir() -> PathBuf {
         if dir.join(".rustc_info.json").exists()
             || dir.join("CACHEDIR.TAG").exists()
             || dir.file_name() == Some(OsStr::new("target"))
-            && dir
-            .parent()
-            .is_some_and(|parent| parent.join("Cargo.toml").exists())
+                && dir
+                    .parent()
+                    .is_some_and(|parent| parent.join("Cargo.toml").exists())
         {
             return dir.join("riscv-guest");
         }

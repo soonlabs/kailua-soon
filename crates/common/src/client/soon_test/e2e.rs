@@ -1,11 +1,10 @@
 use super::{new_soon, TokenMetadata};
-use crate::client;
 use crate::client::soon_test::e2e::hints::*;
 use crate::client::soon_test::{to_execution, L1_NUMBER};
 use crate::executor::Execution;
 use alloy_primitives::{keccak256, B256};
 use alloy_rlp::{BytesMut, Encodable};
-use anyhow::{bail, ensure, Context, Result};
+use anyhow::{ensure, Context, Result};
 use crossbeam_channel::Receiver;
 use crossbeam_channel::Sender;
 use fraud_executor::accounts::SoonAccounts;
@@ -15,12 +14,11 @@ use kona_host::MemoryKeyValueStore;
 use kona_host::OnlineHostBackend;
 use kona_host::PreimageServer;
 use kona_preimage::errors::PreimageOracleResult;
+use kona_preimage::BidirectionalChannel;
 use kona_preimage::PreimageKey;
-use kona_preimage::{BidirectionalChannel, CommsClient};
 use kona_preimage::{HintReader, PreimageOracleClient};
 use kona_preimage::{HintWriterClient, OracleServer};
 use kona_proof::executor::KonaExecutor;
-use kona_proof::BootInfo;
 use solana_sdk::account::ReadableAccount;
 use solana_sdk::native_token::LAMPORTS_PER_SOL;
 use solana_sdk::pubkey::Pubkey;
@@ -30,7 +28,7 @@ use solana_sdk::system_instruction;
 use solana_sdk::system_program;
 use solana_sdk::system_transaction;
 use solana_sdk::transaction::Transaction;
-use soon_derive::traits::{ChainProvider, L2ChainProvider};
+use soon_derive::traits::L2ChainProvider;
 use soon_mpt_handler::MptHandler;
 use soon_mpt_primitives::update::MptUpdatingItem;
 use soon_node::node::tests::MockEthL1Node;
@@ -42,7 +40,7 @@ use soon_node::{
 };
 use soon_primitives::blocks::L2BlockHeader;
 use soon_primitives::l2blocks::L2Block;
-use soon_primitives::output_root::{self, OutputRoot};
+use soon_primitives::output_root::OutputRoot;
 use soon_primitives::{
     blocks::{BlockInfo, L2BlockInfo},
     rollup_config::SoonRollupConfig,
@@ -61,6 +59,7 @@ pub type SharedMockL1 = Arc<RwLock<MockEthL1Node>>;
 
 /// An all-in-one environment holding every component for e2e fraud proof testing between
 /// Soon Execution and Kona Execution.
+#[allow(dead_code)]
 pub struct E2EKailuaSoonEnvironment {
     pub e2e_producer: E2eSoonProducer,
     pub mpt_runner: MptRunner,
@@ -77,11 +76,12 @@ pub struct E2EKailuaSoonEnvironment {
     pub genesis_withdrawal_root: B256,
 }
 
+#[allow(dead_code)]
 pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2EKailuaSoonEnvironment> {
     // init soon producer.
-    let mut mock_l1_node = MockEthL1Node::new(L1_NUMBER, 12);
+    let mut mock_l1_node = MockEthL1Node::new(L1_NUMBER);
     let temp = tempfile::tempdir()?;
-    let (mut e2e_producer, identity, metadata, complete_receiver, mints) =
+    let (e2e_producer, identity, metadata, complete_receiver, mints) =
         new_soon(temp.path(), relative_to_soon, &mut mock_l1_node)?;
 
     let l1_node = Arc::new(RwLock::new(mock_l1_node));
@@ -103,7 +103,7 @@ pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2EKailuaSo
     info!("init state_root {state_root}, withdrawal root {withdrawal_root}");
 
     // init hint backend.
-    let mut kv = Arc::new(RwLock::new(MemoryKeyValueStore::new()));
+    let kv = Arc::new(RwLock::new(MemoryKeyValueStore::new()));
     let hint = BidirectionalChannel::new()?;
     let preimage = BidirectionalChannel::new()?;
     let chain_provider = hints::E2EChainProvider {
@@ -151,13 +151,14 @@ pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2EKailuaSo
 
 /// promote_multi_tx will promote more than 200 random blocks
 /// including modify `data` and `lamports` of all accounts.
+#[allow(dead_code)]
 pub async fn multi_l2_tx_to_execution(
     env: &mut E2EKailuaSoonEnvironment,
 ) -> Result<(Vec<Arc<Execution>>, HashMap<usize, B256>)> {
     let blocks = 500usize;
     let mut executions = vec![];
     let mut executor = env.e2e_producer.get_executor().clone();
-    let mut last_blockhash = executor.storage_query(|s| Ok(s.current_bank().last_blockhash()))?;
+    let mut last_blockhash;
     let mut agreed_l2_output_roots: HashMap<usize, B256> = HashMap::new();
 
     // firstly we need load prepared slot1.
@@ -278,6 +279,7 @@ pub async fn multi_l2_tx_to_execution(
     Ok((executions, agreed_l2_output_roots))
 }
 
+#[allow(dead_code)]
 pub async fn get_l2_block_by_executor(
     executor: &mut SharedExecutor,
     slot: u64,
@@ -311,6 +313,7 @@ pub mod hints {
     }
 
     #[derive(Clone)]
+    #[allow(dead_code)]
     pub struct E2EChainProvider {
         pub l1: SharedMockL1,
         pub executor: SharedExecutor,
@@ -384,15 +387,8 @@ pub mod hints {
             })
         }
 
-        fn get_block_by_number(&self, slot: u64) -> Result<L2Block> {
-            Ok(L2Block {
-                previous_blockhash: todo!(),
-                blockhash: todo!(),
-                parent_slot: todo!(),
-                block_time: todo!(),
-                block_height: todo!(),
-                transactions: todo!(),
-            })
+        fn get_block_by_number(&self, _slot: u64) -> Result<L2Block> {
+            todo!()
         }
 
         fn get_bank_hash(&self, slot: u64) -> Result<Option<String>> {
@@ -427,7 +423,7 @@ pub mod hints {
         /// Fetches data in response to a hint.
         async fn fetch_hint(
             hint: Hint<<Self::Cfg as OnlineHostBackendCfg>::HintType>,
-            cfg: &Self::Cfg,
+            _cfg: &Self::Cfg,
             providers: &<Self::Cfg as OnlineHostBackendCfg>::Providers,
             kv: SharedKeyValueStore,
         ) -> Result<()> {
@@ -560,9 +556,8 @@ pub mod hints {
 }
 
 use kona_executor::TrieDBProvider;
-use kona_mpt::{TrieHinter, TrieProvider};
+use kona_mpt::TrieHinter;
 use kona_preimage::{HintWriter, NativeChannel, OracleReader};
-use kona_proof::{errors::OracleProviderError, HintType};
 
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
 #[error("TestE2EError: {0}")]
@@ -592,13 +587,14 @@ impl HintWriterClient for E2EOracle {
     }
 }
 
+#[allow(dead_code)]
 pub async fn run_l2_core_client<
     E,
     L2: L2ChainProvider + Send + Sync,
     T: TrieDBProvider + TrieHinter + Clone + Send + Sync,
 >(
-    mut l2_provider: L2,
-    mut trie_provider: T,
+    mut _l2_provider: L2,
+    trie_provider: T,
     execution_cache: Vec<Arc<Execution>>,
     mut agreed_l2_roots: HashMap<usize, B256>,
     env: &E2EKailuaSoonEnvironment,
@@ -697,7 +693,7 @@ where
                     "slot at {slot} not same"
                 );
             }
-            Entry::Vacant(vacant_entry) => {}
+            Entry::Vacant(_) => {}
         }
 
         kona_executor.update_safe_head(L2BlockHeader {

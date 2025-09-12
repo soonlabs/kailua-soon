@@ -191,7 +191,6 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
         loop {
             let need_more_headers = {
                 let headers_map = self.headers_map.read().unwrap();
-                let headers = self.headers.read().unwrap();
                 headers_map.len() <= header_index
             };
 

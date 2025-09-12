@@ -234,6 +234,7 @@ pub async fn run_bonsai_client(
     Ok(groth16_receipt)
 }
 
+#[allow(deprecated)]
 pub fn should_use_bonsai() -> bool {
     !is_dev_mode()
         && std::env::var("BONSAI_API_URL").is_ok()

@@ -58,7 +58,7 @@ impl Ord for CandidateBlock {
     }
 }
 
-pub async fn benchmark(args: BenchArgs) -> anyhow::Result<()> {
+pub async fn benchmark(_args: BenchArgs) -> anyhow::Result<()> {
     // let tracer = tracer("kailua");
     // let context = opentelemetry::Context::current_with_span(tracer.start("benchmark"));
     //

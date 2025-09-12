@@ -12,25 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::borrow::Cow;
 use crate::proving::{ProvingArgs, ProvingError};
 use alloy::transports::http::reqwest::Url;
 use alloy_primitives::{Address, U256};
 use anyhow::{anyhow, bail, Context};
+use boundless_market::alloy::eips::BlockNumberOrTag;
 use boundless_market::alloy::providers::Provider;
 use boundless_market::alloy::signers::local::PrivateKeySigner;
-use boundless_market::alloy::eips::BlockNumberOrTag;
 use boundless_market::client::Client;
 use boundless_market::contracts::{Predicate, RequestId, RequestStatus, Requirements};
+use boundless_market::request_builder::OfferParams;
 use boundless_market::storage::{StorageProviderConfig, StorageProviderType};
 use boundless_market::{Deployment, GuestEnvBuilder};
-use boundless_market::request_builder::OfferParams;
 use clap::Parser;
 use kailua_build::{KAILUA_FPVM_ELF, KAILUA_FPVM_ID};
 use kailua_common::journal::ProofJournal;
 use risc0_ethereum_contracts::selector::Selector;
 use risc0_zkvm::sha::Digestible;
 use risc0_zkvm::{default_executor, ExecutorEnv, Journal, Receipt};
+use std::borrow::Cow;
 use std::time::Duration;
 use tracing::info;
 use tracing::log::warn;
@@ -134,10 +134,7 @@ pub struct MarketProviderConfig {
 }
 
 impl MarketProviderConfig {
-    pub fn to_arg_vec(
-        &self,
-        storage_provider_config: &StorageProviderConfig,
-    ) -> Vec<String> {
+    pub fn to_arg_vec(&self, storage_provider_config: &StorageProviderConfig) -> Vec<String> {
         let mut proving_args = Vec::new();
         proving_args.extend(vec![
             String::from("--boundless-rpc-url"),
@@ -275,8 +272,7 @@ pub async fn run_boundless_client(
             if let Some(boundless_market_address) = args.boundless_market_address {
                 builder.boundless_market_address(boundless_market_address);
             };
-            if let Some(boundless_verifier_router_address) =
-                args.boundless_verifier_router_address
+            if let Some(boundless_verifier_router_address) = args.boundless_verifier_router_address
             {
                 builder.verifier_router_address(boundless_verifier_router_address);
             };
@@ -308,8 +304,8 @@ pub async fn run_boundless_client(
         KAILUA_FPVM_ID,
         Predicate::digest_match(proof_journal.digest()),
     )
-        // manually choose latest Groth16 receipt selector
-        .with_selector((Selector::groth16_latest() as u32).into());
+    // manually choose latest Groth16 receipt selector
+    .with_selector((Selector::groth16_latest() as u32).into());
 
     // Check if an unexpired request had already been made recently
     let boundless_wallet_address = boundless_client.signer.as_ref().unwrap().address();
@@ -368,8 +364,8 @@ pub async fn run_boundless_client(
             args.boundless_order_check_interval,
             request.expires_at(),
         )
-            .await
-            .map_err(|e| ProvingError::OtherError(anyhow!(e)));
+        .await
+        .map_err(|e| ProvingError::OtherError(anyhow!(e)));
     }
 
     // Preflight execution to get cycle count
@@ -393,9 +389,9 @@ pub async fn run_boundless_client(
         let session_info = default_executor().execute(env, KAILUA_FPVM_ELF)?;
         Ok::<_, anyhow::Error>(session_info)
     })
-        .await
-        .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
-        .map_err(|e| ProvingError::ExecutionError(anyhow!(e)))?;
+    .await
+    .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
+    .map_err(|e| ProvingError::ExecutionError(anyhow!(e)))?;
 
     // todo: remember this storage location to avoid duplicate uploads
     // Upload the ELF to the storage provider so that it can be fetched by the market.
@@ -435,7 +431,9 @@ pub async fn run_boundless_client(
         .get_block_by_number(BlockNumberOrTag::Latest)
         .await
         .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
-        .ok_or_else(|| ProvingError::OtherError(anyhow!("Failed to fetch latest block from Boundless RPC")))?
+        .ok_or_else(|| {
+            ProvingError::OtherError(anyhow!("Failed to fetch latest block from Boundless RPC"))
+        })?
         .header
         .timestamp;
 
@@ -475,7 +473,10 @@ pub async fn run_boundless_client(
                 .build()
                 .map_err(|e| ProvingError::OtherError(anyhow!(e)))?,
         )
-        .with_request_id(RequestId::new(boundless_wallet_address, boundless_wallet_nonce));
+        .with_request_id(RequestId::new(
+            boundless_wallet_address,
+            boundless_wallet_nonce,
+        ));
 
     // Send the request and wait for it to be completed.
     let (request_id, expires_at) = if args.boundless_order_stream_url.is_some() {
@@ -505,8 +506,8 @@ pub async fn run_boundless_client(
         args.boundless_order_check_interval,
         expires_at,
     )
-        .await
-        .map_err(|e| ProvingError::OtherError(anyhow!(e)))
+    .await
+    .map_err(|e| ProvingError::OtherError(anyhow!(e)))
 }
 
 pub async fn retrieve_proof(

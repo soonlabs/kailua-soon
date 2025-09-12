@@ -278,8 +278,11 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
             .filter(|addr| !addr.is_empty())
             .map(|addr| Address::from_str(addr))
             .collect::<Result<Vec<_>, _>>()?;
-        
-        info!("Assigning {} proposal vanguards in KailuaTreasury.", vanguard_addresses.len());
+
+        info!(
+            "Assigning {} proposal vanguards in KailuaTreasury.",
+            vanguard_addresses.len()
+        );
 
         for vanguard_address in vanguard_addresses {
             await_tel_res!(

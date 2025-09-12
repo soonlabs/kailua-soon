@@ -19,7 +19,7 @@ import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 
 import "../src/vendor/FlatOPImportV1.4.0.sol";
-import "../src/vendor/FlatR0ImportV2.2.0.sol";
+import "../src/vendor/FlatR0ImportV2.0.2.sol";
 
 import "../src/KailuaLib.sol";
 import "../src/KailuaTournament.sol";
@@ -33,6 +33,7 @@ contract KailuaTest is Test {
     DisputeGameFactory factory;
     OptimismPortal2 portal;
     RiscZeroMockVerifier verifier;
+    RiscZeroGroth16Verifier verifier2;
 
     uint256 public constant BLOB_NZ_VALUE = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000000;
     bytes public constant BLOB_NZ_COMMIT = abi.encodePacked(
@@ -41,6 +42,9 @@ contract KailuaTest is Test {
     bytes public constant BLOB_ID_ELEM = abi.encodePacked(
         hex"c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
     );
+    bytes32 public constant CONTROL_ROOT = hex"ce52bf56033842021af3cf6db8a50d1b7535c125a34f1a22c6fdcf002c5a1529";
+    bytes32 public constant BN254_CONTROL_ID = hex"04446e66d300eb7fb45c9726bb53c793dda407a62e9601618bb43c5c14657ac0";
+    bytes4 public constant SELECTOR = bytes4(0xbb001d44);
 
     function setUp() public virtual {
         // OP Stack
@@ -53,6 +57,9 @@ contract KailuaTest is Test {
         vm.assertEq(address(portal.disputeGameFactory()), address(factory));
         // RISC Zero
         verifier = new RiscZeroMockVerifier(bytes4(bytes32(uint256(0xFF))));
+        verifier2 = new RiscZeroGroth16Verifier(CONTROL_ROOT, BN254_CONTROL_ID);
+
+        vm.assertEq(SELECTOR, verifier2.SELECTOR());
     }
 
     function deployKailua(
