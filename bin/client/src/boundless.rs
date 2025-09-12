@@ -111,7 +111,7 @@ pub struct MarketProviderConfig {
     #[clap(long, env, required = false, default_value = "0")]
     pub boundless_cycle_min_wei: U256,
     /// Maximum price (wei) per cycle of the proving order
-    #[clap(long, env, required = false, default_value = "200000")]
+    #[clap(long, env, required = false, default_value = "2000000")]
     pub boundless_cycle_max_wei: U256,
     /// Stake (USDC) per million cycles of the proving order
     #[clap(long, env, required = false, default_value = "1000")]
@@ -120,13 +120,13 @@ pub struct MarketProviderConfig {
     #[clap(long, env, required = false, default_value_t = 2.0)]
     pub boundless_order_bid_delay_factor: f64,
     /// Multiplier for order price to ramp up from min to max.
-    #[clap(long, env, required = false, default_value_t = 3.0)]
+    #[clap(long, env, required = false, default_value_t = 2.0)]
     pub boundless_order_ramp_up_factor: f64,
     /// Multiplier for order fulfillment timeout (seconds/segment) after locking
-    #[clap(long, env, required = false, default_value_t = 5.0)]
+    #[clap(long, env, required = false, default_value_t = 9.0)]
     pub boundless_order_lock_timeout_factor: f64,
     /// Multiplier for order expiry timeout (seconds/segment) after lock timeout
-    #[clap(long, env, required = false, default_value_t = 3.0)]
+    #[clap(long, env, required = false, default_value_t = 4.0)]
     pub boundless_order_expiry_factor: f64,
     /// Time in seconds between attempts to check order status
     #[clap(long, env, required = false, default_value_t = 12)]
