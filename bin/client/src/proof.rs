@@ -20,6 +20,7 @@ use std::path::Path;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
+#[allow(deprecated)]
 pub fn proof_file_name(proof_journal: &ProofJournal) -> String {
     let version = risc0_zkvm::get_version().unwrap();
     let suffix = if risc0_zkvm::is_dev_mode() {

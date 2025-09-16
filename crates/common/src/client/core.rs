@@ -35,7 +35,6 @@ use soon_derive::sources::DAServerSource;
 use soon_derive::traits::{BlobProvider, L2ChainProvider};
 use soon_primitives::blocks::L2BlockHeader;
 use soon_primitives::output_root::OutputRoot;
-use soon_primitives::rollup_config::SoonRollupConfig;
 use std::fmt::Debug;
 use std::mem::take;
 use std::sync::{Arc, Mutex};
@@ -546,6 +545,7 @@ pub mod tests {
     use kona_proof::BootInfo;
     use litesvm::accounts_callback::MemoryAccountsCallback;
     use solana_sdk::signer::Signer;
+    use soon_primitives::rollup_config::SoonRollupConfig;
     use std::sync::Arc;
     use tracing_subscriber::EnvFilter;
 

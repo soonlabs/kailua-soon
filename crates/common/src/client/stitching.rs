@@ -330,7 +330,7 @@ pub fn stitch_executions(
     for execution_trace in stitched_executions {
         let precondition_hash = crate::executor::exec_precondition_hash(execution_trace.as_slice());
         // Validate execution data
-        for execution in execution_trace {
+        for _execution in execution_trace {
             // Validate receipts
             // assert_eq!(
             //     execution.artifacts.header.receipts_root,

@@ -156,6 +156,7 @@ pub fn maybe_patch_proof(
     expected_fpvm_image_id: [u8; 32],
 ) -> anyhow::Result<risc0_zkvm::Receipt> {
     // Return the proof if we can't patch it
+    #[allow(deprecated)]
     if !risc0_zkvm::is_dev_mode() {
         return Ok(receipt);
     }
