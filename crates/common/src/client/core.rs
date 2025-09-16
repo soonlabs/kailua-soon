@@ -541,7 +541,7 @@ pub mod tests {
     use crate::test::TestOracle;
     use alloy_primitives::{b256, B256};
     use kona_cli::init_tracing_subscriber;
-    use kona_executor::{OffchainL2Builder, TrieDB};
+    use kona_executor::{OffchainL2Builder};
     use kona_proof::l1::OracleBlobProvider;
     use kona_proof::BootInfo;
     use litesvm::accounts_callback::MemoryAccountsCallback;

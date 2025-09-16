@@ -1,11 +1,10 @@
 use super::{new_soon, TokenMetadata};
-use crate::client;
 use crate::client::soon_test::e2e::hints::*;
 use crate::client::soon_test::{to_execution, L1_NUMBER};
 use crate::executor::Execution;
-use alloy_primitives::{keccak256, B256};
+use alloy_primitives::{keccak256, Address, B256};
 use alloy_rlp::{BytesMut, Encodable};
-use anyhow::{bail, ensure, Context, Result};
+use anyhow::{ensure, Context, Result};
 use crossbeam_channel::Receiver;
 use crossbeam_channel::Sender;
 use fraud_executor::accounts::SoonAccounts;
@@ -15,13 +14,14 @@ use kona_host::MemoryKeyValueStore;
 use kona_host::OnlineHostBackend;
 use kona_host::PreimageServer;
 use kona_preimage::errors::PreimageOracleResult;
+use kona_preimage::BidirectionalChannel;
 use kona_preimage::PreimageKey;
-use kona_preimage::{BidirectionalChannel, CommsClient};
 use kona_preimage::{HintReader, PreimageOracleClient};
 use kona_preimage::{HintWriterClient, OracleServer};
 use kona_proof::executor::KonaExecutor;
-use kona_proof::BootInfo;
+use rkyv::ptr_meta::metadata;
 use solana_sdk::account::ReadableAccount;
+use solana_sdk::message::Message;
 use solana_sdk::native_token::LAMPORTS_PER_SOL;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
@@ -30,10 +30,10 @@ use solana_sdk::system_instruction;
 use solana_sdk::system_program;
 use solana_sdk::system_transaction;
 use solana_sdk::transaction::Transaction;
-use soon_derive::traits::{ChainProvider, L2ChainProvider};
+use soon_derive::traits::L2ChainProvider;
 use soon_mpt_handler::MptHandler;
 use soon_mpt_primitives::update::MptUpdatingItem;
-use soon_node::node::tests::MockEthL1Node;
+use soon_node::node::tests::{create_spl_tx, MockEthL1Node};
 use soon_node::{
     derive::mock::MockInstant,
     executor::{ExecutorOperator, SharedExecutor},
@@ -42,7 +42,7 @@ use soon_node::{
 };
 use soon_primitives::blocks::L2BlockHeader;
 use soon_primitives::l2blocks::L2Block;
-use soon_primitives::output_root::{self, OutputRoot};
+use soon_primitives::output_root::OutputRoot;
 use soon_primitives::{
     blocks::{BlockInfo, L2BlockInfo},
     rollup_config::SoonRollupConfig,
@@ -79,7 +79,7 @@ pub struct E2EKailuaSoonEnvironment {
 
 pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2EKailuaSoonEnvironment> {
     // init soon producer.
-    let mut mock_l1_node = MockEthL1Node::new(L1_NUMBER, 12);
+    let mut mock_l1_node = MockEthL1Node::new(L1_NUMBER);
     let temp = tempfile::tempdir()?;
     let (mut e2e_producer, identity, metadata, complete_receiver, mints) =
         new_soon(temp.path(), relative_to_soon, &mut mock_l1_node)?;
@@ -154,7 +154,6 @@ pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2EKailuaSo
 pub async fn multi_l2_tx_to_execution(
     env: &mut E2EKailuaSoonEnvironment,
 ) -> Result<(Vec<Arc<Execution>>, HashMap<usize, B256>)> {
-    let blocks = 500usize;
     let mut executions = vec![];
     let mut executor = env.e2e_producer.get_executor().clone();
     let mut last_blockhash = executor.storage_query(|s| Ok(s.current_bank().last_blockhash()))?;
@@ -166,10 +165,93 @@ pub async fn multi_l2_tx_to_execution(
     executor.finalize(1)?;
     executions.push(Arc::new(execution));
 
+    // prepare some delete tx.
+    let mut next_slot = 2;
+    let delete_account = 5;
+    for i in 0..delete_account {
+        let deleted_account = env.mints[env.mints.len() - i - 1].insecure_clone();
+        let payer = env.mints[0].insecure_clone();
+        let lamports = env
+            .e2e_producer
+            .get_executor()
+            .storage_query(|s| Ok(s.current_bank().get_balance(&deleted_account.pubkey())))?;
+        info!(
+            "before remove {}: lamports {}",
+            deleted_account.pubkey().to_string(),
+            lamports
+        );
+
+        let transfer_instruction =
+            system_instruction::transfer(&deleted_account.pubkey(), &payer.pubkey(), lamports);
+        let message = Message::new_with_blockhash(
+            &[transfer_instruction],
+            Some(&payer.pubkey()),
+            &last_blockhash,
+        );
+        let mut tx = Transaction::new_unsigned(message);
+        tx.sign(&[&payer, &deleted_account], last_blockhash);
+        env.e2e_producer.add_tx(tx)?;
+        env.e2e_producer.mine_with_block(None)?;
+        env.complete_receiver.try_recv()?;
+        let (block, header) = get_l2_block_by_executor(&mut executor, next_slot).await?;
+        let execution = to_execution(block, B256::ZERO, B256::ZERO, header)?;
+        executions.push(Arc::new(execution));
+        executor.finalize(next_slot)?;
+        next_slot += 1;
+        let lamports = env
+            .e2e_producer
+            .get_executor()
+            .storage_query(|s| Ok(s.current_bank().get_balance(&deleted_account.pubkey())))?;
+        info!(
+            "after remove {}: lamports {}",
+            deleted_account.pubkey().to_string(),
+            lamports
+        );
+    }
+
+    // prepare some withdrawal tx.
+    let withdrawal_tx_count = 5;
+    let mut create_counter = false;
+    for i in 0..withdrawal_tx_count {
+        let identity = env.identity.insecure_clone();
+        let mut instructions = vec![];
+        if !create_counter {
+            instructions.push(bridge::instruction::create_user_withdrawal_counter_account(
+                identity.pubkey(),
+            ));
+            create_counter = true;
+        }
+
+        instructions.push(bridge::instruction::withdraw_eth(
+            ethabi::Address::zero(),
+            identity.pubkey(),
+            1e8 as u128,
+            1e8 as u128,
+            i,
+        ));
+        let tx = Transaction::new_signed_with_payer(
+            &instructions,
+            Some(&identity.pubkey()),
+            &[identity],
+            last_blockhash,
+        );
+        let accounts = tx.message.account_keys.clone();
+        env.e2e_producer.add_tx(tx)?;
+        env.e2e_producer.mine_with_block(None)?;
+        env.complete_receiver.try_recv()?;
+        let (block, header) = get_l2_block_by_executor(&mut executor, next_slot).await?;
+        let execution = to_execution(block, B256::ZERO, B256::ZERO, header)?;
+        executions.push(Arc::new(execution));
+        executor.finalize(next_slot)?;
+        next_slot += 1;
+    }
+
+    let blocks = 50usize;
+    // prepare some random tx.
     for i in 0..blocks {
-        let slot = (i + 2) as u64;
-        let from = env.mints[i % env.mints.len()].insecure_clone();
-        let to = env.mints[(i + 1) % env.mints.len()].pubkey();
+        let available_mints = env.mints.len() - delete_account;
+        let from = env.mints[i % available_mints].insecure_clone();
+        let to = env.mints[(i + 1) % available_mints].pubkey();
         last_blockhash = executor.storage_query(|s| Ok(s.current_bank().last_blockhash()))?;
 
         // Create different transaction types based on index to enrich testing
@@ -215,54 +297,24 @@ pub async fn multi_l2_tx_to_execution(
                 tx.sign(&[&from, &target_account], last_blockhash);
                 tx
             }
-            4 => {
-                // Delete account transaction (transfer all remaining balance to close the account)
-                let target_account = env.mints[(i + 4) % env.mints.len()].insecure_clone();
-                // Query the account balance first to transfer all of it
-                let account_balance =
-                    match env.e2e_producer.get_executor().storage_query(|s| {
-                        Ok(s.current_bank().get_balance(&target_account.pubkey()))
-                    }) {
-                        Ok(balance) => balance,
-                        Err(_) => LAMPORTS_PER_SOL / 1000, // fallback amount
-                    };
-
-                // Transfer all balance to effectively delete the account
-                if account_balance > 0 {
-                    system_transaction::transfer(
-                        &target_account,
-                        &to,
-                        account_balance,
-                        last_blockhash,
-                    )
-                } else {
-                    // If no balance, just do a minimal transfer
-                    system_transaction::transfer(
-                        &from,
-                        &to,
-                        LAMPORTS_PER_SOL / 1000,
-                        last_blockhash,
-                    )
-                }
-            }
             _ => unreachable!(),
         };
 
         env.e2e_producer.add_tx(tx)?;
         env.e2e_producer.mine_with_block(None)?;
         env.complete_receiver.try_recv()?;
+
         // finalize at once.
-        let (block, header) = get_l2_block_by_executor(&mut executor, slot).await?;
+        let (block, header) = get_l2_block_by_executor(&mut executor, next_slot).await?;
         let execution = to_execution(block, B256::ZERO, B256::ZERO, header)?;
         executions.push(Arc::new(execution));
-        executor.finalize(slot)?;
-
-        if slot % 50 == 0 {
+        executor.finalize(next_slot)?;
+        if next_slot % 50 == 0 {
             tokio::time::sleep(Duration::from_secs(1)).await;
             let handler = env.mpt_runner.inner_handler();
-            assert_eq!(handler.get_aligned_slot(slot)?, slot);
-            let state_root = handler.query_state_root(slot)?;
-            let withdrawal_root = handler.query_withdrawal_root(slot)?;
+            assert_eq!(handler.get_aligned_slot(next_slot)?, next_slot);
+            let state_root = handler.query_state_root(next_slot)?;
+            let withdrawal_root = handler.query_withdrawal_root(next_slot)?;
             let block_hash = executor
                 .storage_query(|s| Ok(s.current_bank().last_blockhash()))?
                 .to_bytes();
@@ -272,8 +324,9 @@ pub async fn multi_l2_tx_to_execution(
                 block_hash: B256::from_slice(&block_hash),
             }
             .hash();
-            agreed_l2_output_roots.insert(slot as usize, output_root);
+            agreed_l2_output_roots.insert(next_slot as usize, output_root);
         }
+        next_slot += 1;
     }
     Ok((executions, agreed_l2_output_roots))
 }
@@ -454,7 +507,9 @@ pub mod hints {
                         output_res.encode().into(),
                     )?;
                 }
-                HintType::L2StateNode => {}
+                HintType::L2StateNode => {
+                    unreachable!("hint not support");
+                }
                 HintType::L2AccountProof => {
                     // block number + hashed address<b256>
                     ensure!(
@@ -560,9 +615,8 @@ pub mod hints {
 }
 
 use kona_executor::TrieDBProvider;
-use kona_mpt::{TrieHinter, TrieProvider};
+use kona_mpt::TrieHinter;
 use kona_preimage::{HintWriter, NativeChannel, OracleReader};
-use kona_proof::{errors::OracleProviderError, HintType};
 
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
 #[error("TestE2EError: {0}")]
@@ -597,8 +651,8 @@ pub async fn run_l2_core_client<
     L2: L2ChainProvider + Send + Sync,
     T: TrieDBProvider + TrieHinter + Clone + Send + Sync,
 >(
-    mut l2_provider: L2,
-    mut trie_provider: T,
+    l2_provider: L2,
+    trie_provider: T,
     execution_cache: Vec<Arc<Execution>>,
     mut agreed_l2_roots: HashMap<usize, B256>,
     env: &E2EKailuaSoonEnvironment,
@@ -642,14 +696,10 @@ where
     let total = execution_cache.len();
     for (idx, execution) in execution_cache.into_iter().enumerate() {
         let slot = idx + 1;
-        info!("enter execution {}/{}", idx, total);
+        info!("enter execution {}/{}", slot, total);
         let executor_result = kona_executor
             .execute_payload(execution.attributes.clone())
             .await?;
-        info!(
-            "slot {slot}, result: {}",
-            executor_result.execution_result[0].is_ok()
-        );
         let new_output_root = kona_executor
             .compute_output_root()
             .context("compute_output_root: Verify post state")?;
@@ -696,6 +746,7 @@ where
                     new_output_root,
                     "slot at {slot} not same"
                 );
+                info!("slot {slot} output root check pass");
             }
             Entry::Vacant(vacant_entry) => {}
         }

@@ -318,7 +318,7 @@ where
         Ok(())
     }
 
-    fn hint_account_proof(&self, _pubkey: &Pubkey, _block_number: u64) -> Result<(), Self::Error> {
+    fn hint_account_proof(&self, _pubkey: B256, _block_number: u64) -> Result<(), Self::Error> {
         // No-op for testing
         Ok(())
     }

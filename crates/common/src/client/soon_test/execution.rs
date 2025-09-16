@@ -34,7 +34,7 @@ use tracing::info;
 pub async fn soon_to_execution_cache(
     relative_to_soon: Option<&str>,
 ) -> Result<(BootInfo, MockOracle)> {
-    let mut mock_l1_node = MockEthL1Node::new(L1_NUMBER, 12);
+    let mut mock_l1_node = MockEthL1Node::new(L1_NUMBER);
     let temp = tempfile::tempdir()?;
     let (mut producer, identity, metadata, complete_receiver, _) =
         new_soon(temp.path(), relative_to_soon, &mut mock_l1_node)?;
