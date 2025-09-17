@@ -1,86 +1,124 @@
-# Kailua
+# Kailua-Soon
 
-> [!NOTE]
-> Documentation: https://risc0.github.io/kailua/
+Kailua-Soon bridges the gap between Solana Virtual Machine (SVM) execution and RISC-Zero zkVM proof generation, enabling the first SVM-powered OP Stack rollup with cryptographic validity and fraud proofs. By integrating [kona-soon](../kona-soon)'s revolutionary SVM executor with Kailua's proven zkVM framework, we achieve faster finality and reduced operational costs while maintaining full compatibility with the OP Stack ecosystem.
 
-Kailua uses the RISC-Zero zkVM to verifiably run Optimism's [Kona][kona] and secure rollups with cryptographic proofs enabling faster finality and reduced operational costs.
+Unlike traditional EVM-based rollups, Kailua-Soon leverages the high-performance SVM execution environment while preserving the battle-tested OP Stack L2 derivation pipeline, creating a unique hybrid architecture that combines the best of both worlds.
 
-Kailua's Fault Proving Game is designed to require constant collateral lockups from both proposers and validators (challengers), whereas the Bisection-based fault dispute game backed by Cannon requires a linear number of deposits proportional to the number of proposals/challenges.
+## Architecture Overview
 
-The fault proofs are estimated to require on the order of 100 billion cycles to prove in the worst case, which, on Bonsai, would cost on the order of 100 USD and take around an hour to prove.
-All proving costs are borne by the dishonest party in the protocol, whether that is the proposer or validator.
+Kailua-Soon serves as the crucial bridge between SVM execution and zkVM proof generation:
+
+### Core Integration Points
+
+1. **SVM Execution Adapter**: Integrates kona-soon's `litesvm` executor into Kailua's proving framework
+2. **Enhanced Host Program**: Extended `kailua-host` with SOON network data providers for L2 state verification
+3. **Optimized Client Program**: Modified `kailua-client` to handle SVM state transitions and account model proofs
+4. **Boundless Market Integration**: Seamless integration with boundless-market v0.13.0 for decentralized proof generation
+
+### Key Improvements
+
+- **🔄 SVM → zkVM Bridge**: First-of-its-kind integration enabling SVM execution proof generation
+- **⚡ Enhanced Performance**: Leverages SVM's high-performance execution with zkVM security guarantees
+- **🛡️ Decentralized Proving**: Integrated with Boundless proof market for distributed proof generation
+- **🌐 OP Stack Compatibility**: Maintains full compatibility with Optimism's Bedrock contracts v1.4.0+
 
 ## Development Status
 
 > [!CAUTION]
-> 
-> `Kailua` as well as `kona` are still in active development and are NOT recommended for production usage.
+>
+> `Kailua-Soon` is experimental software integrating cutting-edge SVM and zkVM technologies. Not recommended for production usage.
 
-## Fraud/Validity Proofs
+## SVM-Powered Fraud/Validity Proofs
 
-Kailua enables rollup operators to add a new fault proof contract, compatible with Bedrock contracts `v1.4.0` and above, using the `DisputeGameFactory` rollup instance to their deployment that relies on RISC-Zero zkVM proofs to finalize/dismiss output proposals.
+Kailua-Soon enables rollup operators to deploy SVM-based fault proof contracts that leverage RISC-Zero zkVM to generate cryptographic proofs of SVM state transitions. The enhanced `KailuaGame` contract supports:
 
-`KailuaGame` optimistically allows outputs to be accepted after a timeout if no fraud proof is published against it, or if the output is challenged, waits for a proof to be submitted to decide whether to dismiss the output.
+- **SVM State Validation**: Cryptographic verification of Solana account model state transitions
+- **SOON Network Integration**: Native support for SOON network's L2 derivation pipeline
+- **Boundless Market Proofs**: Decentralized proof generation through the Boundless ecosystem
 
 ## Prerequisites
-1. [rust](https://www.rust-lang.org/tools/install)
-2. [just](https://just.systems/man/en/)
-3. [docker](https://www.docker.com/)
-4. [svm](https://github.com/alloy-rs/svm-rs)
-5. [foundry](https://book.getfoundry.sh/getting-started/installation)
 
-## Devnet Usage
+### Core Dependencies
+1. [Rust](https://www.rust-lang.org/tools/install) - Latest stable version
+2. [Just](https://just.systems/man/en/) - Command runner for development workflows
+3. [Docker](https://www.docker.com/) - Container runtime for local development
+4. [Foundry](https://book.getfoundry.sh/getting-started/installation) - Ethereum development toolkit
 
-1. `just devnet-init-l1`
-    * (Optional) Init beacon chain validator keys if needed.
-2. `just devnet-build-l1`
-    * Builds the local cargo and foundry projects for L1 node.
-3. `just devnet-up-l1`
-    * Start l1 node for devnet.
-4. `just devnet-verify`
-    * Verifies the contracts are deployed correctly.    
-5. `just devnet-build-l2`
-    * Builds the L2 node related files according to l1 node.
-6. `just devnet-up`
-    * Start the entire devnet, including l1 and l2 nodes.
-7. `just devnet-build`
-    * Builds the local cargo and foundry projects.
-8. `just devnet-upgrade`
-    * Upgrades the devnet to use the `KailuaGame` contract.
-    * Assumes the default values of the local soon devnet, but can take parameters.
-9. `just devnet-propose`
-    * Launches the Kailua proposer.
-    * This runs the sequences, which periodically creates new `KailuaGame` instances.
-10. `just devnet-validate`
-    * Launches the Kailua validator.
-    * This monitors `KailuaGame` instances for disputes and creates proofs to resolve them.
-    * Note: Use `RISC0_DEV_MODE=1` to use fake proofs.
-11. `just devnet-fault`
-    * Deploys a single `KailuaGame` instance with a faulty sequencing proposal.
-    * Tests the validator's fault proving functionality.
-    * Tests the proposer's canonical chain tracking functionality.
-12. After you're done:
-    * `just devnet-down` to stop the running docker containers.
-    * `just devnet-clean` to cleanup the docker volumes.
+### SVM Integration Dependencies
+5. **kona-soon**: Must be available at `../kona-soon/` (see [kona-soon README](../kona-soon/README.md))
+6. **SOON Network Components**: Integrated via workspace dependencies
 
-## Questions, Feedback, and Collaborations
+## Development Workflow
 
-We'd love to hear from you on [Discord][discord] or [Twitter][twitter].
+Kailua-Soon provides a comprehensive development workflow for SVM-powered zkVM proving:
 
-[bonsai access]: https://bonsai.xyz/apply
-[cargo-risczero]: https://docs.rs/cargo-risczero
-[crates]: https://github.com/risc0/risc0/blob/main/README.md#rust-binaries
-[dev-docs]: https://dev.risczero.com
-[dev-mode]: https://dev.risczero.com/api/generating-proofs/dev-mode
-[discord]: https://discord.gg/risczero
-[docs.rs]: https://docs.rs/releases/search?query=risc0
-[examples]: https://github.com/risc0/risc0/tree/main/examples
-[risc0-build]: https://docs.rs/risc0-build
-[risc0-repo]: https://www.github.com/risc0/risc0
-[risc0-zkvm]: https://docs.rs/risc0-zkvm
-[rustup]: https://rustup.rs
-[rust-toolchain]: rust-toolchain.toml
-[twitter]: https://twitter.com/risczero
-[zkvm-overview]: https://dev.risczero.com/zkvm
-[zkhack-iii]: https://www.youtube.com/watch?v=Yg_BGqj_6lg&list=PLcPzhUaCxlCgig7ofeARMPwQ8vbuD6hC5&index=5
-[kona]: https://github.com/anton-rs/kona
+### 1. L1 Infrastructure Setup
+```bash
+just devnet-init-l1      # Initialize beacon chain validator keys
+just devnet-build-l1     # Build L1 node and foundry contracts
+just devnet-up-l1        # Start L1 (Ethereum) and beacon chain nodes
+just devnet-build        # Build l2 image
+just devnet-verify       # Verify contract deployment
+```
+
+### 2. L2 SOON Network Setup
+```bash
+just devnet-build-l2     # Build L2 SOON network components
+just devnet-up           # Start complete L1+L2 infrastructure
+```
+
+### 3. SVM-zkVM Integration
+```bash
+just devnet-build        # Build kailua-soon with SVM integration
+just devnet-upgrade      # Deploy enhanced KailuaGame contracts for SVM
+```
+
+### 4. Proof Generation & Validation
+```bash
+# Launch SVM-aware proposer
+just devnet-propose
+
+# Generate a fraud proof
+just devnet-fault 1 0
+
+# Launch validator with local proving
+just devnet-validate
+```
+
+
+## SVM-zkVM Proof Architecture
+
+Kailua-Soon introduces several key enhancements to support SVM execution within the zkVM proving framework:
+
+### Enhanced Binaries
+- **`kailua-client`**: SVM-aware client program that executes state transitions in the zkVM
+- **`kailua-host`**: Enhanced host program with SOON network data providers and SVM state management
+- **`kailua-cli`**: Command-line interface with SVM-specific operations and Boundless market integration
+
+### Boundless Market Integration
+Kailua-Soon seamlessly integrates with the Boundless proof market for decentralized proof generation:
+
+- **Automated Proof Submission**: Validators can automatically submit proofs to the Boundless market
+- **Economic Incentives**: Integrated with Boundless market's reward system for proof generators
+- **Scalable Proving**: Distribute proof generation across the Boundless network for improved throughput
+
+
+## Credits & Acknowledgments
+
+Kailua-Soon builds upon the work of several innovative projects:
+
+- **[boundless-xyz/kailua](https://github.com/boundless-xyz/kailua)**: The foundational zkVM proving framework
+- **[kona-soon](../kona-soon)**: Revolutionary SVM integration with OP Stack derivation
+- **[RISC Zero](https://risczero.com)**: zkVM technology enabling verifiable SVM execution
+- **[Boundless](https://boundless.market)**: Decentralized proof market for scalable verification
+- **[SOON Network](https://soo.network)**: SVM-powered L2 infrastructure
+
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE)
+
+> [!NOTE]
+>
+> Contributions intentionally submitted for inclusion in this project by you
+> shall be licensed as above, without any additional terms or conditions.
