@@ -10,6 +10,7 @@ async fn main() -> anyhow::Result<()> {
     kona_cli::init_tracing_subscriber(args.kailua_verbosity, None::<EnvFilter>)?;
     info!("Initialized tracing subscriber");
 
+    #[cfg(test)]
     kailua_client::offline::run_offline_client(args.offline_cfg)?;
     info!("Offline client finished");
     Ok(())

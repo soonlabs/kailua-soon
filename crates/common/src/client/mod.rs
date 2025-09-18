@@ -13,7 +13,7 @@
 // limitations under the License.
 
 pub mod core;
-#[cfg(feature = "__test")]
+#[cfg(test)]
 pub mod soon_test;
 pub mod stateless;
 pub mod stitching;
@@ -35,7 +35,7 @@ pub fn log(msg: &str) {
     tracing::info!("{msg}");
 }
 
-#[cfg(all(test, feature = "__test"))]
+#[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 pub mod tests {
     use crate::test::TestOracle;

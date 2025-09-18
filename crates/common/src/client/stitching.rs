@@ -494,7 +494,7 @@ pub fn stitch_boot_info(
     stitched_journal
 }
 
-#[cfg(all(test, feature = "__test"))]
+#[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 pub mod tests {
     use super::*;

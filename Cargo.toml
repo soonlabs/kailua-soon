@@ -99,35 +99,28 @@ kailua-contracts = { path = "crates/contracts" }
 kailua-host = { path = "bin/host" }
 
 # Kona
-kona-cli = { path = "../kona-soon/crates/utilities/cli", default-features = false }
-kona-client = { path = "../kona-soon/bin/client", default-features = false }
-kona-driver = { path = "../kona-soon/crates/protocol/driver" }
-kona-executor = { path = "../kona-soon/crates/proof/executor" }
-kona-host = { path = "../kona-soon/bin/host", default-features = false, features = [
+kona-cli = { git = "https://github.com/soonlabs/kona-soon", branch = "dev", default-features = false }
+kona-client = { git = "https://github.com/soonlabs/kona-soon", branch = "dev", default-features = false }
+kona-driver = { git = "https://github.com/soonlabs/kona-soon", branch = "dev" }
+kona-executor = { git = "https://github.com/soonlabs/kona-soon", branch = "dev" }
+kona-host = { git = "https://github.com/soonlabs/kona-soon", branch = "dev", default-features = false, features = [
     "single",
 ] }
-kona-mpt = { path = "../kona-soon/crates/proof/mpt", features = ["serde"] }
-kona-preimage = { path = "../kona-soon/crates/proof/preimage", features = [
+kona-mpt = { git = "https://github.com/soonlabs/kona-soon", branch = "dev", features = ["serde"] }
+kona-preimage = { git = "https://github.com/soonlabs/kona-soon", branch = "dev", features = [
     "serde",
     "rkyv",
     "std",
 ] }
-kona-proof = { path = "../kona-soon/crates/proof/proof" }
-kona-std-fpvm = { path = "../kona-soon/crates/proof/std-fpvm" }
-fraud-executor = { path = "../kona-soon/crates/executor/fraud" }
-litesvm = { path = "../kona-soon/crates/executor/svm" }
+kona-proof = { git = "https://github.com/soonlabs/kona-soon", branch = "dev" }
+kona-std-fpvm = { git = "https://github.com/soonlabs/kona-soon", branch = "dev" }
+fraud-executor = { git = "https://github.com/soonlabs/kona-soon", branch = "dev" }
+litesvm = { git = "https://github.com/soonlabs/kona-soon", branch = "dev" }
 
 # SOON
-soon-primitives = { path = '../kona-soon/crates/primitives' }
-soon-derive = { path = '../kona-soon/crates/derive' }
-soon-l2-chain-provider = { path = '../kona-soon/crates/l2provider' }
-
-# only for testing
-soon-storage = { path = '../soon/node/storage' }
-soon-node = { path = '../soon/node/node' }
-batcher = { path = '../soon/batcher' }
-soon-mpt-handler = { path = '../soon/node/mpt/handler' }
-soon-mpt-primitives = { path = '../soon/node/mpt/primitives' }
+soon-primitives = { git = "https://github.com/soonlabs/kona-soon", branch = "dev" }
+soon-derive = { git = "https://github.com/soonlabs/kona-soon", branch = "dev" }
+soon-l2-chain-provider = { git = "https://github.com/soonlabs/kona-soon", branch = "dev" }
 
 # Bonsai
 bonsai-sdk = { version = "1.4.0", features = ["non_blocking"] }

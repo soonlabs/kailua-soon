@@ -3155,7 +3155,7 @@ dependencies = [
  "ethers",
  "futures 0.3.31",
  "hex",
- "l1-block-info",
+ "l1-block-info 1.0.0 (git+https://github.com/soonlabs/kona-soon?branch=dev)",
  "log",
  "op-alloy-consensus 0.15.4",
  "op-alloy-rpc-types-engine",
@@ -3523,6 +3523,25 @@ dependencies = [
 [[package]]
 name = "bridge"
 version = "1.0.0"
+dependencies = [
+ "arrayref",
+ "ethabi",
+ "ethnum",
+ "keccak-hash",
+ "mpl-token-metadata",
+ "num-derive 0.4.2",
+ "num-traits",
+ "serde",
+ "solana-program",
+ "spl-associated-token-account",
+ "spl-token",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "bridge"
+version = "1.0.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "arrayref",
  "ethabi",
@@ -6040,12 +6059,13 @@ checksum = "28dd6caf6059519a65843af8fe2a3ae298b14b80179855aeb4adc2c1934ee619"
 [[package]]
 name = "fraud-executor"
 version = "0.1.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "alloy-eips 0.15.11",
  "alloy-primitives 1.3.1",
  "hash-db",
  "hex",
- "l1-block-info",
+ "l1-block-info 1.0.0 (git+https://github.com/soonlabs/kona-soon?branch=dev)",
  "litesvm",
  "plain_hasher",
  "serde",
@@ -7808,7 +7828,7 @@ dependencies = [
  "batcher",
  "bincode",
  "bonsai-sdk",
- "bridge",
+ "bridge 1.0.0",
  "bs58 0.4.0",
  "c-kzg",
  "copy_dir",
@@ -7824,7 +7844,7 @@ dependencies = [
  "kona-mpt",
  "kona-preimage",
  "kona-proof",
- "l1-block-info",
+ "l1-block-info 1.0.0",
  "lazy_static",
  "litesvm",
  "op-alloy-consensus 0.15.4",
@@ -7942,6 +7962,7 @@ dependencies = [
 [[package]]
 name = "kona-cli"
 version = "0.2.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "clap 4.5.47",
  "libc",
@@ -7953,6 +7974,7 @@ dependencies = [
 [[package]]
 name = "kona-client"
 version = "1.0.1"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "alloy-consensus 0.15.11",
  "alloy-eips 0.15.11",
@@ -7987,6 +8009,7 @@ dependencies = [
 [[package]]
 name = "kona-driver"
 version = "0.3.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "alloy-consensus 0.15.11",
  "alloy-evm",
@@ -8006,6 +8029,7 @@ dependencies = [
 [[package]]
 name = "kona-executor"
 version = "0.3.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "alloy-consensus 0.15.11",
  "alloy-eips 0.15.11",
@@ -8033,6 +8057,7 @@ dependencies = [
 [[package]]
 name = "kona-host"
 version = "1.0.1"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "alloy-consensus 0.15.11",
  "alloy-eips 0.15.11",
@@ -8078,6 +8103,7 @@ dependencies = [
 [[package]]
 name = "kona-mpt"
 version = "0.2.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "alloy-primitives 1.3.1",
  "alloy-rlp",
@@ -8092,6 +8118,7 @@ dependencies = [
 [[package]]
 name = "kona-preimage"
 version = "0.3.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "alloy-primitives 1.3.1",
  "async-channel 2.5.0",
@@ -8105,6 +8132,7 @@ dependencies = [
 [[package]]
 name = "kona-proof"
 version = "0.3.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "alloy-consensus 0.15.11",
  "alloy-eips 0.15.11",
@@ -8122,7 +8150,7 @@ dependencies = [
  "kona-executor",
  "kona-mpt",
  "kona-preimage",
- "l1-block-info",
+ "l1-block-info 1.0.0 (git+https://github.com/soonlabs/kona-soon?branch=dev)",
  "lazy_static",
  "lru 0.14.0",
  "op-alloy-consensus 0.15.4",
@@ -8143,6 +8171,7 @@ dependencies = [
 [[package]]
 name = "kona-std-fpvm"
 version = "0.2.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "async-trait",
  "buddy_system_allocator",
@@ -8154,6 +8183,7 @@ dependencies = [
 [[package]]
 name = "kona-std-fpvm-proc"
 version = "0.2.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "cfg-if 1.0.3",
  "kona-std-fpvm",
@@ -8174,6 +8204,18 @@ dependencies = [
 [[package]]
 name = "l1-block-info"
 version = "1.0.0"
+dependencies = [
+ "arrayref",
+ "num-derive 0.4.2",
+ "num-traits",
+ "solana-program",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "l1-block-info"
+version = "1.0.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "arrayref",
  "num-derive 0.4.2",
@@ -8456,6 +8498,7 @@ checksum = "241eaef5fd12c88705a01fc1066c48c4b36e0dd4377dcdc7ec3942cea7a69956"
 [[package]]
 name = "litesvm"
 version = "0.1.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "bincode",
  "fast-math",
@@ -9917,9 +9960,9 @@ dependencies = [
 
 [[package]]
 name = "pest"
-version = "2.8.1"
+version = "2.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1db05f56d34358a8b1066f67cbb203ee3e7ed2ba674a6263a1d5ec6db2204323"
+checksum = "21e0a3a33733faeaf8651dfee72dd0f388f0c8e5ad496a3478fa5a922f49cfa8"
 dependencies = [
  "memchr",
  "thiserror 2.0.16",
@@ -9928,9 +9971,9 @@ dependencies = [
 
 [[package]]
 name = "pest_derive"
-version = "2.8.1"
+version = "2.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb056d9e8ea77922845ec74a1c4e8fb17e7c218cc4fc11a15c5d25e189aa40bc"
+checksum = "bc58706f770acb1dbd0973e6530a3cff4746fb721207feb3a8a6064cd0b6c663"
 dependencies = [
  "pest",
  "pest_generator",
@@ -9938,9 +9981,9 @@ dependencies = [
 
 [[package]]
 name = "pest_generator"
-version = "2.8.1"
+version = "2.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87e404e638f781eb3202dc82db6760c8ae8a1eeef7fb3fa8264b2ef280504966"
+checksum = "6d4f36811dfe07f7b8573462465d5cb8965fffc2e71ae377a33aecf14c2c9a2f"
 dependencies = [
  "pest",
  "pest_meta",
@@ -9951,9 +9994,9 @@ dependencies = [
 
 [[package]]
 name = "pest_meta"
-version = "2.8.1"
+version = "2.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edd1101f170f5903fde0914f899bb503d9ff5271d7ba76bbb70bea63690cc0d5"
+checksum = "42919b05089acbd0a5dcd5405fb304d17d1053847b81163d09c4ad18ce8e8420"
 dependencies = [
  "pest",
  "sha2 0.10.8",
@@ -14628,6 +14671,7 @@ dependencies = [
 [[package]]
 name = "soon-da-provider"
 version = "0.1.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "async-trait",
  "hex",
@@ -14641,6 +14685,7 @@ dependencies = [
 [[package]]
 name = "soon-derive"
 version = "0.1.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "alloc-no-stdlib",
  "alloy-consensus 0.15.11",
@@ -14693,11 +14738,11 @@ dependencies = [
  "alloy 0.15.11",
  "anyhow",
  "bincode",
- "bridge",
+ "bridge 1.0.0 (git+https://github.com/soonlabs/kona-soon?branch=dev)",
  "clap 4.5.47",
  "dirs 4.0.0",
  "env_logger 0.11.8",
- "l1-block-info",
+ "l1-block-info 1.0.0 (git+https://github.com/soonlabs/kona-soon?branch=dev)",
  "log",
  "reqwest 0.11.27",
  "serde",
@@ -14721,6 +14766,7 @@ dependencies = [
 [[package]]
 name = "soon-l1-chain-provider"
 version = "0.1.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "alloy 0.15.11",
  "alloy-consensus 0.15.11",
@@ -14758,6 +14804,7 @@ dependencies = [
 [[package]]
 name = "soon-l2-chain-provider"
 version = "0.1.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "alloy-eips 0.15.11",
  "alloy-primitives 1.3.1",
@@ -14766,7 +14813,7 @@ dependencies = [
  "futures 0.3.31",
  "hex",
  "jsonrpsee 0.25.1",
- "l1-block-info",
+ "l1-block-info 1.0.0 (git+https://github.com/soonlabs/kona-soon?branch=dev)",
  "lru 0.14.0",
  "reqwest 0.12.23",
  "serde",
@@ -14813,6 +14860,7 @@ dependencies = [
 [[package]]
 name = "soon-miniz-oxide"
 version = "0.1.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "adler2",
 ]
@@ -14864,7 +14912,7 @@ dependencies = [
 name = "soon-mpt-handler"
 version = "0.7.4"
 dependencies = [
- "bridge",
+ "bridge 1.0.0 (git+https://github.com/soonlabs/kona-soon?branch=dev)",
  "crossbeam-channel",
  "log",
  "solana-sdk",
@@ -14982,7 +15030,7 @@ dependencies = [
  "bytes",
  "crossbeam-channel",
  "itertools 0.10.5",
- "l1-block-info",
+ "l1-block-info 1.0.0 (git+https://github.com/soonlabs/kona-soon?branch=dev)",
  "log",
  "parking_lot 0.12.4",
  "rand 0.8.5",
@@ -15035,7 +15083,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bincode",
- "bridge",
+ "bridge 1.0.0 (git+https://github.com/soonlabs/kona-soon?branch=dev)",
  "bs58 0.4.0",
  "built",
  "chrono",
@@ -15046,7 +15094,7 @@ dependencies = [
  "futures 0.3.31",
  "glob",
  "itertools 0.10.5",
- "l1-block-info",
+ "l1-block-info 1.0.0 (git+https://github.com/soonlabs/kona-soon?branch=dev)",
  "log",
  "lru 0.12.5",
  "op-alloy-consensus 0.15.4",
@@ -15110,10 +15158,10 @@ dependencies = [
  "alloy-rlp",
  "alloy-sol-types",
  "bincode",
- "bridge",
+ "bridge 1.0.0 (git+https://github.com/soonlabs/kona-soon?branch=dev)",
  "derive_more 0.99.20",
  "hex-literal",
- "l1-block-info",
+ "l1-block-info 1.0.0 (git+https://github.com/soonlabs/kona-soon?branch=dev)",
  "log",
  "num-bigint 0.4.6",
  "op-alloy-rpc-types-engine",
@@ -15133,6 +15181,7 @@ dependencies = [
 [[package]]
 name = "soon-primitives"
 version = "0.1.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "alloy-consensus 0.15.11",
  "alloy-eips 0.15.11",
@@ -15140,10 +15189,10 @@ dependencies = [
  "alloy-rlp",
  "alloy-sol-types",
  "bincode",
- "bridge",
+ "bridge 1.0.0 (git+https://github.com/soonlabs/kona-soon?branch=dev)",
  "derive_more 2.0.1",
  "hex-literal",
- "l1-block-info",
+ "l1-block-info 1.0.0 (git+https://github.com/soonlabs/kona-soon?branch=dev)",
  "log",
  "num-bigint 0.4.6",
  "once_cell",
@@ -15177,7 +15226,7 @@ dependencies = [
  "jsonrpc-derive",
  "jsonrpc-http-server",
  "jsonrpc-pubsub",
- "l1-block-info",
+ "l1-block-info 1.0.0 (git+https://github.com/soonlabs/kona-soon?branch=dev)",
  "libc",
  "log",
  "rayon",
@@ -15259,7 +15308,7 @@ dependencies = [
  "crossbeam-channel",
  "fraud-executor",
  "itertools 0.10.5",
- "l1-block-info",
+ "l1-block-info 1.0.0 (git+https://github.com/soonlabs/kona-soon?branch=dev)",
  "litesvm",
  "log",
  "rand 0.8.5",
@@ -15303,8 +15352,8 @@ dependencies = [
 name = "soon-verifier"
 version = "0.7.4"
 dependencies = [
- "bridge",
- "l1-block-info",
+ "bridge 1.0.0 (git+https://github.com/soonlabs/kona-soon?branch=dev)",
+ "l1-block-info 1.0.0 (git+https://github.com/soonlabs/kona-soon?branch=dev)",
  "rayon",
  "solana-accounts-db",
  "solana-entry",
@@ -15423,6 +15472,7 @@ dependencies = [
 [[package]]
 name = "spl-noop"
 version = "0.2.0"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#c2c513a201c9f28ad4420e1f990804894d4ab930"
 dependencies = [
  "solana-program",
 ]

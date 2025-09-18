@@ -64,11 +64,9 @@ name = "kailua-offline"
 path = "src/bins/offline.rs"
 
 [features]
-default = ["test-tools"]
+default = []
 prove = ["risc0-zkvm/prove"]
 cuda = ["risc0-zkvm/cuda"]
 metal = ["risc0-zkvm/metal"]
 disable-dev-mode = ["risc0-zkvm/disable-dev-mode"]
 rebuild-fpvm = ["kailua-build/rebuild-fpvm"]
-# Feature for offline generator tool
-test-tools = ["kailua-common/__test"]

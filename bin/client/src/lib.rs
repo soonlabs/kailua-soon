@@ -15,6 +15,7 @@
 pub mod args;
 pub mod bonsai;
 pub mod boundless;
+#[cfg(test)]
 pub mod offline;
 pub mod oracle;
 pub mod proof;

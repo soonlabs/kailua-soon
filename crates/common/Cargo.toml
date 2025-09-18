@@ -57,17 +57,11 @@ solana-sdk.workspace = true
 soon-primitives.workspace = true
 soon-derive.workspace = true
 
-# for testing
-soon-node = { workspace = true, optional = true }
-soon-storage = { workspace = true, optional = true }
 l1-block-info = { workspace = true, optional = true }
 bridge = { workspace = true, optional = true }
 spl-token = { workspace = true, optional = true }
 crossbeam-channel = { workspace = true, optional = true }
 serde_json = { workspace = true }
-batcher = { workspace = true, optional = true }
-soon-mpt-primitives = { workspace = true, optional = true }
-soon-mpt-handler = { workspace = true, optional = true }
 bs58 = "0.4.0"
 thiserror.workspace = true
 tokio = { workspace = true, features = ["sync"], optional = true }
@@ -84,23 +78,16 @@ kailua-build.workspace = true
 bonsai-sdk.workspace = true
 rand.workspace = true
 
+
+#soon-node = { path = '../../../soon/node/node' }
+#soon-storage = { path = '../../../soon/node/storage' }
+#batcher = { path = '../../../soon/batcher' }
+#soon-mpt-primitives = { path = '../../../soon/node/mpt/primitives' }
+#soon-mpt-handler = { path = '../../../soon/node/mpt/handler' }
+
 [features]
 default = []
 offline = ["kona-host", "copy_dir"]
-__test = [
-	"offline",
-	"tempfile",
-	"soon-node/__test",
-	"soon-storage",
-	"l1-block-info",
-	"tokio",
-	"bridge",
-	"spl-token",
-	"crossbeam-channel",
-	"batcher",
-	"soon-mpt-primitives",
-	"soon-mpt-handler",
-]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = [
