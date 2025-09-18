@@ -169,7 +169,7 @@ pub async fn multi_l2_tx_to_execution(
 
     // prepare some delete tx.
     let mut next_slot = 2;
-    let delete_account = 5;
+    let delete_account = 0;
     for i in 0..delete_account {
         let deleted_account = env.mints[env.mints.len() - i - 1].insecure_clone();
         let payer = env.mints[0].insecure_clone();
@@ -212,7 +212,7 @@ pub async fn multi_l2_tx_to_execution(
     }
 
     // prepare some withdrawal tx.
-    let withdrawal_tx_count = 5;
+    let withdrawal_tx_count = 0;
     let mut create_counter = false;
     for i in 0..withdrawal_tx_count {
         let identity = env.identity.insecure_clone();
@@ -316,16 +316,22 @@ pub async fn multi_l2_tx_to_execution(
             assert_eq!(handler.get_aligned_slot(next_slot)?, next_slot);
             let state_root = handler.query_state_root(next_slot)?;
             let withdrawal_root = handler.query_withdrawal_root(next_slot)?;
-            let block_hash = executor
-                .storage_query(|s| Ok(s.current_bank().last_blockhash()))?
-                .to_bytes();
+            let block_hash = B256::from_slice(
+                &executor
+                    .storage_query(|s| Ok(s.current_bank().last_blockhash()))?
+                    .to_bytes(),
+            );
             let output_root = OutputRoot {
                 state_root,
                 bridge_storage_root: withdrawal_root,
-                block_hash: B256::from_slice(&block_hash),
+                block_hash,
             }
             .hash();
             agreed_l2_output_roots.insert(next_slot as usize, output_root);
+            info!(
+                "generate raw root: {} {} {} {} {}",
+                next_slot, output_root, state_root, withdrawal_root, block_hash,
+            );
         }
         next_slot += 1;
     }
@@ -518,10 +524,11 @@ pub mod hints {
                     let tried_account =
                         providers.get_tried_account_proof(hashed_address, block_number)?;
                     info!(
-                        "l2 addr {}, account {}, proof {}",
+                        "l2 addr {}, account {}, proof {}, wp {}",
                         hashed_address,
                         tried_account.account.is_some(),
-                        tried_account.proofs.len()
+                        tried_account.proofs.len(),
+                        tried_account.withdrawal_proofs.len(),
                     );
                     // need to write account + trie proof node into kv.
                     let mut out_buf = BytesMut::default();
@@ -705,24 +712,47 @@ where
                 if *occupied_entry.get() != new_output_root {
                     let accounts_diff = kona_executor.inner_builder().unwrap().account_diff();
                     info!(
-                        "root not same on {slot}, accounts = {}",
-                        accounts_diff.accounts.len()
+                        "root not same on {slot}, accounts = {}, raw({}) vs kona({}), true state: {}",
+                        accounts_diff.accounts.len(),
+                        *occupied_entry.get(),
+                        new_output_root,
+                        accounts_diff.state_root(),
                     );
                     for (key, account) in &accounts_diff.accounts {
                         let addr = keccak256(key);
-                        let raw = env
+                        let raw_o = env
                             .chain_provider
                             .get_tried_account_proof(addr, slot as u64)?
-                            .account
-                            .unwrap();
+                            .account;
+                        if raw_o.is_none() {
+                            if account.lamports() == 0 {
+                                continue;
+                            }
+                            info!(
+                                "slot {} raw account {:?} not found, diff: {} {} {} {} {}",
+                                slot,
+                                key,
+                                account.lamports(),
+                                account.data().len(),
+                                account.owner(),
+                                account.rent_epoch(),
+                                account.executable(),
+                            );
+                            continue;
+                        }
+                        let raw = raw_o.unwrap();
+                        let mut not_same = false;
                         if raw.0.rent_epoch() != account.rent_epoch() {
                             info!("{:?} not same on rent_epoch", key);
+                            not_same = true;
                         }
                         if raw.0.owner() != account.owner() {
                             info!("{:?} not same on owner", key);
+                            not_same = true;
                         }
                         if raw.0.data() != account.data() {
                             info!("{:?} not same on data", key);
+                            not_same = true;
                         }
                         if raw.0.lamports() != account.lamports() {
                             info!(
@@ -731,9 +761,14 @@ where
                                 raw.0.lamports(),
                                 account.lamports()
                             );
+                            not_same = true;
                         }
                         if raw.0.executable() != account.executable() {
                             info!("{:?} not same on executable", key);
+                            not_same = true;
+                        }
+                        if !not_same {
+                            info!("{:?} is same ", key);
                         }
                     }
                 }
