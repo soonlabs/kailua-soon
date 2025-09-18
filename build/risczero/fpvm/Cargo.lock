@@ -129,7 +129,7 @@ dependencies = [
  "alloy-trie",
  "auto_impl",
  "c-kzg",
- "derive_more 2.0.1",
+ "derive_more",
  "either",
  "k256",
  "once_cell",
@@ -190,7 +190,7 @@ dependencies = [
  "alloy-serde",
  "auto_impl",
  "c-kzg",
- "derive_more 2.0.1",
+ "derive_more",
  "either",
  "serde",
  "sha2",
@@ -208,7 +208,7 @@ dependencies = [
  "alloy-primitives",
  "alloy-sol-types",
  "auto_impl",
- "derive_more 2.0.1",
+ "derive_more",
  "op-alloy-consensus",
  "op-revm",
  "revm",
@@ -266,7 +266,7 @@ dependencies = [
  "bytes",
  "cfg-if",
  "const-hex",
- "derive_more 2.0.1",
+ "derive_more",
  "hashbrown 0.15.5",
  "indexmap",
  "itoa",
@@ -325,7 +325,7 @@ dependencies = [
  "alloy-primitives",
  "alloy-rlp",
  "alloy-serde",
- "derive_more 2.0.1",
+ "derive_more",
  "rand 0.8.5",
  "serde",
  "strum 0.27.2",
@@ -409,7 +409,7 @@ dependencies = [
  "alloy-primitives",
  "alloy-rlp",
  "arrayvec",
- "derive_more 2.0.1",
+ "derive_more",
  "nybbles",
  "serde",
  "smallvec",
@@ -1136,32 +1136,13 @@ dependencies = [
 
 [[package]]
 name = "brotli"
-version = "7.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc97b8f16f944bba54f0433f07e30be199b6dc2bd25937444bbad560bcea29bd"
-dependencies = [
- "alloc-no-stdlib",
- "brotli-decompressor 4.0.3",
-]
-
-[[package]]
-name = "brotli"
 version = "8.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4bd8b9603c7aa97359dbd97ecf258968c95f3adddd6db2f7e7a5bef101c84560"
 dependencies = [
  "alloc-no-stdlib",
  "alloc-stdlib",
- "brotli-decompressor 5.0.0",
-]
-
-[[package]]
-name = "brotli-decompressor"
-version = "4.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a334ef7c9e23abf0ce748e8cd309037da93e606ad52eb372e4ce327a0dcfbdfd"
-dependencies = [
- "alloc-no-stdlib",
+ "brotli-decompressor",
 ]
 
 [[package]]
@@ -1393,7 +1374,7 @@ version = "0.4.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "485abf41ac0c8047c07c87c72c8fb3eb5197f6e9d7ded615dfd1a00ae00a0f64"
 dependencies = [
- "brotli 8.0.2",
+ "brotli",
  "compression-core",
  "flate2",
  "memchr",
@@ -1484,12 +1465,6 @@ name = "constant_time_eq"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
-
-[[package]]
-name = "convert_case"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
 
 [[package]]
 name = "convert_case"
@@ -1764,19 +1739,6 @@ dependencies = [
 
 [[package]]
 name = "derive_more"
-version = "0.99.20"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6edb4b64a43d977b8e99788fe3a04d483834fba1215a7e02caa415b626497f7f"
-dependencies = [
- "convert_case 0.4.0",
- "proc-macro2",
- "quote",
- "rustc_version",
- "syn 2.0.106",
-]
-
-[[package]]
-name = "derive_more"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "093242cf7570c207c83073cf82f79706fe7b8317e98620a47d5be7c3d8497678"
@@ -1790,7 +1752,7 @@ version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bda628edc44c4bb645fbe0f758797143e4e07926f7ebf4e9bdfbd3d2ce621df3"
 dependencies = [
- "convert_case 0.7.1",
+ "convert_case",
  "proc-macro2",
  "quote",
  "syn 2.0.106",
@@ -3093,6 +3055,7 @@ dependencies = [
  "bincode",
  "bs58 0.4.0",
  "c-kzg",
+ "ethabi",
  "fraud-executor",
  "hex",
  "kona-driver",
@@ -3798,7 +3761,7 @@ dependencies = [
  "alloy-primitives",
  "alloy-rlp",
  "alloy-serde",
- "derive_more 2.0.1",
+ "derive_more",
  "serde",
  "thiserror 2.0.16",
 ]
@@ -3815,7 +3778,7 @@ dependencies = [
  "alloy-rlp",
  "alloy-rpc-types-engine",
  "alloy-serde",
- "derive_more 2.0.1",
+ "derive_more",
  "op-alloy-consensus",
  "serde",
  "thiserror 2.0.16",
@@ -4802,7 +4765,7 @@ checksum = "f84c73972691d73955126d3d889c47e7f20900a69c74d775c9eab7c25d10b3d9"
 dependencies = [
  "anyhow",
  "borsh 1.5.7",
- "derive_more 2.0.1",
+ "derive_more",
  "elf",
  "lazy_static",
  "postcard",
@@ -4877,7 +4840,7 @@ dependencies = [
  "anyhow",
  "bit-vec",
  "bytemuck",
- "derive_more 2.0.1",
+ "derive_more",
  "paste",
  "risc0-binfmt",
  "risc0-core",
@@ -4966,7 +4929,7 @@ dependencies = [
  "borsh 1.5.7",
  "bytemuck",
  "bytes",
- "derive_more 2.0.1",
+ "derive_more",
  "getrandom 0.2.16",
  "hex",
  "lazy-regex",
@@ -5988,7 +5951,7 @@ dependencies = [
 
 [[package]]
 name = "soon-derive"
-version = "0.7.4"
+version = "0.1.0"
 dependencies = [
  "alloc-no-stdlib",
  "alloy-consensus",
@@ -5998,7 +5961,7 @@ dependencies = [
  "alloy-rpc-types-engine",
  "async-trait",
  "bincode",
- "brotli 7.0.0",
+ "brotli",
  "op-alloy-consensus",
  "op-alloy-rpc-types-engine",
  "solana-sdk",
@@ -6011,14 +5974,14 @@ dependencies = [
 
 [[package]]
 name = "soon-miniz-oxide"
-version = "0.7.4"
+version = "0.1.0"
 dependencies = [
  "adler2",
 ]
 
 [[package]]
 name = "soon-primitives"
-version = "0.7.4"
+version = "0.1.0"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -6027,7 +5990,7 @@ dependencies = [
  "alloy-sol-types",
  "bincode",
  "bridge",
- "derive_more 0.99.20",
+ "derive_more",
  "hex-literal",
  "l1-block-info",
  "log",
@@ -6037,11 +6000,12 @@ dependencies = [
  "serde",
  "serde_json",
  "smallvec",
+ "solana-account-decoder",
  "solana-program",
  "solana-sdk",
  "solana-transaction-status",
  "spl-token",
- "thiserror 1.0.69",
+ "thiserror 2.0.16",
 ]
 
 [[package]]

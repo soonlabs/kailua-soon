@@ -118,16 +118,16 @@ fraud-executor = { path = "../kona-soon/crates/executor/fraud" }
 litesvm = { path = "../kona-soon/crates/executor/svm" }
 
 # SOON
-soon-primitives = { path = '../soon/node/primitives' }
-soon-mpt-primitives = { path = '../soon/node/mpt/primitives' }
-soon-mpt-handler = { path = '../soon/node/mpt/handler' }
-soon-derive = { path = '../soon/node/derive' }
-soon-l2-chain-provider = { path = '../soon/node/l2provider' }
+soon-primitives = { path = '../kona-soon/crates/primitives' }
+soon-derive = { path = '../kona-soon/crates/derive' }
+soon-l2-chain-provider = { path = '../kona-soon/crates/l2provider' }
 
 # only for testing
 soon-storage = { path = '../soon/node/storage' }
 soon-node = { path = '../soon/node/node' }
 batcher = { path = '../soon/batcher' }
+soon-mpt-handler = { path = '../soon/node/mpt/handler' }
+soon-mpt-primitives = { path = '../soon/node/mpt/primitives' }
 
 # Bonsai
 bonsai-sdk = { version = "1.4.0", features = ["non_blocking"] }
@@ -143,10 +143,10 @@ boundless-market = "0.13.0"
 # for testing
 solana-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
 solana-program = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
-l1-block-info = { path = "../soon/node/programs/l1-block-info-program", features = [
+l1-block-info = { path = "../kona-soon/crates/programs/l1-block-info-program", features = [
     "no-entrypoint",
 ] }
-bridge = { path = "../soon/node/programs/bridge-program", features = [
+bridge = { path = "../kona-soon/crates/programs/bridge-program", features = [
     "no-entrypoint",
 ] }
 spl-token = "=6.0.0"
