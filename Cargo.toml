@@ -136,10 +136,10 @@ boundless-market = "0.13.0"
 # for testing
 solana-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
 solana-program = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
-l1-block-info = { path = "../kona-soon/crates/programs/l1-block-info-program", features = [
+l1-block-info = { git = "https://github.com/soonlabs/kona-soon", branch = "dev", features = [
     "no-entrypoint",
 ] }
-bridge = { path = "../kona-soon/crates/programs/bridge-program", features = [
+bridge = { git = "https://github.com/soonlabs/kona-soon", branch = "dev", features = [
     "no-entrypoint",
 ] }
 spl-token = "=6.0.0"
