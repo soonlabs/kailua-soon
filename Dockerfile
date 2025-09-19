@@ -29,6 +29,9 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=shared \
     export CC=clang && \
     export CXX=clang++ && \
     export CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG=true && \
+    cd crates/contracts/foundry/ && \
+    forge build && \
+    cd ../../../ && \
     cargo build --jobs ${CARGO_BUILD_JOBS} --release -F disable-dev-mode \
     && mkdir out \
     && mv target/release/kailua-host out/ \
