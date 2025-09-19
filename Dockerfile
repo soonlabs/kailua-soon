@@ -16,8 +16,11 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
 
-RUN cargo install svm-rs && \
-    svm install 0.8.24
+# Install svm-rs with reduced parallelism to avoid OOM
+RUN CARGO_BUILD_JOBS=1 cargo install svm-rs@0.5.17
+
+# Install Solana version
+RUN svm install 0.8.24
 
 # Install Foundry
 RUN curl -L https://foundry.paradigm.xyz | bash && \
