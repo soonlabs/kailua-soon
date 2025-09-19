@@ -1,5 +1,5 @@
 # TODO alpine is smaller
-FROM rust:1.81 as build-environment
+FROM rust:1.85 as build-environment
 
 ARG CARGO_BUILD_JOBS=16
 
@@ -17,7 +17,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install svm-rs with reduced parallelism to avoid OOM
-RUN CARGO_BUILD_JOBS=1 cargo install svm-rs@0.5.17
+RUN CARGO_BUILD_JOBS=1 cargo install svm-rs@0.5.17 --locked
 
 # Install Solana version
 RUN svm install 0.8.24
@@ -50,7 +50,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=shared \
     && strip out/kailua-cli \
     && strip out/kailua-client;
 
-FROM rust:1.81 as kailua
+FROM rust:1.85 as kailua
 COPY --from=build-environment /kailua/out/kailua-host /usr/local/bin/kailua-host
 COPY --from=build-environment /kailua/out/kailua-cli /usr/local/bin/kailua-cli
 COPY --from=build-environment /kailua/out/kailua-client /usr/local/bin/kailua-client
