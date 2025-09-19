@@ -10,7 +10,7 @@ on:
 jobs:
   docker:
     name: Build Docker Image
-    runs-on: ubuntu-latest
+    runs-on: soon-runtime-spot
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     
     steps:
