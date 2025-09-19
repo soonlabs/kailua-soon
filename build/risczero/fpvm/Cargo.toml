@@ -27,7 +27,7 @@ rkyv = "0.8.9"
 substrate-bn = "=0.6.0"
 
 kailua-common = { path = "../../../crates/common" }
-kona-executor = { path = "../../../../kona-soon/crates/proof/executor" }
+kona-executor = { git = "https://github.com/soonlabs/kona-soon", branch = "dev" }
 
 risc0-zkvm = { version = "2.3.2", features = ["std", "heap-embedded-alloc", "unstable", "getrandom"] }
 
