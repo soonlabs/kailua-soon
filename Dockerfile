@@ -9,6 +9,10 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     libclang-dev \
     clang \
     curl \
+    cmake \
+    ninja-build \
+    libssl-dev \
+    libc6-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN cargo install svm-rs && \
@@ -21,6 +25,9 @@ COPY . .
 RUN --mount=type=cache,target=/root/.cargo/registry,sharing=shared \
     --mount=type=cache,target=/root/.cargo/git,sharing=shared \
     --mount=type=cache,target=/kailua/target,sharing=private,id=rust-target-${TARGETARCH} \
+    export CC=clang && \
+    export CXX=clang++ && \
+    export CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG=true && \
     cargo build --jobs ${CARGO_BUILD_JOBS} --release -F disable-dev-mode \
     && mkdir out \
     && mv target/release/kailua-host out/ \

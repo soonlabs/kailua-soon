@@ -51,7 +51,11 @@ jobs:
           pkg-config \
           libclang-dev \
           clang \
-          curl
+          curl \
+          cmake \
+          ninja-build \
+          libssl-dev \
+          libc6-dev
 
     - name: Install svm-rs
       run: |
@@ -60,6 +64,9 @@ jobs:
 
     - name: Build release binaries
       run: |
+        export CC=clang
+        export CXX=clang++
+        export CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG=true
         cargo build --jobs 1 --release -F disable-dev-mode
         mkdir -p out
         cp target/release/kailua-host out/
