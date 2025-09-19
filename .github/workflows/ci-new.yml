@@ -63,6 +63,18 @@ jobs:
         cargo install svm-rs@0.5.17
         svm install 0.8.24
 
+    - name: Install Foundry
+      run: |
+        curl -L https://foundry.paradigm.xyz | bash
+        export PATH="$PATH:$HOME/.foundry/bin"
+        foundryup
+
+    - name: Compile Solidity contracts
+      run: |
+        export PATH="$PATH:$HOME/.foundry/bin"
+        cd crates/contracts/foundry
+        forge build
+
     - name: Build release binaries
       run: |
         export CC=clang

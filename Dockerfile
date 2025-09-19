@@ -19,6 +19,11 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
 RUN cargo install svm-rs && \
     svm install 0.8.24
 
+# Install Foundry
+RUN curl -L https://foundry.paradigm.xyz | bash && \
+    export PATH="$PATH:/root/.foundry/bin" && \
+    /root/.foundry/bin/foundryup
+
 WORKDIR /kailua
 
 COPY . .
@@ -29,6 +34,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=shared \
     export CC=clang && \
     export CXX=clang++ && \
     export CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG=true && \
+    export PATH="$PATH:/root/.foundry/bin" && \
     cd crates/contracts/foundry/ && \
     forge build && \
     cd ../../../ && \
