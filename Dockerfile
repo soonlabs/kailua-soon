@@ -13,6 +13,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     ninja-build \
     libssl-dev \
     libc6-dev \
+    protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
 
 RUN cargo install svm-rs && \

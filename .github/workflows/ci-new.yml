@@ -55,7 +55,8 @@ jobs:
           cmake \
           ninja-build \
           libssl-dev \
-          libc6-dev
+          libc6-dev \
+          protobuf-compiler
 
     - name: Install svm-rs
       run: |
