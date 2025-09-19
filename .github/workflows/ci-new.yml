@@ -55,7 +55,7 @@ jobs:
 
     - name: Install svm-rs
       run: |
-        cargo install svm-rs
+        cargo install svm-rs@0.5.17
         svm install 0.8.24
 
     - name: Build release binaries
