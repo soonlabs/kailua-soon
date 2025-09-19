@@ -11,7 +11,7 @@ jobs:
   docker:
     name: Build Docker Image
     runs-on: soon-runtime-spot
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
     
     steps:
     - name: Checkout code
