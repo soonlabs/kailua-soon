@@ -57,14 +57,9 @@ solana-sdk.workspace = true
 soon-primitives.workspace = true
 soon-derive.workspace = true
 
-l1-block-info = { workspace = true, optional = true }
-bridge = { workspace = true, optional = true }
-spl-token = { workspace = true, optional = true }
-crossbeam-channel = { workspace = true, optional = true }
 serde_json = { workspace = true }
 bs58 = "0.4.0"
 thiserror.workspace = true
-tokio = { workspace = true, features = ["sync"], optional = true }
 ethabi = "18.0.0"
 
 [dev-dependencies]
@@ -77,13 +72,16 @@ tracing-subscriber.workspace = true
 kailua-build.workspace = true
 bonsai-sdk.workspace = true
 rand.workspace = true
-
-
-#soon-node = { path = '../../../soon/node/node' }
-#soon-storage = { path = '../../../soon/node/storage' }
-#batcher = { path = '../../../soon/batcher' }
-#soon-mpt-primitives = { path = '../../../soon/node/mpt/primitives' }
-#soon-mpt-handler = { path = '../../../soon/node/mpt/handler' }
+tokio = { workspace = true, features = ["sync"] }
+l1-block-info = { workspace = true }
+spl-token = { workspace = true }
+bridge = { workspace = true }
+crossbeam-channel = { workspace = true }
+soon-node = { path = '../../../soon/node/node', features = ["__test"] }
+soon-storage = { path = '../../../soon/node/storage' }
+batcher = { path = '../../../soon/batcher' }
+soon-mpt-primitives = { path = '../../../soon/node/mpt/primitives' }
+soon-mpt-handler = { path = '../../../soon/node/mpt/handler' }
 
 [features]
 default = []

@@ -20,6 +20,7 @@ use kona_preimage::{HintReader, PreimageOracleClient};
 use kona_preimage::{HintWriterClient, OracleServer};
 use kona_proof::executor::KonaExecutor;
 use solana_sdk::account::ReadableAccount;
+use solana_sdk::hash::Hash;
 use solana_sdk::message::Message;
 use solana_sdk::native_token::LAMPORTS_PER_SOL;
 use solana_sdk::pubkey::Pubkey;
@@ -75,6 +76,7 @@ pub struct E2EKailuaSoonEnvironment {
     pub soon_path: TempDir,
     pub genesis_state_root: B256,
     pub genesis_withdrawal_root: B256,
+    pub genesis_hash: Hash,
 }
 
 #[allow(dead_code)]
@@ -94,6 +96,8 @@ pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2EKailuaSo
 
     let (sender, r, s, _) = executor
         .storage_query(|storage| Ok(storage.signal_hub.mpt_update_chanel.clone().unwrap()))?;
+    let genesis_hash = executor.storage_query(|s| Ok(s.config().genesis.hash()))?;
+
     let mpt_runner = MptRunner::new(mpt_path.path(), r, s, exit)?;
     mpt_runner.clone().run();
     // finalize 0 and 1 slot.
@@ -147,6 +151,7 @@ pub async fn init_soon_env(relative_to_soon: Option<&str>) -> Result<E2EKailuaSo
         soon_path: temp,
         genesis_state_root: state_root,
         genesis_withdrawal_root: withdrawal_root,
+        genesis_hash,
     })
 }
 
@@ -169,7 +174,7 @@ pub async fn multi_l2_tx_to_execution(
 
     // prepare some delete tx.
     let mut next_slot = 2;
-    let delete_account = 0;
+    let delete_account = 5;
     for i in 0..delete_account {
         let deleted_account = env.mints[env.mints.len() - i - 1].insecure_clone();
         let payer = env.mints[0].insecure_clone();
@@ -212,7 +217,7 @@ pub async fn multi_l2_tx_to_execution(
     }
 
     // prepare some withdrawal tx.
-    let withdrawal_tx_count = 0;
+    let withdrawal_tx_count = 5;
     let mut create_counter = false;
     for i in 0..withdrawal_tx_count {
         let identity = env.identity.insecure_clone();
@@ -667,6 +672,7 @@ where
 {
     let rollup_config = Arc::new(SoonRollupConfig {
         sequencer_schedules: vec![(0, env.identity.pubkey())],
+        genesis_hash: Some(env.genesis_hash),
         ..Default::default()
     });
 
