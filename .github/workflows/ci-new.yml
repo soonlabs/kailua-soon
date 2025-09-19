@@ -6,100 +6,11 @@ on:
   pull_request:
     branches: [ main, develop,dev ]
 
-env:
-  CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
 
 jobs:
-  build:
-    name: Build
-    runs-on: soon-runtime-spot
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Cache cargo registry
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-
-
-    - name: Cache cargo build
-      uses: actions/cache@v4
-      with:
-        path: target
-        key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/Cargo.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}-
-          ${{ runner.os }}-cargo-build-
-
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update -y
-        sudo apt-get install -y --no-install-recommends \
-          build-essential \
-          pkg-config \
-          libclang-dev \
-          clang \
-          curl \
-          cmake \
-          ninja-build \
-          libssl-dev \
-          libc6-dev \
-          protobuf-compiler
-
-    - name: Install svm-rs
-      run: |
-        cargo install svm-rs@0.5.17
-        svm install 0.8.24
-
-    - name: Install Foundry
-      run: |
-        curl -L https://foundry.paradigm.xyz | bash
-        export PATH="$PATH:$HOME/.foundry/bin"
-        foundryup
-
-    - name: Compile Solidity contracts
-      run: |
-        export PATH="$PATH:$HOME/.foundry/bin"
-        cd crates/contracts/foundry
-        forge build
-
-    - name: Build release binaries
-      run: |
-        export CC=clang
-        export CXX=clang++
-        export CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG=true
-        cargo build --jobs 1 --release -F disable-dev-mode
-        mkdir -p out
-        cp target/release/kailua-host out/
-        cp target/release/kailua-cli out/
-        cp target/release/kailua-client out/
-        strip out/kailua-host
-        strip out/kailua-cli
-        strip out/kailua-client
-
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: kailua-binaries-x86_64
-        path: out/
-        retention-days: 7
-
   docker:
     name: Build Docker Image
     runs-on: ubuntu-latest
-    needs: build
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     
     steps:
@@ -138,5 +49,5 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
         build-args: |
-          CARGO_BUILD_JOBS=1
+          CARGO_BUILD_JOBS=16
 

@@ -1,7 +1,7 @@
 # TODO alpine is smaller
 FROM rust:1.81 as build-environment
 
-ARG CARGO_BUILD_JOBS=1
+ARG CARGO_BUILD_JOBS=16
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
     build-essential \
