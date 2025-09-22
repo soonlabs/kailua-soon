@@ -77,11 +77,11 @@ l1-block-info = { workspace = true }
 spl-token = { workspace = true }
 bridge = { workspace = true }
 crossbeam-channel = { workspace = true }
-soon-node = { path = '../../../soon/node/node', features = ["__test"] }
-soon-storage = { path = '../../../soon/node/storage' }
-batcher = { path = '../../../soon/batcher' }
-soon-mpt-primitives = { path = '../../../soon/node/mpt/primitives' }
-soon-mpt-handler = { path = '../../../soon/node/mpt/handler' }
+# soon-node = { path = '../../../soon/node/node', features = ["__test"] }
+# soon-storage = { path = '../../../soon/node/storage' }
+# batcher = { path = '../../../soon/batcher' }
+# soon-mpt-primitives = { path = '../../../soon/node/mpt/primitives' }
+# soon-mpt-handler = { path = '../../../soon/node/mpt/handler' }
 
 [features]
 default = []
