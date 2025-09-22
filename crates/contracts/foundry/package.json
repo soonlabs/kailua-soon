@@ -1,0 +1,17 @@
+{
+  "name": "kailua-soon-contract",
+  "version": "1.0.0",
+  "license": "ISC",
+  "scripts": {
+    "build": "forge build && yarn generate-types",
+    "generate-types": "typechain --target ethers-v5 --out-dir types/ethers './out/Kailua*/*.json'"
+  },
+  "devDependencies": {
+    "@typechain/ethers-v5": "^11.1.2",
+    "@typechain/hardhat": "^9.1.0",
+    "typechain": "^8.3.2"
+  },
+  "dependencies": {
+    "ethers": "^5.7.2"
+  }
+}
