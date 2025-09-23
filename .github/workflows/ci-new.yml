@@ -30,15 +30,18 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Generate date tag
+      id: date
+      run: echo "date_tag=$(date +'%y.%m.%d')" >> $GITHUB_OUTPUT
+
     - name: Extract metadata
       id: meta
       uses: docker/metadata-action@v5
       with:
         images: ghcr.io/soonlabs/soon/kailua
         tags: |
+          type=raw,value=${{ steps.date.outputs.date_tag }}
           type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix={{branch}}-
           type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Build and push Docker image
