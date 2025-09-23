@@ -51,8 +51,20 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=shared \
     && strip out/kailua-client;
 
 FROM rust:1.85 as kailua
+
+# Install bash for the entrypoint script
+RUN apt-get update && apt-get install -y bash && rm -rf /var/lib/apt/lists/*
+
+# Copy binaries from build stage
 COPY --from=build-environment /kailua/out/kailua-host /usr/local/bin/kailua-host
 COPY --from=build-environment /kailua/out/kailua-cli /usr/local/bin/kailua-cli
 COPY --from=build-environment /kailua/out/kailua-client /usr/local/bin/kailua-client
 
-ENTRYPOINT ["/bin/sh", "-c"]
+# Copy and setup entrypoint script
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Create default data directory
+RUN mkdir -p /data
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
