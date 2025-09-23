@@ -32,7 +32,7 @@ jobs:
 
     - name: Generate date tag
       id: date
-      run: echo "date_tag=$(date +'%y.%m.%d')" >> $GITHUB_OUTPUT
+      run: echo "date_tag=$(date +'%y-%m-%d%H')" >> $GITHUB_OUTPUT
 
     - name: Extract metadata
       id: meta
