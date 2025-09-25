@@ -31,7 +31,7 @@ use kailua_soon_kona::precondition::Precondition;
 use kailua_soon_kona::witness::Witness;
 use kona_preimage::{HintWriterClient, PreimageOracleClient};
 use kona_proof::l1::OracleBlobProvider;
-use kona_proof::CachingOracle;
+use kona_proof::{BootInfo, CachingOracle};
 use lazy_static::lazy_static;
 use risc0_zkvm::sha::Digestible;
 use risc0_zkvm::{Journal, Receipt};
@@ -91,8 +91,9 @@ where
     let witgen_permit = acquire_owned_permit(SEMAPHORE_WITGEN.clone())
         .await
         .map_err(ProvingError::OtherError);
+    // Run witgen client to get correct BootInfo and Precondition
     let (
-        boot_info,
+        _boot_info,
         proof_journal,
         precondition,
         traced_driver,
@@ -119,7 +120,11 @@ where
     drop(witgen_permit);
 
     // Commit derivation trace to driver file
-    let driver_file = driver_file_name(proving.image_id(), &boot_info, &precondition);
+    let driver_boot = BootInfo::load(preimage_oracle.as_ref())
+        .await
+        .context("BootInfo::load")
+        .map_err(ProvingError::OtherError)?;
+    let driver_file = driver_file_name(proving.image_id(), &driver_boot, &precondition);
     if let Some(traced_driver) = traced_driver.as_ref() {
         let driver_digest = B256::new(traced_driver.digest().into());
         if driver_digest != precondition.derivation_trace {
@@ -167,7 +172,8 @@ where
         .as_ref()
         .map(|d| B256::new(d.digest().into()))
         .unwrap_or_default();
-    let witness_frames = process_witness(
+
+    let processed_witness = process_witness(
         &proving,
         witness,
         stitched_executions,
@@ -177,13 +183,23 @@ where
         derivation_cache,
         derivation_trace.clone(),
         traced_driver_hash,
-    )?;
+    );
 
-    // signal the cached driver to the tracer before seeking a proof
-    if trace_derivation && derivation_trace.is_none() {
-        warn!("Traced derivation without signaling.");
+    if processed_witness.is_ok()
+        || matches!(
+            processed_witness.as_ref(),
+            Err(ProvingError::NotSeekingProof(..))
+        )
+    {
+        // signal the cached driver to the tracer before seeking a proof
+        if trace_derivation && derivation_trace.is_none() {
+            warn!("Traced derivation without signaling.");
+        }
+        signal_derivation_trace(derivation_trace, traced_driver).await;
     }
-    signal_derivation_trace(derivation_trace, traced_driver).await;
+
+    // Bubble up any ProvingError
+    let witness_frames = processed_witness?;
 
     // seek corresponding proof
     crate::risczero::seek_proof(
@@ -262,7 +278,8 @@ pub fn process_witness(
         if !force_attempt {
             warn!("Aborting.");
             return Err(ProvingError::WitnessSizeError(
-                total_wit_size,
+                preloaded_wit_size,
+                streamed_wit_size,
                 proving.max_witness_size,
                 execution_trace,
                 Box::new(derivation_cache),
@@ -293,7 +310,8 @@ pub fn process_witness(
 
     if !seek_proof {
         return Err(ProvingError::NotSeekingProof(
-            total_wit_size,
+            preloaded_wit_size,
+            streamed_wit_size,
             execution_trace,
             Box::new(derivation_cache),
             derivation_trace,
