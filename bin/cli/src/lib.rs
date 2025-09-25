@@ -27,7 +27,7 @@ pub mod sync;
 pub mod transact;
 pub mod validate;
 
-pub const KAILUA_GAME_TYPE: u32 = 1337;
+pub const KAILUA_GAME_TYPE: u32 = 1330;
 
 #[derive(clap::Parser, Debug, Clone)]
 #[command(name = "kailua-cli")]
