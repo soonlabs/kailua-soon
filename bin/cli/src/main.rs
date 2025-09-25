@@ -47,9 +47,6 @@ async fn main() -> anyhow::Result<()> {
             await_tel!(context, kailua_cli::validate::validate(args, data_dir))
         }
         KailuaCli::TestFault(_args) => {
-            #[cfg(not(feature = "devnet"))]
-            unimplemented!("Intentional faults are only available on devnet environments");
-            #[cfg(feature = "devnet")]
             await_tel!(context, kailua_cli::fault::fault(_args))
         }
         KailuaCli::Benchmark(bench_args) => {
