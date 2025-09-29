@@ -40,7 +40,6 @@ op-alloy-network.workspace = true
 
 kailua-build.workspace = true
 kailua-soon-kona.workspace = true
-kailua-hokulea.workspace = true
 kailua-sync.workspace = true
 
 kona-host.workspace = true
@@ -53,11 +52,6 @@ soon-derive.workspace = true
 soon-primitives.workspace = true
 soon-l2-chain-provider.workspace = true
 
-canoe-bindings.workspace = true
-canoe-provider.workspace = true
-hokulea-host-bin.workspace = true
-hokulea-proof.workspace = true
-hokulea-witgen.workspace = true
 
 bonsai-sdk.workspace = true
 boundless-market.workspace = true

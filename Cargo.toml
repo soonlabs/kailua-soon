@@ -94,7 +94,6 @@ op-alloy-network = { version = "0.17.2", default-features = false, features = ["
 # Kailua
 kailua-build = { path = "build/risczero" }
 kailua-contracts = { path = "crates/contracts" }
-kailua-hokulea = { path = "crates/hokulea" }
 kailua-soon-kona = { path = "crates/kona" }
 kailua-proposer = { path = "crates/proposer" }
 kailua-prover = { path = "crates/prover" }
@@ -120,16 +119,6 @@ kona-proof = { git = "https://github.com/soonlabs/kona-soon", branch = "dev" }
 kona-std-fpvm = { git = "https://github.com/soonlabs/kona-soon", branch = "dev" }
 fraud-executor = { git = "https://github.com/soonlabs/kona-soon", branch = "dev" }
 litesvm = { git = "https://github.com/soonlabs/kona-soon", branch = "dev" }
-
-# Hokulea git = "https://github.com/Layr-Labs/hokulea", rev = "ed038f498a942f53f2d5218e26125aed7980f9cc"
-canoe-bindings = { git = "https://github.com/Layr-Labs/hokulea", rev = "ed038f498a942f53f2d5218e26125aed7980f9cc" }
-canoe-provider = { git = "https://github.com/Layr-Labs/hokulea", rev = "ed038f498a942f53f2d5218e26125aed7980f9cc" }
-canoe-steel-methods = { git = "https://github.com/Layr-Labs/hokulea", rev = "ed038f498a942f53f2d5218e26125aed7980f9cc" }
-eigenda-cert = { git = "https://github.com/Layr-Labs/hokulea", rev = "ed038f498a942f53f2d5218e26125aed7980f9cc" }
-hokulea-host-bin = { git = "https://github.com/Layr-Labs/hokulea", rev = "ed038f498a942f53f2d5218e26125aed7980f9cc", default-features = false }
-hokulea-eigenda = { git = "https://github.com/Layr-Labs/hokulea", rev = "ed038f498a942f53f2d5218e26125aed7980f9cc", default-features = false }
-hokulea-proof = { git = "https://github.com/Layr-Labs/hokulea", rev = "ed038f498a942f53f2d5218e26125aed7980f9cc", default-features = false }
-hokulea-witgen = { git = "https://github.com/Layr-Labs/hokulea", rev = "ed038f498a942f53f2d5218e26125aed7980f9cc", default-features = false }
 
 # SOON
 soon-primitives = { git = "https://github.com/soonlabs/kona-soon", branch = "dev" }
