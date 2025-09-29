@@ -12,27 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::propose::ProposeArgs;
-use crate::stall::Stall;
-use crate::sync::proposal::Proposal;
-use crate::transact::Transact;
-use crate::{retry_res_ctx_timeout, KAILUA_GAME_TYPE};
 use alloy::eips::eip4844::FIELD_ELEMENTS_PER_BLOB;
 use alloy::network::Ethereum;
 use alloy::primitives::{Bytes, B256, U256};
 use alloy::providers::RootProvider;
 use alloy::sol_types::SolValue;
 use anyhow::Context;
-use kailua_client::{await_tel, await_tel_res};
-use kailua_common::blobs::hash_to_fe;
-use kailua_common::config::config_hash;
 use kailua_contracts::*;
-use kailua_host::config::fetch_rollup_config;
+use kailua_kona::blobs::hash_to_fe;
+use kailua_kona::config::config_hash;
+use kailua_proposer::args::ProposeArgs;
+use kailua_sync::proposal::Proposal;
+use kailua_sync::provider::optimism::fetch_rollup_config;
+use kailua_sync::provider::optimism::OpNodeProvider;
+use kailua_sync::stall::Stall;
+use kailua_sync::transact::Transact;
+use kailua_sync::{await_tel, await_tel_res, retry_res_ctx_timeout, KAILUA_GAME_TYPE};
 use opentelemetry::global::tracer;
 use opentelemetry::trace::{FutureExt, TraceContextExt, Tracer};
-use soon_l2_chain_provider::chain_provider::L2BlockFetcher;
 use tracing::{error, info};
 
+/// Publish a faulty sequencing proposal to test fault proofs
 #[derive(clap::Args, Debug, Clone)]
 pub struct FaultArgs {
     #[clap(flatten)]
@@ -51,19 +51,36 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
     let tracer = tracer("kailua");
     let context = opentelemetry::Context::current_with_span(tracer.start("fault"));
 
-    let soon_node_provider =
-        L2BlockFetcher::new_with_url(args.propose_args.core.soon_node_url.as_str());
-    let eth_rpc_provider =
-        RootProvider::<Ethereum>::new_http(args.propose_args.core.eth_rpc_url.as_str().try_into()?);
+    let op_node_provider = OpNodeProvider(RootProvider::new_http(
+        args.propose_args
+            .sync
+            .provider
+            .op_node_url
+            .as_str()
+            .try_into()?,
+    ));
+    let eth_rpc_provider = RootProvider::<Ethereum>::new_http(
+        args.propose_args
+            .sync
+            .provider
+            .eth_rpc_url
+            .as_str()
+            .try_into()?,
+    );
 
     info!("Fetching rollup configuration from rpc endpoints.");
     // fetch rollup config
     let config = await_tel!(
         context,
-        fetch_rollup_config(&args.propose_args.core.soon_node_url, None,)
+        fetch_rollup_config(
+            &args.propose_args.sync.provider.op_node_url,
+            &args.propose_args.sync.provider.op_geth_url,
+            None,
+            args.propose_args.bypass_chain_registry
+        )
     )
     .context("fetch_rollup_config")?;
-    let rollup_config_hash = config_hash(&config).expect("Configuration hash derivation error");
+    let rollup_config_hash = config_hash(&config);
     info!("RollupConfigHash({})", hex::encode(rollup_config_hash));
 
     // load system config
@@ -88,7 +105,14 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
         .txn_args
         .premium_provider::<Ethereum>()
         .wallet(tester_wallet)
-        .connect_http(args.propose_args.core.eth_rpc_url.as_str().try_into()?);
+        .connect_http(
+            args.propose_args
+                .sync
+                .provider
+                .eth_rpc_url
+                .as_str()
+                .try_into()?,
+        );
 
     let dispute_game_factory = IDisputeGameFactory::new(dgf_address, &tester_provider);
     let kailua_game_implementation = KailuaGame::new(
@@ -136,10 +160,6 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
     let faulty_root_claim = B256::from(games_count.to_be_bytes());
     // Prepare remainder of proposal
     let proposed_block_number = parent_block_number + proposal_block_count;
-    info!(
-        "faulty parent block number:{}, faulty_block_number:{}, proposed_block_number:{}",
-        parent_block_number, faulty_block_number, proposed_block_number
-    );
     let proposed_output_root = if proposed_block_number == faulty_block_number {
         faulty_root_claim
     } else {
@@ -148,12 +168,11 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
             tracer,
             "proposed_output_root",
             retry_res_ctx_timeout!(
-                soon_node_provider
+                op_node_provider
                     .output_at_block(proposed_block_number)
                     .await
             )
         )
-        .hash()
     };
 
     // Prepare intermediate outputs
@@ -171,15 +190,14 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
                 context,
                 tracer,
                 "output_hash",
-                retry_res_ctx_timeout!(soon_node_provider.output_at_block(io_block_number).await)
+                retry_res_ctx_timeout!(op_node_provider.output_at_block(io_block_number).await)
             )
-            .hash()
         } else {
             B256::ZERO
         };
         io_field_elements.push(hash_to_fe(output_hash));
     }
-    let _sidecar = Proposal::create_sidecar(&io_field_elements)?;
+    let sidecar = Proposal::create_sidecar(&io_field_elements)?;
 
     // Calculate required duplication counter
     let mut dupe_counter = 0u64;
@@ -224,9 +242,9 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
     if !owed_collateral.is_zero() {
         transaction = transaction.value(owed_collateral);
     }
-    // if !sidecar.blobs.is_empty() {
-    //     transaction = transaction.sidecar(sidecar);
-    // }
+    if !sidecar.blobs.is_empty() {
+        transaction = transaction.sidecar(sidecar);
+    }
     match transaction
         .transact_with_context(context.clone(), "KailuaTreasury::propose")
         .await

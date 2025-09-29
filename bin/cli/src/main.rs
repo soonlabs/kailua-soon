@@ -14,15 +14,16 @@
 
 use clap::Parser;
 use kailua_cli::KailuaCli;
-use kailua_client::await_tel;
-use kailua_client::telemetry::init_tracer_provider;
+use kailua_prover::args::ProvingArgs;
+use kailua_sync::await_tel;
+use kailua_sync::telemetry::init_tracer_provider;
 use opentelemetry::global::{shutdown_tracer_provider, tracer};
 use opentelemetry::trace::{FutureExt, Status, TraceContextExt, Tracer};
 use tempfile::tempdir;
 use tracing::error;
 use tracing_subscriber::EnvFilter;
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread")]
 async fn main() -> anyhow::Result<()> {
     let cli = KailuaCli::parse();
     kona_cli::init_tracing_subscriber(cli.verbosity(), None::<EnvFilter>)?;
@@ -34,23 +35,59 @@ async fn main() -> anyhow::Result<()> {
     let data_dir = cli.data_dir().unwrap_or(tmp_dir.path().to_path_buf());
 
     let command_res = match cli {
-        KailuaCli::Config(args) => {
+        KailuaCli::Config { args, .. } => {
             await_tel!(context, kailua_cli::config::config(args))
         }
-        KailuaCli::FastTrack(args) => {
+        KailuaCli::FastTrack { args, .. } => {
             await_tel!(context, kailua_cli::fast_track::fast_track(args))
         }
-        KailuaCli::Propose(args) => {
-            await_tel!(context, kailua_cli::propose::propose(args, data_dir))
+        KailuaCli::Propose { args, .. } => {
+            await_tel!(context, kailua_proposer::propose::propose(args, data_dir))
         }
-        KailuaCli::Validate(args) => {
-            await_tel!(context, kailua_cli::validate::validate(args, data_dir))
+        KailuaCli::Validate { args, cli } => {
+            maybe_restrict_permits(&args.proving).await;
+            await_tel!(
+                context,
+                kailua_validator::validate::validate(args, cli.v, data_dir)
+            )
         }
-        KailuaCli::TestFault(_args) => {
-            await_tel!(context, kailua_cli::fault::fault(_args))
+        KailuaCli::Prove { args, .. } => {
+            maybe_restrict_permits(&args.proving).await;
+            let result = await_tel!(context, kailua_prover::prove::prove(args));
+            // Special exit code used to signal insufficient l1 data
+            if let Ok(false) = result {
+                std::process::exit(111);
+            }
+            result.map(|_| ())
         }
-        KailuaCli::Benchmark(bench_args) => {
-            await_tel!(context, kailua_cli::bench::benchmark(bench_args))
+        KailuaCli::TestFault {
+            #[cfg(feature = "devnet")]
+            args,
+            ..
+        } => {
+            #[cfg(not(feature = "devnet"))]
+            unimplemented!("Intentional faults are only available on devnet environments");
+            #[cfg(feature = "devnet")]
+            await_tel!(context, kailua_cli::fault::fault(args))
+        }
+        KailuaCli::Benchmark { args, cli } => {
+            await_tel!(context, kailua_cli::bench::benchmark(args, cli.v))
+        }
+        KailuaCli::Demo { args, cli } => {
+            maybe_restrict_permits(&args.proving).await;
+            await_tel!(context, kailua_cli::demo::demo(args, cli.v, data_dir))
+        }
+        KailuaCli::Rpc { args, .. } => {
+            await_tel!(context, kailua_rpc::rpc::rpc(args, data_dir))
+        }
+        KailuaCli::Bonsai { args, .. } => {
+            await_tel!(context, kailua_cli::bonsai::bonsai(args))
+        }
+        KailuaCli::Boundless { args, .. } => {
+            await_tel!(context, kailua_cli::boundless::boundless(args))
+        }
+        KailuaCli::Export { .. } => {
+            await_tel!(context, kailua_cli::export::export(data_dir))
         }
     };
 
@@ -66,4 +103,13 @@ async fn main() -> anyhow::Result<()> {
     shutdown_tracer_provider();
 
     Ok(())
+}
+
+pub async fn maybe_restrict_permits(args: &ProvingArgs) {
+    if let Some(witgen_permits) = args.num_concurrent_witgens {
+        kailua_prover::client::proving::restrict_witgen_permits(witgen_permits).await;
+    }
+    if let Some(executor_permits) = args.num_concurrent_r0vm {
+        kailua_prover::client::proving::restrict_r0vm_permits(executor_permits).await;
+    }
 }

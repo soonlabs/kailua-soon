@@ -1,0 +1,470 @@
+// Copyright 2024, 2025 RISC Zero, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use crate::args::ProvingArgs;
+use crate::client::witgen;
+use crate::driver::{driver_file_name, signal_derivation_trace};
+use crate::proof::save_to_bincoded_file;
+use crate::risczero::boundless::BoundlessArgs;
+use crate::ProvingError;
+use alloy_primitives::B256;
+use anyhow::{anyhow, Context};
+use async_channel::Sender;
+use canoe_provider::CanoeProvider;
+use human_bytes::human_bytes;
+use kailua_kona::boot::StitchedBootInfo;
+use kailua_kona::client::core::EthereumDataSourceProvider;
+use kailua_kona::client::stitching::split_executions;
+use kailua_kona::driver::CachedDriver;
+use kailua_kona::executor::Execution;
+use kailua_kona::oracle::vec::{PreimageVecEntry, VecOracle};
+use kailua_kona::precondition::Precondition;
+use kailua_kona::witness::Witness;
+use kona_derive::prelude::ChainProvider;
+use kona_preimage::{HintWriterClient, PreimageOracleClient};
+use kona_proof::l1::OracleBlobProvider;
+use kona_proof::CachingOracle;
+use lazy_static::lazy_static;
+use risc0_zkvm::sha::Digestible;
+use risc0_zkvm::{Journal, Receipt};
+use rkyv::rancor::Error;
+use std::fmt::Debug;
+use std::sync::Arc;
+use tokio::sync::{Mutex, OwnedSemaphorePermit, Semaphore};
+use tracing::{error, info, warn};
+
+lazy_static! {
+    pub static ref SEMAPHORE_WITGEN: Arc<Mutex<Arc<Semaphore>>> =
+        Arc::new(Mutex::new(Arc::new(Semaphore::new(Semaphore::MAX_PERMITS))));
+    pub static ref SEMAPHORE_R0VM: Arc<Mutex<Arc<Semaphore>>> =
+        Arc::new(Mutex::new(Arc::new(Semaphore::new(Semaphore::MAX_PERMITS))));
+}
+
+/// The size of the LRU cache in the oracle.
+pub const ORACLE_LRU_SIZE: usize = 1024;
+
+#[allow(clippy::too_many_arguments)]
+pub async fn run_proving_client<P, H>(
+    l1_node_address: Option<String>,
+    proving: ProvingArgs,
+    boundless: BoundlessArgs,
+    oracle_client: P,
+    hint_client: H,
+    proposal_data_hash: B256,
+    stitched_executions: Vec<Vec<Execution>>,
+    derivation_cache: Option<CachedDriver>,
+    trace_derivation: bool,
+    derivation_trace: Option<Sender<CachedDriver>>,
+    stitched_preconditions: Vec<Precondition>,
+    stitched_boot_info: Vec<StitchedBootInfo>,
+    stitched_proofs: Vec<Receipt>,
+    prove_snark: bool,
+    force_attempt: bool,
+    seek_proof: bool,
+) -> Result<(), ProvingError>
+where
+    P: PreimageOracleClient + Send + Sync + Debug + Clone + 'static,
+    H: HintWriterClient + Send + Sync + Debug + Clone + 'static,
+{
+    // preload all data into the vec oracle
+    let (_, execution_cache) = split_executions(stitched_executions.clone());
+    info!(
+        "Running vec witgen client with {} cached executions ({} traces).",
+        execution_cache.len(),
+        stitched_executions.len()
+    );
+    let preimage_oracle = Arc::new(CachingOracle::new(
+        ORACLE_LRU_SIZE,
+        oracle_client,
+        hint_client,
+    ));
+    // Instantiate oracles
+    let blob_provider = OracleBlobProvider::new(preimage_oracle.clone());
+    // Run witness generation with oracles
+    let witgen_permit = acquire_owned_permit(SEMAPHORE_WITGEN.clone())
+        .await
+        .map_err(ProvingError::OtherError);
+    let (
+        boot_info,
+        proof_journal,
+        precondition,
+        traced_driver,
+        witness,
+        extra_frames,
+        extra_proofs,
+    ) = match (proving.use_hokulea(), proving.use_hana()) {
+        (false, false) => {
+            witgen::run_witgen_client(
+                B256::from(bytemuck::cast::<_, [u8; 32]>(
+                    kailua_build::KAILUA_FPVM_KONA_ID,
+                )),
+                preimage_oracle.clone(),
+                10 * 1024 * 1024, // default to 10MB chunks
+                blob_provider,
+                EthereumDataSourceProvider,
+                proving.payout_recipient_address.unwrap_or_default(),
+                proposal_data_hash,
+                execution_cache.clone(),
+                derivation_cache.clone(),
+                trace_derivation,
+                stitched_preconditions.clone(),
+                stitched_boot_info.clone(),
+            )
+            .await
+            .context("Failed to run kona vec witgen client.")
+            .map_err(ProvingError::OtherError)
+            .map(|(b, j, p, d, w)| (b, j, p, d, w, vec![], vec![]))?
+        }
+        (true, _) => {
+            let (boot_info, proof_journal, precondition, cached_driver, witness, mut da_witness) =
+                crate::hokulea::witgen::run_hokulea_witgen_client(
+                    preimage_oracle.clone(),
+                    10 * 1024 * 1024, // default to 10MB chunks
+                    blob_provider,
+                    proving.payout_recipient_address.unwrap_or_default(),
+                    proposal_data_hash,
+                    execution_cache.clone(),
+                    derivation_cache.clone(),
+                    trace_derivation,
+                    stitched_preconditions.clone(),
+                    stitched_boot_info.clone(),
+                )
+                .await
+                .context("Failed to run hokulea vec witgen client.")
+                .map_err(ProvingError::OtherError)?;
+            // Generate Hokulea DA proofs
+            let canoe_provider = crate::hokulea::canoe::KailuaCanoeSteelProvider {
+                eth_rpc_url: l1_node_address.expect("Missing Hokulea L1 Node Provider"),
+                proving_args: proving.clone(),
+                boundless_args: boundless.clone(),
+            };
+
+            // todo: concurrency via generic prover pool
+            let mut canoe_proofs = Vec::new();
+            for (commitment, validity) in &mut da_witness.validity {
+                if validity.canoe_proof.is_some() {
+                    continue;
+                }
+                let mut provider = kona_proof::l1::OracleL1ChainProvider::new(
+                    validity.l1_head_block_hash,
+                    preimage_oracle.clone(),
+                );
+                let l1_head_block = provider
+                    .header_by_hash(validity.l1_head_block_hash)
+                    .await
+                    .expect("Failed to get l1 head block for canoe");
+                // Call local/bonsai/boundless prover w/ receipt caching
+                let receipt = canoe_provider
+                    .create_cert_validity_proof(canoe_provider::CanoeInput {
+                        altda_commitment: commitment.clone(),
+                        claimed_validity: validity.claimed_validity,
+                        l1_head_block_hash: validity.l1_head_block_hash,
+                        l1_head_block_number: l1_head_block.number,
+                        l1_chain_id: validity.l1_chain_id,
+                    })
+                    .await
+                    .expect("Canoe proof creation failed");
+                // use manual recursion only when necessary
+                if matches!(receipt.inner, risc0_zkvm::InnerReceipt::Groth16(_)) {
+                    validity.canoe_proof = Some(
+                        serde_json::to_vec(&receipt).expect("Canoe proof serialization failed"),
+                    );
+                } else {
+                    canoe_proofs.push(receipt);
+                }
+            }
+            // todo: sharding into separate frames
+            let eigen_da_frame = bincode::serialize(&da_witness)
+                .expect("Failed to serialize EigenDABlobWitnessData");
+
+            (
+                boot_info,
+                proof_journal,
+                precondition,
+                cached_driver,
+                witness,
+                vec![eigen_da_frame],
+                canoe_proofs,
+            )
+        }
+        (_, true) => {
+            let (boot_info, proof_journal, precondition, cached_driver, witness, da_witness) =
+                crate::hana::witgen::run_hana_witgen_client::<_, _, VecOracle>(
+                    preimage_oracle.clone(),
+                    10 * 1024 * 1024, // default to 10MB chunks
+                    blob_provider,
+                    proving.payout_recipient_address.unwrap_or_default(),
+                    proposal_data_hash,
+                    execution_cache.clone(),
+                    derivation_cache.clone(),
+                    trace_derivation,
+                    stitched_preconditions.clone(),
+                    stitched_boot_info.clone(),
+                )
+                .await
+                .context("Failed to run hana vec witgen client.")
+                .map_err(ProvingError::OtherError)?;
+            // serialize celestia frame (todo: sharding)
+            let celestia_da_frame = rkyv::to_bytes::<rkyv::rancor::Error>(&da_witness)
+                .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
+                .to_vec();
+
+            (
+                boot_info,
+                proof_journal,
+                precondition,
+                cached_driver,
+                witness,
+                vec![celestia_da_frame],
+                vec![],
+            )
+        }
+    };
+    drop(witgen_permit);
+
+    // Commit derivation trace to driver file
+    let driver_file = driver_file_name(proving.image_id(), &boot_info, &precondition);
+    if let Some(traced_driver) = traced_driver.as_ref() {
+        let driver_digest = B256::new(traced_driver.digest().into());
+        if driver_digest != precondition.derivation_trace {
+            error!(
+                "Witgen derivation trace hash mismatch: Output {driver_digest}, precondition: {}",
+                precondition.derivation_trace
+            );
+        }
+        match rkyv::to_bytes::<Error>(traced_driver) {
+            Ok(rkyved_driver) => {
+                if let Err(err) = save_to_bincoded_file(&rkyved_driver.to_vec(), &driver_file).await
+                {
+                    error!(
+                        "Failed to write CachedDriver {driver_digest} to {driver_file}: {err:?}"
+                    );
+                } else {
+                    info!("Wrote CachedDriver {driver_digest} to {driver_file}.");
+                }
+            }
+            Err(err) => {
+                error!("Failed to rkyv CachedDriver: {err:?}")
+            }
+        }
+    } else if trace_derivation {
+        error!("Witgen client did not provide required CachedDriver.");
+    }
+
+    // Sanity check
+    let precondition_hash = B256::new(precondition.digest().into());
+    if proof_journal.precondition_hash != precondition_hash {
+        error!(
+            "ProofJournal precondition hash mismatch: found {} expected {} for {precondition:?}.",
+            proof_journal.precondition_hash, precondition_hash
+        );
+    }
+    if witness.trace_derivation != trace_derivation {
+        error!(
+            "Witness derivation tracing {} expected {trace_derivation}.",
+            witness.trace_derivation
+        );
+    }
+
+    // Encode witness as frames
+    let traced_driver_hash = traced_driver
+        .as_ref()
+        .map(|d| B256::new(d.digest().into()))
+        .unwrap_or_default();
+    let witness_frames = process_witness(
+        &proving,
+        witness,
+        stitched_executions,
+        extra_frames,
+        seek_proof,
+        force_attempt,
+        derivation_cache,
+        derivation_trace.clone(),
+        traced_driver_hash,
+    )?;
+
+    // signal the cached driver to the tracer before seeking a proof
+    if trace_derivation && derivation_trace.is_none() {
+        warn!("Traced derivation without signaling.");
+    }
+    signal_derivation_trace(derivation_trace, traced_driver).await;
+
+    // seek corresponding proof
+    crate::risczero::seek_proof(
+        &proving,
+        boundless,
+        Journal::from(&proof_journal),
+        vec![],
+        witness_frames,
+        [stitched_proofs, extra_proofs].concat(),
+        prove_snark,
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn acquire_owned_permit(
+    semaphore: Arc<Mutex<Arc<Semaphore>>>,
+) -> anyhow::Result<OwnedSemaphorePermit> {
+    semaphore
+        .lock()
+        .await
+        .clone()
+        .acquire_owned()
+        .await
+        .context("Could not acquire witgen permit.")
+}
+
+/// Update the number of available permits
+pub async fn restrict_witgen_permits(count: usize) {
+    let mut witgen_sem_lock = SEMAPHORE_WITGEN.lock().await;
+    *witgen_sem_lock = Arc::new(Semaphore::new(count));
+}
+
+/// Update the number of available permits
+pub async fn restrict_r0vm_permits(count: usize) {
+    let mut execute_sem_lock = SEMAPHORE_R0VM.lock().await;
+    *execute_sem_lock = Arc::new(Semaphore::new(count));
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn process_witness(
+    proving: &ProvingArgs,
+    mut witness: Witness<VecOracle>,
+    stitched_executions: Vec<Vec<Execution>>,
+    extra_frames: Vec<Vec<u8>>,
+    seek_proof: bool,
+    force_attempt: bool,
+    derivation_cache: Option<CachedDriver>,
+    derivation_trace: Option<Sender<CachedDriver>>,
+    derivation_trace_hash: B256,
+) -> Result<Vec<Vec<u8>>, ProvingError> {
+    let execution_trace = core::mem::replace(&mut witness.stitched_executions, stitched_executions);
+
+    // Sanity check kzg proofs
+    let _ = kailua_kona::blobs::PreloadedBlobProvider::from(witness.blobs_witness.clone());
+
+    // check if we can prove this workload
+    let (preloaded_wit_size, streamed_wit_size) = sum_witness_size(&witness);
+    let total_wit_size = preloaded_wit_size
+        + streamed_wit_size
+        + extra_frames.iter().map(|f| f.len()).sum::<usize>();
+    info!(
+        "Witness size: {} ({} preloaded, {} streamed.)",
+        human_bytes(total_wit_size as f64),
+        human_bytes(preloaded_wit_size as f64),
+        human_bytes(streamed_wit_size as f64)
+    );
+    // Abort on witness size violation
+    if total_wit_size > proving.max_witness_size {
+        warn!(
+            "Witness size {} exceeds limit {}.",
+            human_bytes(total_wit_size as f64),
+            human_bytes(proving.max_witness_size as f64)
+        );
+        if !force_attempt {
+            warn!("Aborting.");
+            return Err(ProvingError::WitnessSizeError(
+                total_wit_size,
+                proving.max_witness_size,
+                execution_trace,
+                Box::new(derivation_cache),
+                derivation_trace,
+            ));
+        }
+        warn!("Continuing..");
+    }
+    // Abort on block count violation
+    let num_executions = execution_trace.iter().flatten().count();
+    if num_executions > proving.max_block_executions {
+        warn!(
+            "Executed blocks {num_executions} exceeds limit {}",
+            proving.max_block_executions
+        );
+        if !force_attempt {
+            warn!("Aborting.");
+            return Err(ProvingError::BlockCountError(
+                num_executions,
+                proving.max_block_executions,
+                execution_trace,
+                Box::new(derivation_cache),
+                derivation_trace,
+            ));
+        }
+        warn!("Continuing..");
+    }
+
+    if !seek_proof {
+        return Err(ProvingError::NotSeekingProof(
+            total_wit_size,
+            execution_trace,
+            Box::new(derivation_cache),
+            derivation_trace,
+            derivation_trace_hash,
+        ));
+    }
+
+    // collect input frames
+    let (preloaded_frames, streamed_frames) = encode_witness_frames(witness)
+        .context("Failed to encode VecOracle")
+        .map_err(ProvingError::OtherError)?;
+
+    Ok([extra_frames, preloaded_frames, streamed_frames].concat())
+}
+
+#[allow(clippy::type_complexity)]
+pub fn encode_witness_frames(
+    witness_vec: Witness<VecOracle>,
+) -> anyhow::Result<(Vec<Vec<u8>>, Vec<Vec<u8>>)> {
+    // serialize preloaded shards
+    let mut preloaded_data = witness_vec.oracle_witness.preimages.lock().unwrap();
+    let shards = shard_witness_data(&mut preloaded_data)?;
+    drop(preloaded_data);
+    // serialize streamed data
+    let mut streamed_data = witness_vec.stream_witness.preimages.lock().unwrap();
+    let mut streams = shard_witness_data(&mut streamed_data)?;
+    streams.reverse();
+    streamed_data.clear();
+    drop(streamed_data);
+    // serialize main witness object
+    let main_frame = rkyv::to_bytes::<rkyv::rancor::Error>(&witness_vec)
+        .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
+        .to_vec();
+    let preloaded_data = [vec![main_frame], shards].concat();
+
+    Ok((preloaded_data, streams))
+}
+
+pub fn shard_witness_data(data: &mut [PreimageVecEntry]) -> anyhow::Result<Vec<Vec<u8>>> {
+    let mut shards = vec![];
+    for entry in data {
+        let shard = core::mem::take(entry);
+        shards.push(
+            rkyv::to_bytes::<rkyv::rancor::Error>(&shard)
+                .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
+                .to_vec(),
+        )
+    }
+    Ok(shards)
+}
+
+pub fn sum_witness_size(witness: &Witness<VecOracle>) -> (usize, usize) {
+    let (witness_frames, streamed_frames) =
+        encode_witness_frames(witness.deep_clone()).expect("Failed to encode VecOracle");
+    (
+        witness_frames.iter().map(|f| f.len()).sum::<usize>(),
+        streamed_frames.iter().map(|f| f.len()).sum::<usize>(),
+    )
+}

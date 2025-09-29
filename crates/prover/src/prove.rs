@@ -1,0 +1,525 @@
+// Copyright 2024, 2025 RISC Zero, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use crate::args::ProveArgs;
+use crate::channel::AsyncChannel;
+use crate::config::generate_rollup_config_file;
+use crate::kv::create_disk_kv_store;
+use crate::preflight::{concurrent_execution_preflight, fetch_precondition_data};
+use crate::tasks::{handle_oneshot_tasks, CachedTask, Oneshot, OneshotResult};
+use crate::ProvingError;
+use alloy::eips::BlockNumberOrTag;
+use alloy::providers::{Provider, RootProvider};
+use alloy_primitives::B256;
+use anyhow::{anyhow, bail, Context};
+use human_bytes::human_bytes;
+use kailua_kona::boot::StitchedBootInfo;
+use kailua_kona::driver::CachedDriver;
+use kailua_kona::precondition::Precondition;
+use kailua_sync::provider::optimism::OpNodeProvider;
+use kailua_sync::{await_tel, retry_res_ctx_timeout};
+use opentelemetry::global::tracer;
+use opentelemetry::trace::FutureExt;
+use opentelemetry::trace::{TraceContextExt, Tracer};
+use std::collections::BinaryHeap;
+use std::env::set_var;
+use tempfile::tempdir;
+use tokio::fs::remove_dir_all;
+use tracing::{error, info, warn};
+
+pub async fn prove(mut args: ProveArgs) -> anyhow::Result<bool> {
+    let tracer = tracer("kailua");
+    let context = opentelemetry::Context::current_with_span(tracer.start("prove"));
+
+    // fetch starting block number
+    let l2_provider = if args.kona.is_offline() {
+        None
+    } else {
+        Some(
+            retry_res_ctx_timeout!(20, args.create_providers().await)
+                .await
+                .l2,
+        )
+    };
+    let op_node_provider = args.op_node_address.as_ref().map(|addr| {
+        OpNodeProvider(RootProvider::new_http(
+            addr.as_str()
+                .try_into()
+                .expect("Failed to parse op_node_address"),
+        ))
+    });
+
+    // set tmp data dir if data dir unset
+    let tmp_dir = tempdir().map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
+    if args.kona.data_dir.is_none() {
+        args.kona.data_dir = Some(tmp_dir.path().to_path_buf());
+    }
+
+    // fetch rollup config
+    let rollup_config = generate_rollup_config_file(&mut args, &tmp_dir)
+        .await
+        .context("generate_rollup_config")
+        .map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
+
+    // preload precondition data into KV store
+    let (proposal_precondition_hash, proposal_data_hash) = match fetch_precondition_data(&args)
+        .await
+        .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
+    {
+        Some(data) => {
+            let precondition_validation_data_hash = data.hash();
+            set_var(
+                "PRECONDITION_VALIDATION_DATA_HASH",
+                precondition_validation_data_hash.to_string(),
+            );
+            (data.precondition_hash(), precondition_validation_data_hash)
+        }
+        None => (B256::ZERO, B256::ZERO),
+    };
+
+    // create concurrent db
+    let disk_kv_store = create_disk_kv_store(&args.kona);
+    // perform preflight
+    if args.proving.num_concurrent_preflights == 0 {
+        warn!("Performing mandatory single-thread preflight.");
+        args.proving.num_concurrent_preflights = 1;
+    }
+    // run parallelized preflight instances to populate kv store
+    info!(
+        "Running concurrent preflights with {} threads",
+        args.proving.num_concurrent_preflights
+    );
+    if !concurrent_execution_preflight(
+        &args,
+        rollup_config.clone(),
+        op_node_provider.as_ref().expect("Missing op_node_provider"),
+        disk_kv_store.clone(),
+    )
+    .await
+    .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
+    {
+        return Ok(false);
+    }
+    // We only use executionWitness/executePayload during preflight.
+    args.kona.enable_experimental_witness_endpoint = false;
+
+    // spin up proving workers
+    let task_channel: AsyncChannel<Oneshot> = async_channel::unbounded();
+    let mut proving_handlers = vec![];
+    for _ in 0..args.proving.num_concurrent_proofs {
+        proving_handlers.push(tokio::spawn(handle_oneshot_tasks(task_channel.1.clone())));
+    }
+    let mut result_pq = BinaryHeap::new();
+
+    // create channel for receiving proving results from handlers
+    let result_channel = async_channel::unbounded();
+    // create channel for receiving proof requests to process and dispatch to handlers
+    let prover_channel = async_channel::unbounded();
+    // create channel for receiving final derivation trace in case of stitching
+    let mut derivation_cache_receiver = None;
+    // dispatch requested proof
+    let mut num_proofs = 0;
+    if let (Some(l2_provider), Some(op_node_provider)) =
+        (l2_provider.as_ref(), op_node_provider.as_ref())
+    {
+        // divide into subtasks
+        let mut agreed_l2_block_number = await_tel!(
+            context,
+            tracer,
+            "l2_provider get_block_by_hash agreed_l2_head_hash",
+            retry_res_ctx_timeout!(l2_provider
+                .get_block_by_hash(args.kona.agreed_l2_head_hash)
+                .await
+                .context("l2_provider get_block_by_hash agreed_l2_head_hash")?
+                .ok_or_else(|| anyhow!("Failed to fetch agreed l2 block number")))
+        )
+        .header
+        .number;
+        let mut agreed_l2_output_root = args.kona.agreed_l2_output_root;
+        let mut agreed_l2_head_hash = args.kona.agreed_l2_head_hash;
+        while agreed_l2_output_root != args.kona.claimed_l2_output_root {
+            let claimed_l2_block_number = agreed_l2_block_number
+                .saturating_add(args.proving.max_block_derivations as u64)
+                .min(args.kona.claimed_l2_block_number);
+            // Create sub-proof job
+            let mut job_args = args.clone();
+            job_args.kona.agreed_l2_output_root = agreed_l2_output_root;
+            job_args.kona.agreed_l2_head_hash = agreed_l2_head_hash;
+            job_args.kona.claimed_l2_output_root = await_tel!(
+                context,
+                tracer,
+                "claimed_l2_output_root",
+                retry_res_ctx_timeout!(
+                    op_node_provider
+                        .output_at_block(claimed_l2_block_number)
+                        .await
+                )
+            );
+            job_args.kona.claimed_l2_block_number = claimed_l2_block_number;
+            // advance agreed pointers
+            agreed_l2_block_number = claimed_l2_block_number;
+            agreed_l2_output_root = job_args.kona.claimed_l2_output_root;
+            agreed_l2_head_hash = await_tel!(
+                context,
+                tracer,
+                "l2_provider get_block_by_number claimed_l2_block_number",
+                retry_res_ctx_timeout!(l2_provider
+                    .get_block_by_number(BlockNumberOrTag::Number(claimed_l2_block_number))
+                    .await
+                    .context("l2_provider get_block_by_number claimed_l2_block_number")?
+                    .ok_or_else(|| anyhow!("Failed to fetch claimed l2 block")))
+            )
+            .header
+            .hash;
+            // instantiate cached driver relays
+            let is_last_iteration = agreed_l2_output_root == args.kona.claimed_l2_output_root;
+            let (derivation_trace_sender, new_receiver) = (!is_last_iteration)
+                .then(|| async_channel::bounded::<CachedDriver>(1))
+                .unzip();
+            // queue up job
+            num_proofs += 1;
+            prover_channel
+                .0
+                .send((
+                    false,
+                    job_args.clone(),
+                    derivation_cache_receiver,
+                    derivation_trace_sender,
+                ))
+                .await
+                .expect("Failed to send prover task");
+            // prepare receiver for next iteration if any
+            derivation_cache_receiver = new_receiver;
+        }
+    } else {
+        // one big task
+        num_proofs = 1;
+        prover_channel
+            .0
+            .send((false, args.clone(), None, None))
+            .await
+            .expect("Failed to send prover task");
+    }
+
+    // wait for required proofs to arrive
+    while result_pq.len() < num_proofs {
+        // dispatch all pending proofs
+        while !prover_channel.1.is_empty() {
+            let (have_split, job_args, derivation_cache_receiver, derivation_trace_sender) =
+                prover_channel
+                    .1
+                    .recv()
+                    .await
+                    .expect("Failed to recv prover task");
+
+            let starting_block = if let Some(l2_provider) = l2_provider.as_ref() {
+                await_tel!(
+                    context,
+                    tracer,
+                    "l2_provider get_block_by_hash starting_block",
+                    retry_res_ctx_timeout!(l2_provider
+                        .get_block_by_hash(job_args.kona.agreed_l2_head_hash)
+                        .await
+                        .context("l2_provider get_block_by_hash starting_block")?
+                        .ok_or_else(|| anyhow!("Failed to fetch starting block")))
+                )
+                .header
+                .number
+            } else {
+                0
+            };
+
+            let num_blocks = job_args.kona.claimed_l2_block_number - starting_block;
+            if starting_block > 0 {
+                info!(
+                    "Preparing task for (split={have_split}) job with {} blocks from block {}",
+                    num_blocks, starting_block
+                );
+            }
+            // Force the proving attempt regardless of witness size if we prove just one block
+            let force_attempt = num_blocks == 1 || job_args.kona.is_offline();
+
+            // spawn an async task that computes the proof using one of the instantiated handlers and sends back the result to result_channel
+            let rollup_config = rollup_config.clone();
+            let disk_kv_store = disk_kv_store.clone();
+            let task_channel = task_channel.clone();
+            let result_channel = result_channel.clone();
+            tokio::spawn(async move {
+                let result = crate::tasks::compute_fpvm_proof(
+                    job_args.clone(),
+                    rollup_config,
+                    disk_kv_store,
+                    Precondition::default().proposal(proposal_precondition_hash),
+                    proposal_data_hash,
+                    derivation_cache_receiver,
+                    derivation_trace_sender,
+                    vec![],
+                    vec![],
+                    vec![],
+                    !have_split,
+                    task_channel.0.clone(),
+                )
+                .await;
+
+                result_channel
+                    .0
+                    .clone()
+                    .send((starting_block, job_args, force_attempt, result))
+                    .await
+                    .expect("Failed to send fpvm proof result");
+            });
+        }
+
+        // receive and process new results
+        let (starting_block, job_args, force_attempt, result) = result_channel
+            .1
+            .recv()
+            .await
+            .expect("Failed to recv prover task");
+        let num_blocks = job_args.kona.claimed_l2_block_number - starting_block;
+        let last_block = job_args.kona.claimed_l2_block_number;
+
+        match result {
+            Ok(result) => {
+                let cached_task = CachedTask {
+                    // used for sorting
+                    args: job_args.clone(),
+                    // all unused
+                    rollup_config: rollup_config.clone(),
+                    disk_kv_store: disk_kv_store.clone(),
+                    precondition: result.as_ref().map(|(_, p)| *p).unwrap_or_else(|| {
+                        Precondition::default().proposal(proposal_precondition_hash)
+                    }),
+                    proposal_data_hash,
+                    stitched_executions: vec![],
+                    derivation_cache: None,
+                    derivation_trace: None,
+                    stitched_preconditions: vec![],
+                    stitched_boot_info: vec![],
+                    stitched_proofs: vec![],
+                    prove_snark: false,
+                    force_attempt,
+                    seek_proof: true,
+                };
+                if result.is_some() {
+                    info!(
+                        "Successfully proved {num_blocks} blocks ({starting_block}..{last_block})",
+                    );
+                } else {
+                    error!(
+                        "Failed to create complete proof for {num_blocks} blocks ({starting_block}..{last_block})",
+                    );
+                }
+                let result = result
+                    .ok_or_else(|| ProvingError::OtherError(anyhow!("Missing complete proof.")));
+                // enqueue result to reach the termination condition
+                result_pq.push(OneshotResult {
+                    cached_task,
+                    result,
+                });
+            }
+            Err(err) => {
+                // Handle error case
+                let (derivation_cache, mut derivation_trace) = match err {
+                    ProvingError::WitnessSizeError(f, t, _, d, s) => {
+                        if force_attempt {
+                            bail!(
+                                "Received WitnessSizeError({f},{t}) for a forced proving attempt."
+                            );
+                        }
+                        warn!(
+                            "Proof witness size {} above safety threshold {}. Splitting workload.",
+                            human_bytes(f as f64),
+                            human_bytes(t as f64),
+                        );
+                        (*d, s)
+                    }
+                    ProvingError::ExecutionError(e) => {
+                        if force_attempt {
+                            bail!("Irrecoverable ZKVM execution error: {e:?}")
+                        }
+                        warn!("Splitting proof after ZKVM execution error: {e:?}");
+                        // todo: should we reuse sender/receiver here?
+                        Default::default()
+                    }
+                    ProvingError::OtherError(e) => {
+                        bail!("Irrecoverable proving error: {e:?}")
+                    }
+                    ProvingError::BlockCountError(..) => {
+                        unreachable!("BlockCountError bubbled up")
+                    }
+                    ProvingError::NotSeekingProof(..) => {
+                        unreachable!("NotSeekingProof bubbled up")
+                    }
+                    ProvingError::DerivationProofError(proofs) => {
+                        info!(
+                            "Successfully proved execution-only for {num_blocks} blocks ({starting_block}..{last_block}) over {proofs} proofs",
+                        );
+                        num_proofs -= 1;
+                        continue;
+                    }
+                    ProvingError::NotAwaitingProof => {
+                        info!(
+                            "Skipped awaiting proof for {num_blocks} blocks ({starting_block}..{last_block})",
+                        );
+                        num_proofs -= 1;
+                        continue;
+                    }
+                };
+                // Instantiate driver cache relays
+                if num_proofs == 1 {
+                    (derivation_trace, derivation_cache_receiver) =
+                        Some(async_channel::bounded::<CachedDriver>(1)).unzip();
+                }
+                // Require additional proof
+                num_proofs += 1;
+                // Split workload at midpoint (num_blocks > 1)
+                let mid_point = starting_block + num_blocks / 2;
+                let op_node_provider = op_node_provider.as_ref().expect("Missing op_node_provider");
+                let mid_output = await_tel!(
+                    context,
+                    tracer,
+                    "op_node_provider output_at_block mid_output",
+                    retry_res_ctx_timeout!(op_node_provider
+                        .output_at_block(mid_point)
+                        .await
+                        .context("op_node_provider output_at_block mid_output"))
+                );
+                let l2_provider = l2_provider.as_ref().expect("Missing l2_provider");
+                let mid_block = await_tel!(
+                    context,
+                    tracer,
+                    "l2_provider get_block_by_number mid_block",
+                    retry_res_ctx_timeout!(l2_provider
+                        .get_block_by_number(BlockNumberOrTag::Number(mid_point))
+                        .await
+                        .context("l2_provider get_block_by_number mid_block")?
+                        .ok_or_else(|| anyhow!("Block {mid_point} not found")))
+                );
+                // Instantiate derivation trace channel
+                let (lower_sender, upper_receiver) = async_channel::bounded(1);
+                // Lower half workload ends at midpoint (inclusive)
+                let mut lower_job_args = job_args.clone();
+                lower_job_args.kona.claimed_l2_output_root = mid_output;
+                lower_job_args.kona.claimed_l2_block_number = mid_point;
+                // Instantiate derivation cache channel
+                let lower_receiver = match derivation_cache {
+                    Some(cached_driver) => {
+                        let (sender, receiver) = async_channel::bounded(1);
+                        sender.send(cached_driver).await.expect("infallible");
+                        Some(receiver)
+                    }
+                    None => None,
+                };
+                prover_channel
+                    .0
+                    .send((true, lower_job_args, lower_receiver, Some(lower_sender)))
+                    .await
+                    .expect("Failed to send prover task");
+                // upper half workload starts after midpoint
+                let mut upper_job_args = job_args;
+                upper_job_args.kona.agreed_l2_output_root = mid_output;
+                upper_job_args.kona.agreed_l2_head_hash = mid_block.header.hash;
+                prover_channel
+                    .0
+                    .send((true, upper_job_args, Some(upper_receiver), derivation_trace))
+                    .await
+                    .expect("Failed to send prover task");
+            }
+        }
+    }
+
+    // recursively combine expected proofs
+    if !args.proving.skip_stitching() && result_pq.len() > 1 {
+        // gather sorted proofs into vec
+        let results = result_pq
+            .into_sorted_vec()
+            .into_iter()
+            .rev()
+            .map(|r| r.result.expect("Failed to get result"))
+            .collect::<Vec<_>>();
+
+        // stitch contiguous proofs together
+        info!("Composing {} proofs together.", results.len());
+        // construct a proving instruction with no blocks to derive
+        let mut base_args = args.clone();
+        {
+            // set last block as starting point
+            base_args.kona.agreed_l2_output_root = base_args.kona.claimed_l2_output_root;
+            let l2_provider = l2_provider.as_ref().unwrap();
+            base_args.kona.agreed_l2_head_hash = await_tel!(
+                context,
+                tracer,
+                "l2_provider get_block_by_number claimed_l2_block_number",
+                retry_res_ctx_timeout!(l2_provider
+                    .get_block_by_number(BlockNumberOrTag::Number(
+                        base_args.kona.claimed_l2_block_number,
+                    ))
+                    .await
+                    .context("l2_provider get_block_by_number claimed_l2_block_number")?
+                    .ok_or_else(|| anyhow!("Claimed L2 block not found")))
+            )
+            .header
+            .hash;
+        }
+        // construct a list of boot info to backward stitch
+        let (proofs, stitched_preconditions): (Vec<_>, Vec<_>) = results.into_iter().unzip();
+        let stitched_boot_info = proofs
+            .iter()
+            .map(StitchedBootInfo::from)
+            .collect::<Vec<_>>();
+
+        crate::tasks::compute_fpvm_proof(
+            base_args,
+            rollup_config.clone(),
+            disk_kv_store.clone(),
+            Precondition::default().proposal(proposal_precondition_hash),
+            proposal_data_hash,
+            derivation_cache_receiver,
+            None,
+            stitched_preconditions,
+            stitched_boot_info,
+            proofs,
+            true,
+            task_channel.0.clone(),
+        )
+        .await
+        .context("Failed to compute stitched FPVM proof.")?;
+    }
+
+    // Cleanup cached data
+    drop(disk_kv_store);
+    cleanup_cache_data(&args).await;
+
+    info!("Exiting prover program.");
+    Ok(true)
+}
+
+pub async fn cleanup_cache_data(args: &ProveArgs) {
+    let Some(data_dir) = args.kona.data_dir.as_ref() else {
+        return;
+    };
+    if !args.proving.clear_cache_data {
+        warn!("Cache data directory {} was persisted.", data_dir.display());
+        return;
+    }
+    if let Err(err) = remove_dir_all(data_dir).await {
+        error!(
+            "Failed to cleanup cache directory {}: {err:?}",
+            data_dir.display()
+        );
+    } else {
+        info!("Cache data directory {} was removed.", data_dir.display());
+    }
+}

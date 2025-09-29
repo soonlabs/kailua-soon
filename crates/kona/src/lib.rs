@@ -23,6 +23,8 @@ pub mod boot;
 pub mod client;
 /// Procedures for generating secure cryptographic commitments to rollup configuration settings.
 pub mod config;
+/// Implementation for caching support in derivation.
+pub mod driver;
 /// Implementation for an execution engine with caching support.
 pub mod executor;
 /// A tightly packed representation for extended execution trace results.
@@ -35,8 +37,8 @@ pub mod oracle;
 pub mod precondition;
 /// Utility methods for zero-copy (de)serialization using the `rkyv` crate.
 pub mod rkyv;
+/// A module for representing oracle-backed stateless client witness data.
+pub mod witness;
 /// Test module for testing the common crate.
 #[cfg(test)]
 pub mod test;
-/// A module for representing oracle-backed stateless client witness data.
-pub mod witness;

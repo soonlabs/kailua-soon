@@ -12,38 +12,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::stall::Stall;
-use crate::transact::signer::{DeployerSignerArgs, GuardianSignerArgs, OwnerSignerArgs};
-use crate::transact::{Transact, TransactArgs};
-use crate::{retry_res_ctx_timeout, KAILUA_GAME_TYPE};
 use alloy::network::{Ethereum, Network, ReceiptResponse, TxSigner};
-use alloy::primitives::{Address, Bytes, U256};
+use alloy::primitives::{Address, Bytes, B256, U256};
 use alloy::providers::{Provider, RootProvider};
 use alloy::sol_types::SolValue;
 use anyhow::{anyhow, bail, Context};
-use kailua_build::KAILUA_FPVM_ID;
-use kailua_client::telemetry::TelemetryArgs;
-use kailua_client::{await_tel, await_tel_res};
-use kailua_common::config::{config_hash, BN254_CONTROL_ID, CONTROL_ROOT};
+use kailua_build::KAILUA_FPVM_KONA_ID;
 use kailua_contracts::*;
-use kailua_host::config::fetch_rollup_config;
+use kailua_kona::config::config_hash;
+use kailua_sync::provider::optimism::fetch_rollup_config;
+use kailua_sync::provider::optimism::OpNodeProvider;
+use kailua_sync::stall::Stall;
+use kailua_sync::telemetry::TelemetryArgs;
+use kailua_sync::transact::safe::exec_safe_txn;
+use kailua_sync::transact::signer::{DeployerSignerArgs, GuardianSignerArgs, OwnerSignerArgs};
+use kailua_sync::transact::{Transact, TransactArgs};
+use kailua_sync::{await_tel, await_tel_res, retry_res_ctx_timeout, KAILUA_GAME_TYPE};
 use opentelemetry::global::tracer;
 use opentelemetry::trace::{FutureExt, Status, TraceContextExt, Tracer};
-use soon_l2_chain_provider::chain_provider::L2BlockFetcher;
+use risc0_circuit_recursion::control_id::BN254_IDENTITY_CONTROL_ID;
+use risc0_zkvm::ALLOWED_CONTROL_ROOT;
 use std::str::FromStr;
 use tracing::info;
 
+/// Fast-track migrate a rollup to use Kailua
 #[derive(clap::Args, Debug, Clone)]
 pub struct FastTrackArgs {
-    #[arg(long, short, help = "Verbosity level (0-4)", action = clap::ArgAction::Count)]
-    pub v: u8,
-
     /// Address of the OP-NODE endpoint to use
     #[clap(long, env)]
-    pub soon_node_url: String,
+    pub op_node_url: String,
+    /// Address of the OP-GETH endpoint to use (eth and debug namespace required).
+    #[clap(long, env)]
+    pub op_geth_url: String,
     /// Address of the ethereum rpc endpoint to use (eth namespace required)
     #[clap(long, env)]
     pub eth_rpc_url: String,
+    /// Whether to bypass loading rollup chain configurations from the kona registry
+    #[clap(long, env, default_value_t = false)]
+    pub bypass_chain_registry: bool,
 
     /// Transaction publication configuration
     #[clap(flatten)]
@@ -79,9 +85,12 @@ pub struct FastTrackArgs {
     #[clap(flatten)]
     pub guardian_signer: Option<GuardianSignerArgs>,
 
-    /// Addresses of the vanguards to set (comma-separated)
+    /// Address of the vanguard to set
     #[clap(long, env)]
-    pub vanguard_addresses: Option<String>,
+    pub vanguard_address: Option<String>,
+    /// Duration of the advantage given to the vanguard
+    #[clap(long, env, requires = "vanguard_address")]
+    pub vanguard_advantage: Option<u64>,
 
     /// Whether to set Kailua as the OptimismPortal's respected game type
     #[clap(long, env)]
@@ -95,15 +104,25 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
     let tracer = tracer("kailua");
     let context = opentelemetry::Context::current_with_span(tracer.start("fast_track"));
 
-    let soon_node_provider = L2BlockFetcher::new_with_url(args.soon_node_url.as_str());
+    let op_node_provider = OpNodeProvider(RootProvider::new_http(
+        args.op_node_url.as_str().try_into()?,
+    ));
     let eth_rpc_provider =
         RootProvider::<Ethereum>::new_http(args.eth_rpc_url.as_str().try_into()?);
 
     info!("Fetching rollup configuration from rpc endpoints.");
     // fetch rollup config
-    let config = await_tel!(context, fetch_rollup_config(&args.soon_node_url, None))
-        .context("fetch_rollup_config")?;
-    let rollup_config_hash = config_hash(&config).context("config_hash")?;
+    let config = await_tel!(
+        context,
+        fetch_rollup_config(
+            &args.op_node_url,
+            &args.op_geth_url,
+            None,
+            args.bypass_chain_registry
+        )
+    )
+    .context("fetch_rollup_config")?;
+    let rollup_config_hash = config_hash(&config);
     info!("RollupConfigHash({})", hex::encode(rollup_config_hash));
 
     // load system config
@@ -125,8 +144,6 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
         "OwnerSignerArgs::wallet",
         args.owner_signer.wallet(Some(config.l1_chain_id))
     )?;
-    let owner_address = owner_wallet.default_signer().address();
-    info!("owner_address({:?})", owner_address);
     let owner_provider = args
         .txn_args
         .premium_provider::<Ethereum>()
@@ -153,6 +170,7 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
         .stall_with_context(context.clone(), "Safe::getOwners")
         .await;
     info!("Safe::owners({:?})", &safe_owners);
+    let owner_address = owner_wallet.default_signer().address();
     if safe_owners.first().unwrap() != &owner_address {
         bail!("Incorrect owner key.");
     } else if safe_owners.len() != 1 {
@@ -184,27 +202,21 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
     };
 
     // Deploy KailuaTreasury contract
-    let output_res = await_tel!(
+    let root_claim = await_tel!(
         context,
         tracer,
         "root_claim",
         retry_res_ctx_timeout!(
-            soon_node_provider
+            op_node_provider
                 .output_at_block(args.starting_block_number)
                 .await
         )
-    );
-    let root_claim = output_res.hash();
-    info!("output_res: {}", output_res);
-    info!(
-        "root_claim: {} at block number: {}",
-        root_claim, args.starting_block_number
     );
     info!("Deploying KailuaTreasury contract to L1 rpc.");
     let receipt = KailuaTreasury::deploy_builder(
         &deployer_provider,
         verifier_contract_address,
-        bytemuck::cast::<[u32; 8], [u8; 32]>(KAILUA_FPVM_ID).into(),
+        bytemuck::cast::<[u32; 8], [u8; 32]>(KAILUA_FPVM_KONA_ID).into(),
         rollup_config_hash.into(),
         args.proposal_output_count,
         args.output_block_span,
@@ -230,7 +242,7 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
         context,
         tracer,
         "DisputeGameFactory::setImplementation",
-        crate::transact::safe::exec_safe_txn(
+        exec_safe_txn(
             dispute_game_factory.setImplementation(KAILUA_GAME_TYPE, kailua_treasury_impl_addr),
             &factory_owner_safe,
             owner_address,
@@ -255,7 +267,7 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
             context,
             tracer,
             "DisputeGameFactory::setInitBond",
-            crate::transact::safe::exec_safe_txn(
+            exec_safe_txn(
                 dispute_game_factory.setInitBond(KAILUA_GAME_TYPE, U256::ZERO),
                 &factory_owner_safe,
                 owner_address,
@@ -268,34 +280,6 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
                 .await,
             U256::ZERO
         );
-    }
-
-    // Set the vanguard parameters if provided
-    if let Some(vanguard_addresses_string) = args.vanguard_addresses {
-        let vanguard_addresses: Vec<Address> = vanguard_addresses_string
-            .split(',')
-            .map(|addr| addr.trim())
-            .filter(|addr| !addr.is_empty())
-            .map(|addr| Address::from_str(addr))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        info!(
-            "Assigning {} proposal vanguards in KailuaTreasury.",
-            vanguard_addresses.len()
-        );
-
-        for vanguard_address in vanguard_addresses {
-            await_tel_res!(
-                context,
-                tracer,
-                "KailuaTreasury::assignVanguard",
-                crate::transact::safe::exec_safe_txn(
-                    kailua_treasury_implementation.assignVanguard(vanguard_address),
-                    &factory_owner_safe,
-                    owner_address,
-                )
-            )?;
-        }
     }
 
     // Create new treasury instance from target block number
@@ -316,11 +300,17 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
         .transact_with_context(context.clone(), "KailuaTreasury::propose")
         .await
         .context("KailuaTreasury::propose")?;
-    let kailua_treasury_instance_address = dispute_game_factory
-        .games(KAILUA_GAME_TYPE, root_claim, extra_data)
-        .stall_with_context(context.clone(), "DisputeGameFactory::games")
-        .await
-        .proxy_;
+    let kailua_treasury_instance_address = loop {
+        let result = dispute_game_factory
+            .games(KAILUA_GAME_TYPE, root_claim, extra_data.clone())
+            .stall_with_context(context.clone(), "DisputeGameFactory::games")
+            .await
+            .proxy_;
+
+        if !result.is_zero() {
+            break result;
+        }
+    };
     let kailua_treasury_instance =
         KailuaTreasury::new(kailua_treasury_instance_address, &owner_provider);
     info!("{:?}", &kailua_treasury_instance);
@@ -334,7 +324,7 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
             context,
             tracer,
             "KailuaTreasury::resolve",
-            crate::transact::safe::exec_safe_txn(
+            exec_safe_txn(
                 kailua_treasury_instance.resolve(),
                 &factory_owner_safe,
                 owner_address,
@@ -354,7 +344,7 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
         context,
         tracer,
         "KailuaTreasury::setParticipationBond",
-        crate::transact::safe::exec_safe_txn(
+        exec_safe_txn(
             kailua_treasury_implementation.setParticipationBond(bond_value),
             &factory_owner_safe,
             owner_address,
@@ -373,8 +363,8 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
     let receipt = KailuaGame::deploy_builder(
         &deployer_provider,
         *kailua_treasury_implementation.address(),
-        U256::from(0),
-        U256::from(0),
+        U256::from(config.genesis.l2_time),
+        U256::from(config.block_time),
         args.challenge_timeout,
     )
     .transact_with_context(context.clone(), "KailuaGame::deploy")
@@ -395,13 +385,31 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
         context,
         tracer,
         "DisputeGameFactory::setImplementation",
-        crate::transact::safe::exec_safe_txn(
+        exec_safe_txn(
             dispute_game_factory
                 .setImplementation(KAILUA_GAME_TYPE, *kailua_game_contract.address()),
             &factory_owner_safe,
             owner_address,
         )
     )?;
+
+    // Set the vanguard parameters if provided
+    if let Some(vanguard_address_string) = args.vanguard_address {
+        let vanguard_address = Address::from_str(&vanguard_address_string)?;
+        let vanguard_advantage = args.vanguard_advantage.unwrap_or(u64::MAX >> 4);
+        info!("Assigning proposal advantage to vanguard in KailuaTreasury.");
+
+        await_tel_res!(
+            context,
+            tracer,
+            "KailuaTreasury::assignVanguard",
+            exec_safe_txn(
+                kailua_treasury_implementation.assignVanguard(vanguard_address, vanguard_advantage),
+                &factory_owner_safe,
+                owner_address,
+            )
+        )?;
+    }
 
     // Update the respectedGameType as the guardian
     if args.respect_kailua_proposals {
@@ -447,6 +455,7 @@ pub async fn fast_track(args: FastTrackArgs) -> anyhow::Result<()> {
     Ok(())
 }
 
+#[allow(deprecated)]
 pub async fn deploy_verifier<P1: Provider<N>, P2: Provider<N>, N: Network>(
     deployer_provider: P1,
     owner_provider: P2,
@@ -468,11 +477,18 @@ pub async fn deploy_verifier<P1: Provider<N>, P2: Provider<N>, N: Network>(
 
     // Deploy RiscZeroGroth16Verifier contract
     info!("Deploying RiscZeroGroth16Verifier contract to L1.");
-    let receipt =
-        RiscZeroGroth16Verifier::deploy_builder(&deployer_provider, CONTROL_ROOT, BN254_CONTROL_ID)
-            .transact_with_context(context.clone(), "RiscZeroGroth16Verifier::deploy")
-            .await
-            .context("RiscZeroGroth16Verifier::deploy")?;
+    let receipt = RiscZeroGroth16Verifier::deploy_builder(
+        &deployer_provider,
+        B256::from_slice(ALLOWED_CONTROL_ROOT.as_bytes()),
+        {
+            let mut control_id = B256::from_slice(BN254_IDENTITY_CONTROL_ID.as_bytes());
+            control_id.reverse();
+            control_id
+        },
+    )
+    .transact_with_context(context.clone(), "RiscZeroGroth16Verifier::deploy")
+    .await
+    .context("RiscZeroGroth16Verifier::deploy")?;
     info!(
         "RiscZeroGroth16Verifier::deploy: {} gas",
         receipt.gas_used()
@@ -503,7 +519,6 @@ pub async fn deploy_verifier<P1: Provider<N>, P2: Provider<N>, N: Network>(
     );
 
     // Deploy mock verifier
-    #[allow(deprecated)]
     #[cfg(feature = "devnet")]
     if risc0_zkvm::is_dev_mode() {
         // Deploy MockVerifier contract

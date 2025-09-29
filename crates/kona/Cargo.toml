@@ -1,5 +1,5 @@
 [package]
-name = "kailua-common"
+name = "kailua-soon-kona"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

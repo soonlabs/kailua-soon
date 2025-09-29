@@ -12,17 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::transact::blob::BlobProvider;
-use crate::CoreArgs;
-use alloy_provider::RootProvider;
-use anyhow::Context;
-use kailua_client::await_tel;
-use opentelemetry::trace::FutureExt;
-use opentelemetry::trace::{TraceContextExt, Tracer};
+use crate::provider::beacon::BlobProvider;
+use crate::{await_tel, retry_res_ctx};
+use alloy::providers::RootProvider;
+use opentelemetry::trace::{FutureExt, TraceContextExt, Tracer};
 use soon_l2_chain_provider::chain_provider::L2BlockFetcher;
 
+pub mod beacon;
+
+#[derive(clap::Args, Debug, Clone)]
+pub struct ProviderArgs {
+    /// Address of the SOON-NODE endpoint to use.
+    #[clap(long, env)]
+    pub soon_node_url: String,
+    /// Number of L2 blocks to delay observation by
+    #[clap(long, env, default_value_t = 0)]
+    pub soon_rpc_delay: u64,
+    /// Address of the ethereum rpc endpoint to use (eth namespace required)
+    #[clap(long, env)]
+    pub eth_rpc_url: String,
+    /// Address of the L1 Beacon API endpoint to use.
+    #[clap(long, env)]
+    pub beacon_rpc_url: String,
+}
+
 /// A collection of RPC providers for L1 and L2 data
-/// TODO
 pub struct SyncProvider {
     /// DA provider for blobs
     pub da_provider: BlobProvider,
@@ -33,7 +47,7 @@ pub struct SyncProvider {
 }
 
 impl SyncProvider {
-    pub async fn new(core_args: &CoreArgs) -> anyhow::Result<Self> {
+    pub async fn new(core_args: &ProviderArgs) -> anyhow::Result<Self> {
         let tracer = opentelemetry::global::tracer("kailua");
         let context = opentelemetry::Context::current_with_span(tracer.start("SyncProvider::new"));
 
