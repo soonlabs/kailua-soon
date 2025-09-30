@@ -44,7 +44,7 @@ pub async fn prove(mut args: ProveArgs) -> anyhow::Result<bool> {
         None
     } else {
         Some(
-            retry_res_ctx_timeout!(20, args.create_providers().await)
+            retry_res_ctx_timeout!(args.timeouts.max(), args.create_providers().await)
                 .await
                 .l2,
         )
@@ -135,7 +135,10 @@ pub async fn prove(mut args: ProveArgs) -> anyhow::Result<bool> {
                 context,
                 tracer,
                 "claimed_l2_output_root",
-                retry_res_ctx_timeout!(l2_provider.output_at_block(claimed_l2_block_number).await)
+                retry_res_ctx_timeout!(
+                    args.timeouts.soon_node_timeout,
+                    l2_provider.output_at_block(claimed_l2_block_number).await
+                )
             )
             .hash();
             job_args.kona.claimed_l2_block_number = claimed_l2_block_number;
@@ -327,12 +330,15 @@ pub async fn prove(mut args: ProveArgs) -> anyhow::Result<bool> {
                     context,
                     tracer,
                     "soon_node_provider output_at_block mid_output",
-                    retry_res_ctx_timeout!(l2_provider
-                        .clone()
-                        .unwrap()
-                        .output_at_block(mid_point)
-                        .await
-                        .context("op_node_provider output_at_block mid_output"))
+                    retry_res_ctx_timeout!(
+                        args.timeouts.soon_node_timeout,
+                        l2_provider
+                            .clone()
+                            .unwrap()
+                            .output_at_block(mid_point)
+                            .await
+                            .context("op_node_provider output_at_block mid_output")
+                    )
                 )
                 .hash();
                 // Instantiate derivation trace channel

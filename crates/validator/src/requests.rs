@@ -29,6 +29,7 @@ use kailua_soon_kona::precondition::proposal::ProposalPrecondition;
 use kailua_sync::agent::SyncAgent;
 use kailua_sync::proposal::Proposal;
 use kailua_sync::provider::optimism::fetch_rollup_config;
+use kailua_sync::provider::ProviderTimeoutArgs;
 use kailua_sync::transact::rpc::get_next_block;
 use kailua_sync::{await_tel, await_tel_res};
 use opentelemetry::global::tracer;
@@ -172,6 +173,7 @@ pub async fn handle_proof_requests(
             precondition_block_hashes,
             precondition_blob_hashes,
             telemetry: args.sync.telemetry.clone(),
+            timeouts: args.sync.provider.timeouts,
         };
         // Send to task pool
         task_channel
@@ -205,6 +207,7 @@ pub async fn request_fault_proof(
     parent: &Proposal,
     proposal: &Proposal,
     l1_head: B256,
+    _timeouts: &ProviderTimeoutArgs,
 ) -> anyhow::Result<()> {
     let Some(fault) = proposal.fault() else {
         bail!("Proposal {} does not diverge from canon.", proposal.index);
@@ -255,6 +258,7 @@ pub async fn request_validity_proof(
     parent: &Proposal,
     proposal: &Proposal,
     l1_head: B256,
+    timeouts: &ProviderTimeoutArgs,
 ) -> anyhow::Result<()> {
     let tracer = tracer("kailua");
     let context = opentelemetry::Context::current_with_span(tracer.start("request_validity_proof"));
@@ -265,7 +269,11 @@ pub async fn request_validity_proof(
         for (blob_hash, blob) in &proposal.io_blobs {
             let block = await_tel!(
                 context,
-                get_next_block(&agent.provider.l1_provider, proposal.l1_head)
+                get_next_block(
+                    &agent.provider.l1_provider,
+                    proposal.l1_head,
+                    timeouts.eth_rpc_timeout
+                )
             )
             .context("block")?;
 

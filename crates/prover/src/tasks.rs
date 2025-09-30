@@ -337,7 +337,8 @@ pub async fn compute_fpvm_proof(
     let mut tail_proof_jobs = vec![];
     if can_stitch_tail_proofs && streamed_witness_size > (args.proving.max_witness_size * 90) / 100
     {
-        let mut chain_providers = retry_res_ctx_timeout!(20, args.create_providers().await).await;
+        let mut chain_providers =
+            retry_res_ctx_timeout!(args.timeouts.max(), args.create_providers().await).await;
         // Fetch earliest l1 block to start from
         let l1_tail_number = {
             let safe_block_info = chain_providers
@@ -355,12 +356,15 @@ pub async fn compute_fpvm_proof(
                 .map(|cache| cache.cursor.origin.number)
                 .unwrap_or_default(),
         );
-        let mut l1_tail = retry_res_ctx_timeout!(chain_providers
-            .l1
-            .get_block_by_number(l1_tail_number.into())
-            .await
-            .context("get_block_by_number l1_tail_number")?
-            .ok_or_else(|| anyhow!("Failed to fetch l1 tail")))
+        let mut l1_tail = retry_res_ctx_timeout!(
+            args.timeouts.eth_rpc_timeout,
+            chain_providers
+                .l1
+                .get_block_by_number(l1_tail_number.into())
+                .await
+                .context("get_block_by_number l1_tail_number")?
+                .ok_or_else(|| anyhow!("Failed to fetch l1 tail"))
+        )
         .await;
         // Create tail proofs
         info!(
@@ -375,14 +379,17 @@ pub async fn compute_fpvm_proof(
             let mut job_wit_size = 0;
             let should_continue = loop {
                 // move l1 tail forward
-                l1_tail = retry_res_ctx_timeout!(chain_providers
-                    .l1
-                    .get_block_by_number(
-                        (l1_tail.header.number + args.proving.num_tail_blocks).into()
-                    )
-                    .await
-                    .context("get_block_by_number l1_tail + num_tail_blocks")?
-                    .ok_or_else(|| anyhow!("Failed to fetch l1 tail")))
+                l1_tail = retry_res_ctx_timeout!(
+                    args.timeouts.eth_rpc_timeout,
+                    chain_providers
+                        .l1
+                        .get_block_by_number(
+                            (l1_tail.header.number + args.proving.num_tail_blocks).into()
+                        )
+                        .await
+                        .context("get_block_by_number l1_tail + num_tail_blocks")?
+                        .ok_or_else(|| anyhow!("Failed to fetch l1 tail"))
+                )
                 .await;
                 args.kona.l1_head = l1_tail.header.hash;
                 // Driver tracing
@@ -446,18 +453,21 @@ pub async fn compute_fpvm_proof(
                 .flatten()
             {
                 // move l1 tail backward for the next iteration to start under
-                l1_tail = retry_res_ctx_timeout!(chain_providers
-                    .l1
-                    .get_block_by_number(
-                        l1_tail
-                            .header
-                            .number
-                            .saturating_sub(args.proving.num_tail_blocks)
-                            .into()
-                    )
-                    .await
-                    .context("get_block_by_number l1_tail - tail_blocks")?
-                    .ok_or_else(|| anyhow!("Failed to fetch l1 tail")))
+                l1_tail = retry_res_ctx_timeout!(
+                    args.timeouts.eth_rpc_timeout,
+                    chain_providers
+                        .l1
+                        .get_block_by_number(
+                            l1_tail
+                                .header
+                                .number
+                                .saturating_sub(args.proving.num_tail_blocks)
+                                .into()
+                        )
+                        .await
+                        .context("get_block_by_number l1_tail - tail_blocks")?
+                        .ok_or_else(|| anyhow!("Failed to fetch l1 tail"))
+                )
                 .await;
                 args.kona.l1_head = l1_tail.header.hash;
                 // Queue tail workload

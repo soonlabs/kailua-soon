@@ -13,10 +13,22 @@
 // limitations under the License.
 
 use kailua_build::KAILUA_FPVM_ELF;
+use kailua_sync::telemetry::TelemetryArgs;
 use std::path::PathBuf;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tracing::{error, info};
+
+/// Export the FPVM binaries and their hardcoded image ids
+#[derive(clap::Args, Debug, Clone)]
+pub struct ExportArgs {
+    /// Directory to use for caching data
+    #[clap(long, env)]
+    pub data_dir: Option<PathBuf>,
+
+    #[clap(flatten)]
+    pub telemetry: TelemetryArgs,
+}
 
 pub async fn export(data_dir: PathBuf) -> anyhow::Result<()> {
     let programs = [(KAILUA_FPVM_ELF, "kailua-fpvm.bin")];

@@ -91,6 +91,7 @@ async fn deploy_kailua_contracts(challenge_timeout: u64) -> anyhow::Result<()> {
         respect_kailua_proposals: true,
         telemetry: Default::default(),
         bypass_chain_registry: false,
+        timeouts: Default::default(),
     })
     .await?;
     println!("Kailua contracts installed");
@@ -156,6 +157,9 @@ async fn proposer_validator() {
             op_node_url: "http://127.0.0.1:7545".to_string(),
             op_rpc_delay: 0,
             beacon_rpc_url: "http://127.0.0.1:5052".to_string(),
+            op_rpc_concurrency: 64,
+            rpc_poll_interval: 1,
+            timeouts: Default::default(),
         },
         kailua_game_implementation: None,
         kailua_anchor_address: None,
@@ -194,7 +198,18 @@ async fn proposer_validator() {
         .await
         .unwrap();
     loop {
-        agent.sync(0, Some(75)).await.unwrap();
+        agent
+            .sync(&SyncArgs {
+                provider: ProviderArgs {
+                    op_rpc_concurrency: 64,
+                    op_rpc_delay: 0,
+                    ..Default::default()
+                },
+                final_l2_block: Some(75),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         if agent.cursor.last_output_index >= 75 {
             break;
         }
@@ -389,6 +404,9 @@ async fn prover() {
             op_node_url: "http://127.0.0.1:7545".to_string(),
             op_rpc_delay: 0,
             beacon_rpc_url: "http://127.0.0.1:5052".to_string(),
+            op_rpc_concurrency: 64,
+            rpc_poll_interval: 1,
+            timeouts: Default::default(),
         },
         kailua_game_implementation: None,
         kailua_anchor_address: None,
@@ -403,7 +421,18 @@ async fn prover() {
         .await
         .unwrap();
     loop {
-        agent.sync(0, Some(PROOF_SIZE)).await.unwrap();
+        agent
+            .sync(&SyncArgs {
+                provider: ProviderArgs {
+                    op_rpc_concurrency: 64,
+                    op_rpc_delay: 0,
+                    ..Default::default()
+                },
+                final_l2_block: Some(PROOF_SIZE),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         if agent.cursor.last_output_index >= PROOF_SIZE {
             break;
         }
@@ -479,6 +508,7 @@ async fn prover() {
         precondition_block_hashes: vec![],
         precondition_blob_hashes: vec![],
         telemetry: Default::default(),
+        timeouts: Default::default(),
     })
     .await
     .unwrap();

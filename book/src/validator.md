@@ -12,45 +12,85 @@ Node software other than `op-geth` is not as reliable for the necessary `debug` 
 
 Starting the Kailua validator is straightforward:
 ```shell
-kailua-cli validate \
-  --eth-rpc-url [YOUR_ETH_RPC_URL] \
-  --beacon-rpc-url [YOUR_BEACON_RPC_URL] \
-  --op-geth-url [YOUR_OP_GETH_URL] \
-  --op-node-url [YOUR_OP_NODE_URL] \
-  --data-dir [YOUR_VALIDATOR_DATA_CACHE_PATH] \
-  --kailua-host [YOUR_KAILUA_HOST_BINARY_PATH] \
-  --validator-key [YOUR_PROPOSER_WALLET_PRIVATE_KEY] \
-  --payout-recipient-address [YOUR_FAULT_PROOF_PAYOUT_RECIPIENT] \
-  --txn-timeout [YOUR_TRANSACTION_TIMEOUT_SECONDS] \
-  --exec-gas-premium [YOUR_EXECUTION_GAS_PREMIUM_PERCENTAGE]
+kailua-cli validate [OPTIONS] --op-node-url <OP_NODE_URL> --op-geth-url <OP_GETH_URL> --eth-rpc-url <ETH_RPC_URL> --beacon-rpc-url <BEACON_RPC_URL>
 ```
 
 ```admonish tip
-All the parameters in this section can be provided as environment variables.
+All the parameters above can be provided as environment variables.
 ```
 
-### Endpoints
-The first four arguments specify the endpoints that the validator should use to generate fault proofs:
-* `eth-rpc-url`: The parent chain (ethereum) endpoint for reading proposals and publishing proofs.
+### Remote Endpoints
+The mandatory arguments specify the endpoints that the validator should use to resolve disputes:
+* `eth-rpc-url`: The parent chain (ethereum) endpoint for reading proposals.
 * `beacon-rpc-url`: The DA layer (eth-beacon chain) endpoint for retrieving rollup data.
-* `op-geth-url`: The (archive) rollup `op-geth` endpoint to read fault proving witness data from.
+* `op-geth-url`: The rollup `op-geth` endpoint to read configuration data from.
 * `op-node-url`: The rollup `op-node` endpoint to read sequencing proposals from.
 
-### Cache Directory (Optional)
+### RPC Calls
+To fine-tune the interaction with the above endpoints, the following additional parameters can be specified:
+* `op-rpc-delay`: Number of L2 blocks to delay observation by (default: 0).
+* `rpc-poll-interval`: Time (in seconds) between successive RPC polls (default: 6).
+* `op-node-timeout`: Timeout (seconds) for an OP-NODE RPC request (default: 5).
+* `op-geth-timeout`: Timeout (seconds) for an OP-GETH RPC request (default: 2).
+* `eth-rpc-timeout`: Timeout (seconds) for an ETH RPC request (default: 2).
+* `beacon-rpc-timeout`: Timeout (seconds) for a BEACON RPC request (default: 20).
+
+### Cache Directory
 The validator saves data to disk as it tracks on-chain proposals.
-This allows it to restart quickly without requesting a lot of old on-chain data if terminated.
+This allows it to restart quickly.
 * `data-dir`: Optional directory to save data to.
     * If unspecified, a tmp directory is created.
 
+### Kailua Deployment
+These arguments manually determine the Kailua contract deployment to use and the termination condition.
+* `kailua-game-implementation`: The `KailuaGame` contract address.
+* `kailua-anchor-address`: Address of the first proposal to synchronize from.
+* `final-l2-block`: The last L2 block number to reach and then stop.
+
+### Telemetry
+Telemetry data can be exported to an [OTLP Collector](https://opentelemetry.io/docs/collector/).
+* `otlp-collector`: The OTLP collector endpoint.
+
+### Rollup Config
+These arguments tell Kailua how to read the rollup configuration.
+* `bypass-chain-registry`: This flag forces the rollup configuration to be fetched from `op-node` and `op-geth`.
+
 ### Prover
-To create a fault proof, the validator invokes the `kailua-host` binary.
-* `kailua-host`: The path to the `kailua-host` binary to call for proof generation.
+The validator proving behavior can be customized through the following arguments:
+* `kailua-cli`: The optional path of the external binary to call for custom proof generation.
+* `num-concurrent-provers`: Number of provers to run simultaneously (Default: 1).
+* `num-concurrent-preflights`: Number of threads per prover to use for fetching preflight data (Default: 4).
+* `num-concurrent-proofs`: Number of threads per prover to use for computing sub-proofs (Default: 1).
+* `num-concurrent-witgens`: How many threads to use for witness generation per prover.
+* `num-concurrent-r0vm`: How many threads to use for zkvm executors per prover.
+* `segment-limit`: ZKVM Proving Segment Limit (Default 21).
+* `max-witness-size`: Maximum input data byte size per single proof (Default 2.5 GB).
+* `max-block-derivations`: Maximum number of blocks to derive per single proof.
+* `max-block-executions`: Maximum number of blocks to execute per single proof.
+* `num-tail-blocks`: Rate of growth of tail proofs in L1 blocks (Default 10).
+* `enable-experimental-witness-endpoint`: Enables the use of `debug_executePayload` to collect the execution witness from the execution layer.
+* `max-fault-proving-delay`: The maximum amount of seconds to wait before starting to compute a fault proof (Default 86400).
+* `max-validity-proving-delay`: The maximum amount of seconds to wait before starting to compute a validity proof (Default 0).
+* `clear-cache-data`: Whether to clear cache data after successful completion (Default false).
+
+### Alt DA
+The following additional parameters are required if an alternative DA method is used:
+* `eigenda-proxy-address`: URL of the EigenDA RPC endpoint.
+* `celestia-connection`: Connection to celestia network.
+* `celestia-auth-token`: Token for the Celestia node connection.
+* `celestia-namespace`: Celestia Namespace to fetch data from.
 
 ### Wallet
 The validator requires a funded wallet to be able to publish fault proofs on chain, and an (optional) alternative address
-to direct fault proof submission payouts towards
+to direct fault proof submission payouts towards.
+This wallet can be specified directly as a private key or as an external AWS/GCP signer.
 * `validator-key`: The private key for the validator wallet.
 * `payout-recipient-address`: The ethereum address to use as the recipient of fault proof payouts.
+* `validator-aws-key-id`: AWS KMS Key ID
+* `validator-google-project-id`: GCP KMS Project ID
+* `validator-google-location`: GCP KMS Location
+* `validator-google-keyring`: GCP KMS Keyring Name
+* `validator-google-key-name`: GCP KMS Key name
 
 ```admonish tip
 `validator-key` can be replaced with the corresponding AWS/GCP parameters as described [here](upgrade.md#kms-support).
@@ -83,12 +123,12 @@ address using the optional `kailua-game-implementation` parameter.
 The validator will not generate any proofs for proposals made using a different deployment than the one used at start up.
 ```
 
-
 ## Validity Proof Generation
 Instead of only generating fault proofs, the validator can be instructed to generate a validity proof for every correct
 canonical proposal it encounters to fast-forward finality until a specified block height.
-This is configured using the below parameter:
-*  `fast-forward-target`: The L2 block height until which validity proofs should be computed.
+This is configured using the below parameters:
+* `fast-forward-target`: The L2 block height until which validity proofs should be computed.
+* `fast-forward-start`: Block height to start fast-forwarding finality.
 
 ```admonish note
 To indefinitely power a validity-proof only rollup, this value can be specified to the maximum 64-bit value of
@@ -124,7 +164,7 @@ Running `kailua-cli validate` with these two environment variables should now de
 ### Boundless
 When delegating generation of Kailua Fault proofs to the decentralized [Boundless proving network](https://docs.beboundless.xyz/),
 for every fault proof, a proof request is submitted to the network, where it goes through the standard
-[proof life-cycle](https://docs.beboundless.xyz/introduction/proof-lifecycle) on boundless, before being published by
+[proof life-cycle](https://docs.beboundless.xyz/provers/proof-lifecycle) on boundless, before being published by
 your validator to settle a dispute.
 
 This functionality requires some additional parameters when starting the validator.
@@ -134,17 +174,24 @@ These parameters can be passed in as CLI arguments or set as environment variabl
 The following first set of parameters determine where/how requests are made:
 * `boundless-rpc-url`: The rpc endpoint of the L1 chain where the Boundless network is deployed.
 * `boundless-wallet-key`: The wallet private key to use to send proof request transactions.
-* `boundless-offchain`: (Optional) Flag instructing whether to submit proofs off-chain.
 * `boundless-order-stream-url`: (Optional) The URL to use for off-chain order submission.
+* `boundless-chain-id`: EIP-155 chain ID of the network hosting Boundless.
+* `boundless-verifier-router-address`: Address of the RiscZeroVerifierRouter contract.
 * `boundless-set-verifier-address`: The address of the RISC Zero verifier supporting aggregated proofs for order validation.
 * `boundless-market-address`: The address of the Boundless market contract.
+* `boundless-collateral-token-address`: Address of the stake collateral ERC-20 contract.
 * `boundless-lookback`: (Defaults to `5`) The number of previous proof requests to inspect for duplicates before making a new proof request.
-* `boundless-order-min-price-eth`: (Defaults to `0.0001`) Starting price per megacycle of proving orders.
-* `boundless-order-max-price-eth`: (Defaults to `0.0002`) Maximum price per megacycle of proving orders.
-* `boundless-order-ramp-up-period`: (Defaults to `60`) Time in seconds before order pricing increases.
+* `boundless-assume-cycle-count`: Whether to skip preflighting execution and assume the given cycle count.
+* `boundless-cycle-min-wei`: (Defaults to `0`) Starting price (wei) per cycle of proving.
+* `boundless-cycle-max-wei`: (Defaults to `200000000`) Maximum price (wei) per cycle of proving.
+* `boundless-mega-cycle-collateral`: Collateral (ZKC) per megacycle of the proving order (Default 1000).
+* `boundless-order-bid-delay-factor`: Multiplier for delay before order price starts ramping up (Default 0.1)
+* `boundless-order-ramp-up-factor`: (Defaults to `0.25`) Multiplier for order price to ramp up to maximum.
 * `boundless-order-lock-timeout-factor`: (Defaults to `3`) Multiplier for order fulfillment timeout after locking.
-* `boundless-order-timeout-factor`: (Defaults to `10`) Multiplier for order expiry timeout after creation.
+* `boundless-order-expiry-factor`: (Defaults to `10`) Multiplier for order expiry timeout after creation.
 * `boundless-order-check-interval`: (Defaults to `12`) Time in seconds between attempts to check order status.
+* `boundless-enable-upload-caching`: Whether to enable image/input upload caching.
+* `boundless-order-submission-cooldown`: Time in seconds between attempts to submit new orders (Default 12).
 
 ```admonish note
 Order timeouts are set by default to the number of megacycles in a proof request.
@@ -160,11 +207,13 @@ The below second set of parameters determine where the proven executable and its
 * `s3-secret-key`: The `s3` secret key.
 * `s3-bucket`: The `s3` bucket.
 * `s3-url`: The `s3` url.
+* `s3-use-presigned`: Use presigned URLs for S3.
 * `aws-region`: The `s3` region.
 * `pinata-jwt`: The private `pinata` jwt.
 * `pinata-api-url`: The `pinata` api URL.
 * `ipfs-gateway-url`: The `pinata` gateway URL.
 * `file-path`: The file storage provider path.
+* `r2-domain`: Custom domain for file retrieval. Currently used to upload with a custom prefix and replace the download URL with this domain.
 
 ```admonish success
 Running `kailua-cli validate` with the above extra arguments should now delegate all validator proving to the [Boundless proving network](https://docs.beboundless.xyz/)!
@@ -172,13 +221,11 @@ Running `kailua-cli validate` with the above extra arguments should now delegate
 
 
 ## Advanced Settings
-
-Fault/Validity proof generation can be fine-tuned via the two following environment variables:
-* `NUM_CONCURRENT_HOSTS`: (default 1) The maximum number of kailua-host instances to run concurrently in the validator.
-* `NUM_CONCURRENT_PREFLIGHTS`: (default 4) Sets the number of concurrent data preflights per proving task.
-* `NUM_CONCURRENT_PROOFS`: (default 1) Sets the number of concurrent proofs to seek per proving task.
-* `SEGMENT_LIMIT`: The [segment size limit](https://docs.rs/risc0-zkvm/1.2.3/risc0_zkvm/struct.ExecutorEnvBuilder.html#method.segment_limit_po2) used for local proving (Default 21).
-* `MAX_WITNESS_SIZE`: The maximum input size per single proof (Default 2.5GB).
+```admonish warning
+The below settings should not be normally used in production.
+```
 
 When manually computing individual proofs, the following parameters (or equiv. env. vars) take effect:
+* `SKIP_AWAIT_PROOF`: Skips waiting for the proving process to complete on Bonsai/Boundless.
 * `SKIP_DERIVATION_PROOF`: Skips provably deriving L2 transactions using L1 data.
+* `L1_HEAD_JUMP_BACK`: The number of l1 heads to jump back when initially proving.

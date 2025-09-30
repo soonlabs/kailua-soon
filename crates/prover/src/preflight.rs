@@ -38,6 +38,7 @@ use tracing::{error, info, warn};
 
 pub async fn get_blob_fetch_request(
     l1_provider: &RootProvider,
+    l1_timeout: u64,
     block_hash: B256,
     blob_hash: B256,
 ) -> anyhow::Result<BlobFetchRequest> {
@@ -48,12 +49,15 @@ pub async fn get_blob_fetch_request(
         context,
         tracer,
         "get_block_by_hash",
-        retry_res_ctx_timeout!(l1_provider
-            .get_block_by_hash(block_hash)
-            .full()
-            .await
-            .context("get_block_by_hash")?
-            .ok_or_else(|| anyhow!("Failed to fetch starting block")))
+        retry_res_ctx_timeout!(
+            l1_timeout,
+            l1_provider
+                .get_block_by_hash(block_hash)
+                .full()
+                .await
+                .context("get_block_by_hash")?
+                .ok_or_else(|| anyhow!("Failed to fetch starting block"))
+        )
     );
     let mut blob_index = 0;
     let mut blob_found = false;
@@ -99,7 +103,8 @@ pub async fn fetch_precondition_data(
 
     // fetch necessary data to validate blob equivalence precondition
     if hash_arguments.iter().all(|arg| !arg) {
-        let providers = retry_res_ctx_timeout!(20, cfg.create_providers().await).await;
+        let providers =
+            retry_res_ctx_timeout!(cfg.timeouts.max(), cfg.create_providers().await).await;
         if cfg.precondition_block_hashes.len() != cfg.precondition_blob_hashes.len() {
             bail!(
                 "Blob reference mismatch. Found {} block hashes and {} blob hashes",
@@ -115,8 +120,15 @@ pub async fn fetch_precondition_data(
                 cfg.precondition_blob_hashes.iter(),
             ) {
                 info!("Fetching blob hash {blob_hash} from block {block_hash}");
-                fetch_requests
-                    .push(get_blob_fetch_request(&providers.l1, *block_hash, *blob_hash).await?);
+                fetch_requests.push(
+                    get_blob_fetch_request(
+                        &providers.l1,
+                        cfg.timeouts.eth_rpc_timeout,
+                        *block_hash,
+                        *blob_hash,
+                    )
+                    .await?,
+                );
             }
             ProposalPrecondition {
                 proposal_l2_head_number: cfg.precondition_params[0],
