@@ -6537,6 +6537,7 @@ dependencies = [
  "futures",
  "hex",
  "human_bytes",
+ "itertools 0.14.0",
  "kailua-build",
  "kailua-soon-kona",
  "kailua-sync",

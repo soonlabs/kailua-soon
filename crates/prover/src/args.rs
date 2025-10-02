@@ -38,6 +38,9 @@ pub struct ProvingArgs {
     /// Maximum number of blocks to execute per proof
     #[clap(long, env, required = false, default_value_t = usize::MAX)]
     pub max_block_executions: usize,
+    /// Maximum number of proofs to stitch per proof
+    #[clap(long, env, required = false, default_value_t = usize::MAX)]
+    pub max_proof_stitches: usize,
     /// Maximum input data size per proof
     #[clap(long, env, required = false, default_value_t = 2_684_354_560)]
     pub max_witness_size: usize,
@@ -109,7 +112,7 @@ impl ProvingArgs {
     }
 
     pub fn skip_stitching(&self) -> bool {
-        self.skip_derivation_proof || self.skip_await_proof
+        self.skip_derivation_proof || self.skip_await_proof || self.max_proof_stitches <= 1
     }
 
     pub fn image_id(&self) -> [u32; 8] {
