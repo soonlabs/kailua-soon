@@ -14,32 +14,35 @@
 
 use crate::rkyv::driver::{
     sorted_by_key, BatchReaderRkyv, BatchWithInclusionBlockRkyv, BlockInfoRkyv, ChannelRkyv,
-    FrameRkyv, HeadArtifactsRkyv, IdChannelRkyv, OpAttributesWithParentRkyv, PipelineCursorRkyv,
-    SingleBatchRkyv, SpanBatchRkyv, SystemConfigRkyv,
+    FrameRkyv, IdChannelRkyv, OpAttributesWithParentRkyv, PipelineCursorRkyv,
+    SingleBatchRkyv, SpanBatchRkyv, SystemConfigRkyv, HeadArtifactsRkyv,
 };
 use alloy_primitives::Bytes;
-use kona_derive::attributes::StatefulAttributesBuilder;
-use kona_derive::pipeline::{
-    AttributesQueueStage, BatchProviderStage, BatchStreamStage, ChannelProviderStage,
+use soon_derive::attributes::StatefulAttributesBuilder;
+use soon_derive::pipeline::{
+    AttributesQueueStage, BatchStreamStage, ChannelProviderStage,
     ChannelReaderStage, DerivationPipeline, FrameQueueStage, L1RetrievalStage,
 };
-use kona_derive::prelude::{
+use soon_derive::prelude::{
     BatchQueue, BatchValidator, ChainProvider, ChannelAssembler, ChannelBank,
     DataAvailabilityProvider, L1Traversal, L2ChainProvider,
 };
 use kona_driver::{Driver, Executor, PipelineCursor};
-use kona_executor::BlockBuildingOutcome;
-use kona_genesis::{RollupConfig, SystemConfig};
+use fraud_executor::outcome::BlockBuildingOutcome;
+use soon_primitives::rollup_config::SoonRollupConfig;
+use soon_primitives::system::SystemConfig;
 use kona_preimage::CommsClient;
 use kona_proof::l1::{OraclePipeline, ProviderDerivationPipeline};
 use kona_proof::FlushableCache;
-use kona_protocol::{
-    BatchReader, BatchWithInclusionBlock, BlockInfo, Channel, ChannelId, Frame,
-    OpAttributesWithParent, SingleBatch, SpanBatch,
-};
 use spin::RwLock;
 use std::fmt::Debug;
 use std::sync::Arc;
+use soon_derive::batch::{BatchWithInclusionBlock, SingleBatch, SpanBatch};
+use soon_derive::stages::BatchReader;
+use soon_primitives::blocks::BlockInfo;
+use soon_primitives::da::channel::{Channel, ChannelId};
+use soon_primitives::da::frame::Frame;
+use soon_primitives::derive::OpAttributesWithParent;
 
 pub type KonaDriver<E, O, L1, L2, DA> =
     Driver<E, OraclePipeline<O, L1, L2, DA>, ProviderDerivationPipeline<L1, L2, DA>>;
@@ -61,7 +64,7 @@ impl CachedDriver {
     pub fn uncache<E, O, L1, L2, DA>(
         self,
         executor: E,
-        cfg: Arc<RollupConfig>,
+        cfg: Arc<SoonRollupConfig>,
         sync_start: Arc<RwLock<PipelineCursor>>,
         caching_oracle: Arc<O>,
         da_provider: DA,
@@ -126,7 +129,7 @@ pub struct CachedDerivationPipeline {
 impl CachedDerivationPipeline {
     pub fn uncache<L1, L2, DA>(
         self,
-        cfg: Arc<RollupConfig>,
+        cfg: Arc<SoonRollupConfig>,
         da_provider: DA,
         l1_chain_provider: L1,
         l2_chain_provider: L2,
@@ -172,13 +175,13 @@ pub struct CachedAttributesQueueStage {
     #[rkyv(with = rkyv::with::Map<SingleBatchRkyv>)]
     pub batch: Option<SingleBatch>,
     /// The previous stage of the derivation pipeline.
-    pub prev: CachedBatchProvider,
+    pub prev: CachedBatchQueue,
 }
 
 impl CachedAttributesQueueStage {
     pub fn uncache<L1, L2, DA>(
         self,
-        cfg: Arc<RollupConfig>,
+        cfg: Arc<SoonRollupConfig>,
         da_provider: DA,
         l1_chain_provider: L1,
         l2_chain_provider: L2,
@@ -214,11 +217,12 @@ where
         Self {
             is_last_in_span: value.is_last_in_span,
             batch: value.batch,
-            prev: CachedBatchProvider::from(value.prev),
+            prev: CachedBatchQueue::from(value.prev),
         }
     }
 }
 
+/*
 #[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 pub enum CachedBatchProvider {
     None,
@@ -230,7 +234,7 @@ pub enum CachedBatchProvider {
 impl CachedBatchProvider {
     pub fn uncache<L1, L2, DA>(
         self,
-        cfg: Arc<RollupConfig>,
+        cfg: Arc<SoonRollupConfig>,
         da_provider: DA,
         l1_chain_provider: L1,
         l2_chain_provider: L2,
@@ -309,7 +313,7 @@ where
             _ => unreachable!("More than one optional field set in BatchProviderStage."),
         }
     }
-}
+}*/
 
 #[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 pub struct CachedBatchQueue {
@@ -337,7 +341,7 @@ pub struct CachedBatchQueue {
 impl CachedBatchQueue {
     pub fn uncache<L1, L2, DA>(
         self,
-        cfg: Arc<RollupConfig>,
+        cfg: Arc<SoonRollupConfig>,
         da_provider: DA,
         l1_chain_provider: L1,
         l2_chain_provider: L2,
@@ -401,7 +405,7 @@ pub struct CachedBatchValidator {
 impl CachedBatchValidator {
     pub fn uncache<L1, L2, DA>(
         self,
-        cfg: Arc<RollupConfig>,
+        cfg: Arc<SoonRollupConfig>,
         da_provider: DA,
         l1_chain_provider: L1,
         l2_chain_provider: L2,
@@ -452,7 +456,7 @@ pub struct CachedBatchStream {
 impl CachedBatchStream {
     pub fn uncache<L1, L2, DA>(
         self,
-        cfg: Arc<RollupConfig>,
+        cfg: Arc<SoonRollupConfig>,
         da_provider: DA,
         l1_chain_provider: L1,
         l2_chain_provider: L2,
@@ -503,7 +507,6 @@ impl Clone for CachedChannelReader {
         Self {
             next_batch: self.next_batch.as_ref().map(|v| BatchReader {
                 data: v.data.clone(),
-                decompressed: v.decompressed.clone(),
                 cursor: v.cursor,
                 max_rlp_bytes_per_channel: v.max_rlp_bytes_per_channel,
             }),
@@ -515,7 +518,7 @@ impl Clone for CachedChannelReader {
 impl CachedChannelReader {
     pub fn uncache<L1, DA>(
         self,
-        cfg: Arc<RollupConfig>,
+        cfg: Arc<SoonRollupConfig>,
         da_provider: DA,
         l1_chain_provider: L1,
     ) -> ChannelReaderStage<DA, L1>
@@ -557,7 +560,7 @@ pub enum CachedChannelProvider {
 impl CachedChannelProvider {
     pub fn uncache<L1, DA>(
         self,
-        cfg: Arc<RollupConfig>,
+        cfg: Arc<SoonRollupConfig>,
         da_provider: DA,
         l1_chain_provider: L1,
     ) -> ChannelProviderStage<DA, L1>
@@ -634,7 +637,7 @@ pub struct CachedChannelBank {
 impl CachedChannelBank {
     pub fn uncache<L1, DA>(
         self,
-        cfg: Arc<RollupConfig>,
+        cfg: Arc<SoonRollupConfig>,
         da_provider: DA,
         l1_chain_provider: L1,
     ) -> ChannelBank<FrameQueueStage<DA, L1>>
@@ -677,7 +680,7 @@ pub struct CachedChannelAssembler {
 impl CachedChannelAssembler {
     pub fn uncache<L1, DA>(
         self,
-        cfg: Arc<RollupConfig>,
+        cfg: Arc<SoonRollupConfig>,
         da_provider: DA,
         l1_chain_provider: L1,
     ) -> ChannelAssembler<FrameQueueStage<DA, L1>>
@@ -718,7 +721,7 @@ pub struct CachedFrameQueue {
 impl CachedFrameQueue {
     pub fn uncache<L1, DA>(
         self,
-        cfg: Arc<RollupConfig>,
+        cfg: Arc<SoonRollupConfig>,
         da_provider: DA,
         l1_chain_provider: L1,
     ) -> FrameQueueStage<DA, L1>
@@ -761,7 +764,7 @@ pub struct CachedL1Retrieval {
 impl CachedL1Retrieval {
     pub fn uncache<L1, DA>(
         self,
-        cfg: Arc<RollupConfig>,
+        cfg: Arc<SoonRollupConfig>,
         da_provider: DA,
         l1_chain_provider: L1,
     ) -> L1RetrievalStage<DA, L1>
@@ -803,7 +806,7 @@ pub struct CachedL1Traversal {
 }
 
 impl CachedL1Traversal {
-    pub fn uncache<L1>(self, cfg: Arc<RollupConfig>, l1_chain_provider: L1) -> L1Traversal<L1>
+    pub fn uncache<L1>(self, cfg: Arc<SoonRollupConfig>, l1_chain_provider: L1) -> L1Traversal<L1>
     where
         L1: ChainProvider + Send + Sync + Debug + Clone,
     {
@@ -836,13 +839,10 @@ pub mod tests {
     use super::*;
     use crate::boot::StitchedBootInfo;
     use crate::client::core::tests::test_derivation;
-    use crate::client::core::{fetch_safe_head_hash, DASourceProvider, EthereumDataSourceProvider};
+    use crate::client::core::{fetch_safe_head_hash};
     use crate::client::stitching::tests::test_stitching_client;
     use crate::client::tests::TestOracle;
     use crate::kona::OracleL1ChainProvider;
-    use crate::precondition::Precondition;
-    use crate::rkyv::execution::tests::{gen_execution_outcomes, gen_header};
-    use alloy_consensus::TxType;
     use alloy_eips::eip4895::Withdrawal;
     use alloy_eips::BlockNumHash;
     use alloy_op_evm::OpEvmFactory;
@@ -856,10 +856,6 @@ pub mod tests {
     use kona_proof::l1::OracleBlobProvider;
     use kona_proof::l2::OracleL2ChainProvider;
     use kona_proof::BootInfo;
-    use kona_protocol::{
-        Batch, BatchValidationProvider, L2BlockInfo, SpanBatchBits, SpanBatchElement,
-        SpanBatchTransactions,
-    };
     use lazy_static::lazy_static;
     use op_alloy_rpc_types_engine::OpPayloadAttributes;
     use risc0_zkvm::sha::Digestible;

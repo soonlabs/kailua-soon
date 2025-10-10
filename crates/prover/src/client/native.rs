@@ -18,10 +18,10 @@ use crate::ProvingError;
 use alloy_primitives::B256;
 use anyhow::anyhow;
 use async_channel::Sender;
-use kailua_kona::boot::StitchedBootInfo;
-use kailua_kona::driver::CachedDriver;
-use kailua_kona::executor::Execution;
-use kailua_kona::precondition::Precondition;
+use kailua_soon_kona::boot::StitchedBootInfo;
+use kailua_soon_kona::driver::CachedDriver;
+use kailua_soon_kona::executor::Execution;
+use kailua_soon_kona::precondition::Precondition;
 use kailua_sync::retry_res_ctx_timeout;
 use kona_host::{
     HintHandler, OfflineHostBackend, OnlineHostBackend, OnlineHostBackendCfg, PreimageServer,
@@ -73,76 +73,21 @@ pub async fn run_native_client(
         v => v,
     };
 
-    let use_hokulea = args.proving.use_hokulea();
-    let use_hana = args.proving.use_hana();
-    let server_task = match (use_hokulea, use_hana) {
-        (false, false) => start_server(
-            args.kona.clone(),
-            create_split_kv_store(&args.kona, disk_kv_store)
-                .map_err(|e| ProvingError::OtherError(anyhow!(e)))?,
-            hint.host,
-            preimage.host,
-            kona_host::single::SingleChainHintHandler,
-            retry_res_ctx_timeout!(20, args.create_providers().await).await,
-            args.kona.is_offline(),
-            HintType::L2PayloadWitness,
-        )
+    let server_task = start_server(
+        args.kona.clone(),
+        create_split_kv_store(&args.kona, disk_kv_store)
+            .map_err(|e| ProvingError::OtherError(anyhow!(e)))?,
+        hint.host,
+        preimage.host,
+        kona_host::single::SingleChainHintHandler,
+        retry_res_ctx_timeout!(20, args.create_providers().await).await,
+        args.kona.is_offline(),
+    )
         .await
-        .map_err(|e| ProvingError::OtherError(anyhow!(e)))?,
-        (true, _) => {
-            let cfg = hokulea_host_bin::cfg::SingleChainHostWithEigenDA {
-                kona_cfg: args.kona.clone(),
-                eigenda_proxy_address: args.proving.hokulea.eigenda_proxy_address.clone(),
-                verbose: 0,
-            };
-            let providers = cfg
-                .create_providers()
-                .await
-                .map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
-            let is_offline = cfg.is_offline();
-            start_server(
-                cfg,
-                create_split_kv_store(&args.kona, disk_kv_store)
-                    .map_err(|e| ProvingError::OtherError(anyhow!(e)))?,
-                hint.host,
-                preimage.host,
-                hokulea_host_bin::handler::SingleChainHintHandlerWithEigenDA,
-                providers,
-                is_offline,
-                hokulea_proof::hint::ExtendedHintType::Original(HintType::L2PayloadWitness),
-            )
-            .await
-            .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
-        }
-        (_, true) => {
-            let cfg = hana_host::celestia::CelestiaChainHost {
-                single_host: args.kona.clone(),
-                celestia_args: args.proving.hana.clone().into(),
-            };
-            let providers = crate::hana::providers::create_providers(&cfg)
-                .await
-                .map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
-            let is_offline = cfg.is_offline();
-            let disk_kv_store = disk_kv_store.map(|dkv| dkv.with_global_mask(args.kona.l1_head));
-            start_server(
-                cfg,
-                create_split_kv_store(&args.kona, disk_kv_store)
-                    .map_err(|e| ProvingError::OtherError(anyhow!(e)))?,
-                hint.host,
-                preimage.host,
-                crate::hana::handler::HanaHintHandler,
-                providers,
-                is_offline,
-                hana_oracle::hint::HintWrapper::Standard(HintType::L2PayloadWitness),
-            )
-            .await
-            .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
-        }
-    };
+        .map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
 
     // Start the client program in a separate thread
     let client_task = tokio::spawn(crate::client::proving::run_proving_client(
-        use_hokulea.then_some(args.kona.l1_node_address).flatten(),
         args.proving,
         args.boundless,
         OracleReader::new(preimage.client),
@@ -181,7 +126,6 @@ pub async fn start_server<
     handler: H,
     providers: B::Providers,
     is_offline: bool,
-    proactive_hint: B::HintType,
 ) -> anyhow::Result<JoinHandle<Result<(), PreimageServerError>>>
 where
     C: Channel + Send + Sync + 'static,
@@ -196,8 +140,7 @@ where
             .start(),
         )
     } else {
-        let backend = OnlineHostBackend::new(backend, kv_store.clone(), providers, handler)
-            .with_proactive_hint(proactive_hint);
+        let backend = OnlineHostBackend::new(backend, kv_store.clone(), providers, handler);
 
         task::spawn(
             PreimageServer::new(

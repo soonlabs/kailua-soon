@@ -42,6 +42,10 @@ kailua-build.workspace = true
 kailua-soon-kona.workspace = true
 kailua-contracts.workspace = true
 
+#SOON
+soon-l2-chain-provider.workspace = true
+soon-primitives.workspace = true
+
 [features]
 devnet = []
 rebuild-fpvm = [

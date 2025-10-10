@@ -14,140 +14,173 @@
 
 use crate::boot::StitchedBootInfo;
 use crate::client::log;
+use crate::driver::CachedDriver;
 use crate::executor::Execution;
 use crate::journal::ProofJournal;
+use crate::kona::OracleL1ChainProvider;
+use crate::precondition::Precondition;
 use alloy_primitives::{Address, B256};
-use kona_executor::L2BlockBuilder;
+use anyhow::Context;
 use kona_preimage::CommsClient;
-use kona_proof::{l2::OracleL2ChainProvider, BootInfo, FlushableCache};
-use soon_derive::traits::BlobProvider;
+use kona_proof::{BootInfo, FlushableCache};
+use risc0_zkvm::sha::Digestible;
 use std::fmt::Debug;
+use std::iter::zip;
 use std::sync::Arc;
+use alloy_eips::BlockNumberOrTag;
+use kona_executor::L2BlockBuilder;
+use kona_proof::l2::OracleL2ChainProvider;
+use soon_derive::traits::{BlobProvider, ChainProvider};
 #[cfg(target_os = "zkvm")]
 use {
     alloy_primitives::map::HashSet,
-    risc0_zkvm::{
-        serde::Deserializer,
-        sha::{Digest, Digestible},
-        Receipt,
-    },
+    risc0_zkvm::{serde::Deserializer, sha::Digest, Receipt},
     serde::Deserialize,
 };
 
-/// Executes the primary operation of stitching together execution and boot information for a client,
-/// while maintaining composable proofs for validation in a zero-knowledge environment.
-///
-/// # Arguments
-///
-/// * `precondition_validation_data_hash` - A `B256` hash used for precondition validation.
-/// * `oracle` - An `Arc` wrapped client that implements the `CommsClient` and `FlushableCache`
-///    traits. This serves as the provider for external data communication.
-/// * `stream` - An `Arc` wrapped client, similar to `oracle`, used for additional communication
-///    and streaming purposes.
-/// * `beacon` - A generic blob provider `B`, used as a shared dependency for validation
-///    operations.
-/// * `fpvm_image_id` - A `B256` identifier for the FPVM image to associate with the operations performed.
-/// * `payout_recipient_address` - The Ethereum address (`Address`) where payout rewards are allocated.
-/// * `stitched_executions` - A nested vector of `Execution` objects containing precomputed execution
-///    proofs to be stitched.
-/// * `stitched_boot_info` - A vector of `StitchedBootInfo` objects containing boot proofs
-///    to be stitched together.
-///
-/// # Returns
-///
-/// Returns a `ProofJournal` combining the stitched proofs.
-///
-/// # Functionality
-///
-/// - **Execution Queueing:** Precomputed executions are split into direct executables and cache components
-///   for intermediate processing.
-/// - **Output Validation:** Computes the output hash of the target block using a helper method
-///   (`run_core_client`) and validates the precondition against the provided hash.
-/// - **Proof Loading (Conditional):** For zero-knowledge validations (`zkvm`), loads previously
-///   proven FPVM journals to maintain composability and recursive proof validation.
-/// - **Execution Stitching:** Merges the precomputed execution proofs into a single verifiable
-///   entity while associating it with a target address.
-/// - **Boot Info Stitching:** Stitches together boot proofs based on the precondition hash and FPVM image ID.
-///
-/// # Platform Specific Behavior
-///
-/// This function behaves differently on platforms supporting `zkvm`:
-/// - It loads proven FPVM journals (`load_stitching_journals`) to ensure recursive zero-knowledge proofs
-///   are intact.
-/// - Passes the proven journals to the execution and boot info stitching processes for extended validation.
-///
-/// # Panics
-///
-/// This function will panic if:
-/// - The output hash computation (`run_core_client`) fails.
-#[allow(clippy::too_many_arguments)]
-pub fn run_stitching_client<
+pub trait StitchingClient<
     E,
     O: CommsClient + FlushableCache + Send + Sync + Debug,
     B: BlobProvider + Send + Sync + Debug + Clone,
->(
-    precondition_validation_data_hash: B256,
-    oracle: Arc<O>,
-    stream: Arc<O>,
-    beacon: B,
-    fpvm_image_id: B256,
-    payout_recipient_address: Address,
-    stitched_executions: Vec<Vec<Execution>>,
-    stitched_boot_info: Vec<StitchedBootInfo>,
-) -> ProofJournal
-where
-    <B as BlobProvider>::Error: Debug,
-    E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug,
+>
 {
-    // Queue up precomputed executions
-    let (stitched_executions, execution_cache) = split_executions(stitched_executions);
+    /// Executes the primary operation of stitching together execution and boot information for a client,
+    /// while maintaining composable proofs for validation in a zero-knowledge environment.
+    ///
+    /// # Arguments
+    ///
+    /// * `precondition_validation_data_hash` - A `B256` hash used for precondition validation.
+    /// * `oracle` - An `Arc` wrapped client that implements the `CommsClient` and `FlushableCache`
+    ///   traits. This serves as the provider for external data communication.
+    /// * `stream` - An `Arc` wrapped client, similar to `oracle`, used for additional communication
+    ///   and streaming purposes.
+    /// * `beacon` - A generic blob provider `B`, used as a shared dependency for validation
+    ///   operations.
+    /// * `fpvm_image_id` - A `B256` identifier for the FPVM image to associate with the operations performed.
+    /// * `payout_recipient_address` - The Ethereum address (`Address`) where payout rewards are allocated.
+    /// * `stitched_executions` - A nested vector of `Execution` objects containing precomputed execution
+    ///   proofs to be stitched.
+    /// * `stitched_boot_info` - A vector of `StitchedBootInfo` objects containing boot proofs
+    ///   to be stitched together.
+    ///
+    /// # Returns
+    ///
+    /// Returns a `ProofJournal` combining the stitched proofs.
+    ///
+    /// # Functionality
+    ///
+    /// - **Execution Queueing:** Precomputed executions are split into direct executables and cache components
+    ///   for intermediate processing.
+    /// - **Output Validation:** Computes the output hash of the target block using a helper method
+    ///   (`run_core_client`) and validates the precondition against the provided hash.
+    /// - **Proof Loading (Conditional):** For zero-knowledge validations (`zkvm`), loads previously
+    ///   proven FPVM journals to maintain composability and recursive proof validation.
+    /// - **Execution Stitching:** Merges the precomputed execution proofs into a single verifiable
+    ///   entity while associating it with a target address.
+    /// - **Boot Info Stitching:** Stitches together boot proofs based on the precondition hash and FPVM image ID.
+    ///
+    /// # Platform Specific Behavior
+    ///
+    /// This function behaves differently on platforms supporting `zkvm`:
+    /// - It loads proven FPVM journals (`load_stitching_journals`) to ensure recursive zero-knowledge proofs
+    ///   are intact.
+    /// - Passes the proven journals to the execution and boot info stitching processes for extended validation.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if:
+    /// - The output hash computation (`run_core_client`) fails.
+    #[allow(clippy::too_many_arguments)]
+    fn run_stitching_client(
+        self,
+        proposal_data_hash: B256,
+        oracle: Arc<O>,
+        stream: Arc<O>,
+        beacon: B,
+        fpvm_image_id: B256,
+        payout_recipient_address: Address,
+        stitched_executions: Vec<Vec<Execution>>,
+        derivation_cache: Option<CachedDriver>,
+        derivation_trace: bool,
+        stitched_preconditions: Vec<Precondition>,
+        stitched_boot_info: Vec<StitchedBootInfo>,
+    ) -> (BootInfo, ProofJournal, Precondition)
+    where
+        <B as BlobProvider>::Error: Debug,
+        E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug;
+}
 
-    // Attempt to recompute the output hash at the target block number using kona
-    log("RUN");
-    let (boot, precondition_hash) = crate::client::core::run_core_client::<O, B>(
-        precondition_validation_data_hash,
-        oracle,
-        stream,
-        beacon,
-        execution_cache,
-        None,
-    )
-    .expect("Failed to compute output hash.");
+#[derive(Clone, Debug)]
+pub struct KonaStitchingClient;
 
-    log("LOAD_STITCHING_JOURNALS");
+impl<
+    O: CommsClient + FlushableCache + Send + Sync + Debug,
+    B: BlobProvider + Send + Sync + Debug + Clone,
+    E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug,
+> StitchingClient<E, O, B> for KonaStitchingClient
+{
+    fn run_stitching_client(
+        self,
+        proposal_data_hash: B256,
+        oracle: Arc<O>,
+        stream: Arc<O>,
+        beacon: B,
+        fpvm_image_id: B256,
+        payout_recipient_address: Address,
+        stitched_executions: Vec<Vec<Execution>>,
+        derivation_cache: Option<CachedDriver>,
+        derivation_trace: bool,
+        stitched_preconditions: Vec<Precondition>,
+        stitched_boot_info: Vec<StitchedBootInfo>,
+    ) -> (BootInfo, ProofJournal, Precondition)
+    where
+        <B as BlobProvider>::Error: Debug,
+    {
+        // Queue up precomputed executions
+        let (stitched_executions, execution_cache) = split_executions(stitched_executions);
 
-    // Verify proofs recursively for boundless composition
-    #[cfg(target_os = "zkvm")]
-    let proven_fpvm_journals = load_stitching_journals(fpvm_image_id);
+        // Attempt to recompute the output hash at the target block number using kona
+        log("RUN");
+        let (boot, precondition) = crate::client::core::run_core_client(
+            proposal_data_hash,
+            oracle,
+            stream.clone(),
+            beacon,
+            execution_cache,
+            None,
+            derivation_cache,
+            derivation_trace.then(Default::default),
+        )
+            .expect("Failed to compute output hash.");
 
-    log("RUN STITCH_EXECUTIONS");
-
-    // Stitch recursively composed execution-only proofs
-    stitch_executions(
-        &boot,
-        fpvm_image_id,
-        payout_recipient_address,
-        &stitched_executions,
+        // Verify proofs recursively for boundless composition
         #[cfg(target_os = "zkvm")]
-        &proven_fpvm_journals,
-    );
+        let proven_fpvm_journals = load_stitching_journals(fpvm_image_id);
 
-    log("RUN STITCH_BOOT_INFO");
+        // Stitch recursively composed execution-only proofs
+        stitch_executions(
+            &boot,
+            fpvm_image_id,
+            payout_recipient_address,
+            &stitched_executions,
+            #[cfg(target_os = "zkvm")]
+            &proven_fpvm_journals,
+        );
 
-    // Stitch recursively composed proofs
-    let proof_journal = stitch_boot_info(
-        &boot,
-        fpvm_image_id,
-        payout_recipient_address,
-        precondition_hash,
-        stitched_boot_info,
-        #[cfg(target_os = "zkvm")]
-        &proven_fpvm_journals,
-    );
-
-    log("RUN RETURN");
-
-    proof_journal
+        // Stitch recursively composed proofs
+        kona_proof::block_on(stitch_boot_info(
+            Some(stream),
+            boot,
+            fpvm_image_id,
+            payout_recipient_address,
+            precondition,
+            stitched_preconditions,
+            stitched_boot_info,
+            #[cfg(target_os = "zkvm")]
+            &proven_fpvm_journals,
+        ))
+            .expect("Failed to stitch boot info.")
+    }
 }
 
 /// Loads and verifies stitching journals for a given FPVM image.
@@ -298,9 +331,9 @@ pub fn split_executions(
 /// - `fpvm_image_id`: The unique identifier of the FPVM (Fault-Proof Virtual Machine) image being used for proofs.
 /// - `payout_recipient_address`: The address to receive the payout as a result of the execution.
 /// - `stitched_executions`: A reference to a vector of vectors containing execution traces. Each inner vector represents
-///     a sequence of linked execution steps (`Execution` objects).
+///   a sequence of linked execution steps (`Execution` objects).
 /// - `proven_fpvm_journals` (*conditional*): A reference to a set of `Digest` values representing proven
-///     journals from the FPVM. Only available when compiled for `zkvm` target (`#[cfg(target_os = "zkvm")]`).
+///   journals from the FPVM. Only available when compiled for `zkvm` target (`#[cfg(target_os = "zkvm")]`).
 ///
 /// # Behavior
 /// - When the `boot.l1_head` is zero, it represents a special case where only one batch of execution is validated
@@ -321,34 +354,15 @@ pub fn stitch_executions(
     stitched_executions: &Vec<Vec<Arc<Execution>>>,
     #[cfg(target_os = "zkvm")] proven_fpvm_journals: &HashSet<Digest>,
 ) {
-    let config_hash = crate::config::config_hash(&boot.rollup_config).unwrap();
+    let config_hash = crate::config::config_hash(&boot.rollup_config);
     // When running an execution-only proof, we may only have one batch validated by the kailua client
     if boot.l1_head.is_zero() {
         assert_eq!(1, stitched_executions.len());
         return;
     };
     for execution_trace in stitched_executions {
-        let precondition_hash = crate::executor::exec_precondition_hash(execution_trace.as_slice());
-        // Validate execution data
-        for _execution in execution_trace {
-            // Validate receipts
-            // assert_eq!(
-            //     execution.artifacts.header.receipts_root,
-            //     kona_executor::compute_receipts_root(
-            //         execution.artifacts.execution_result.receipts.as_slice(),
-            //         &boot.rollup_config,
-            //         execution.attributes.payload_attributes.timestamp
-            //     )
-            // );
-            // Validate requests
-            // TODO: Uncomment execution result because it may differ from the ethereum execution result
-            // assert!(execution.artifacts.execution_result.is_empty());
-            // Validate gas used
-            // assert_eq!(
-            //     execution.artifacts.header.gas_used,
-            //     execution.artifacts.execution_result.gas_used
-            // );
-        }
+        let precondition_hash =
+            crate::precondition::execution::exec_precondition_hash(execution_trace.as_slice());
         // Construct expected proof journal
         let encoded_journal = ProofJournal::new_stitched(
             fpvm_image_id,
@@ -374,8 +388,8 @@ pub fn stitch_executions(
                     .number,
             },
         )
-        .encode_packed();
-        // Require transition proof for entire batch
+            .encode_packed();
+        // Require an execution-only proof for the entire batch
         verify_stitching_journal(
             fpvm_image_id,
             encoded_journal,
@@ -435,80 +449,131 @@ pub fn stitch_executions(
 ///
 /// * On `zkvm` platforms, the function requires access to `proven_fpvm_journals` to verify stitching
 ///   proofs. On other platforms, the verification step is omitted.
-pub fn stitch_boot_info(
-    boot: &BootInfo,
+pub async fn stitch_boot_info<O: CommsClient + FlushableCache + Send + Sync + Debug>(
+    stream: Option<Arc<O>>,
+    boot: BootInfo,
     fpvm_image_id: B256,
     payout_recipient_address: Address,
-    precondition_hash: B256,
-    stitched_boot_info: Vec<StitchedBootInfo>,
+    mut precondition: Precondition,
+    stitched_preconditions: Vec<Precondition>,
+    stitched_boot_infos: Vec<StitchedBootInfo>,
     #[cfg(target_os = "zkvm")] proven_fpvm_journals: &HashSet<Digest>,
-) -> ProofJournal {
-    // Stitch boots together into a journal
-    let mut stitched_journal = ProofJournal::new(
+) -> anyhow::Result<(BootInfo, ProofJournal, Precondition)> {
+    // Equal inputs
+    assert_eq!(stitched_preconditions.len(), stitched_boot_infos.len());
+
+    // Instantiate oracle-backed providers
+    let mut l1_provider = match stream {
+        Some(stream) => Some(OracleL1ChainProvider::new(boot.l1_head, stream).await?),
+        None => None,
+    };
+
+    // Instantiate base proof journal for validating stitched proofs
+    let mut journal = ProofJournal::new(
         fpvm_image_id,
         payout_recipient_address,
-        precondition_hash,
-        boot,
+        B256::ZERO, // Precondition digest will be finalized below
+        &boot,
     );
-    log(&format!("rollup_config: {:?}", boot.rollup_config));
-    log(&format!(
-        "rollup_config_hash: {:?}",
-        B256::from(crate::config::config_hash(&boot.rollup_config).unwrap())
-    ));
 
-    for stitched_boot in stitched_boot_info {
-        // Require equivalence in reference head
-        assert_eq!(stitched_boot.l1_head, stitched_journal.l1_head);
-        // Require progress in stitched boot
-        assert_ne!(
-            stitched_boot.agreed_l2_output_root,
-            stitched_boot.claimed_l2_output_root
+    // Stitch boot info instances
+    let mut l1_head_number = match l1_provider.as_mut() {
+        Some(provider) if !boot.l1_head.is_zero() => Some(
+            provider
+                .header_by_hash(boot.l1_head)
+                .await
+                .context("boot header_by_hash")?
+                .number,
+        ),
+        _ => None,
+    };
+    for (stitched_boot, stitched_precondition) in zip(stitched_boot_infos, stitched_preconditions) {
+        // Check if stitched l1 head is in the same chain
+        if boot.l1_head.is_zero() {
+            assert!(stitched_boot.l1_head.is_zero());
+        } else if let Some(l1_provider) = l1_provider.as_mut() {
+            // Retrieve the full header, which could be from another chain
+            let stitched_l1_header = l1_provider
+                .header_by_hash(stitched_boot.l1_head)
+                .await
+                .context("header_by_hash")?;
+            // Ensure non-increasing derivation heads
+            let l1_head_number = l1_head_number.as_mut().unwrap();
+            assert!(stitched_l1_header.number <= *l1_head_number);
+            *l1_head_number = stitched_l1_header.number;
+            // Ensure that querying the oracle by the header number yields the same header hash
+            assert_eq!(
+                l1_provider
+                    .block_info_by_number(BlockNumberOrTag::Number(stitched_l1_header.number))
+                    .await
+                    .context("block_info_by_number")?
+                    .hash,
+                stitched_boot.l1_head
+            );
+        }
+        // Require equivalence in proposal precondition
+        assert_eq!(
+            precondition.proposal_blobs,
+            stitched_precondition.proposal_blobs
         );
-        // Require proof assumption
+        // Require backward stitching (stitched proof leads to current journal state)
+        assert_eq!(
+            stitched_boot.claimed_l2_output_root,
+            journal.agreed_l2_output_root
+        );
+        // Stitched boot's trace must be our cache
+        assert_eq!(
+            precondition.derivation_cache,
+            stitched_precondition.derivation_trace
+        );
+        // Update our initial l2 output root to that of the stitched boot
+        journal.agreed_l2_output_root = stitched_boot.agreed_l2_output_root;
+        // Update our cache to be that of the backwards stitched boot
+        precondition.derivation_cache = stitched_precondition.derivation_cache;
+        // Require derivation proof for stitched boot
         verify_stitching_journal(
             fpvm_image_id,
             ProofJournal::new_stitched(
                 fpvm_image_id,
                 payout_recipient_address,
-                precondition_hash,
-                stitched_journal.config_hash,
+                B256::new(stitched_precondition.digest().into()),
+                journal.config_hash,
                 &stitched_boot,
             )
-            .encode_packed(),
+                .encode_packed(),
             #[cfg(target_os = "zkvm")]
             proven_fpvm_journals,
         );
-        // Require continuity
-        if stitched_boot.claimed_l2_output_root == stitched_journal.agreed_l2_output_root {
-            // Backward stitch
-            stitched_journal.agreed_l2_output_root = stitched_boot.agreed_l2_output_root;
-        } else if stitched_boot.agreed_l2_output_root == stitched_journal.claimed_l2_output_root {
-            // Forward stitch
-            stitched_journal.claimed_l2_output_root = stitched_boot.claimed_l2_output_root;
-            stitched_journal.claimed_l2_block_number = stitched_boot.claimed_l2_block_number;
-        } else {
-            unimplemented!("No support for non-contiguous stitching.");
-        }
     }
 
-    stitched_journal
+    // Update the final precondition hash
+    journal.precondition_hash = B256::new(precondition.digest().into());
+
+    // Report final precondition
+    log("STITCHED");
+    log(&format!("{journal:?}"));
+    log(&format!("{precondition:?}"));
+
+    Ok((boot, journal, precondition))
 }
 
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 pub mod tests {
     use super::*;
-    use crate::precondition::PreconditionValidationData;
-    use crate::test::TestOracle;
-    use crate::{client::core::tests::test_derivation, test::create_analyzed_oracle};
+    use crate::client::core::tests::test_derivation;
+    use crate::client::core::EthereumDataSourceProvider;
+    use crate::client::tests::TestOracle;
+    use crate::precondition::proposal::ProposalPrecondition;
     use alloy_primitives::b256;
     use anyhow::Context;
-    use kona_executor::StatelessL2Builder;
     use kona_proof::l1::OracleBlobProvider;
+    use rayon::prelude::{IntoParallelIterator, ParallelIterator};
+    use std::iter::repeat_n;
     use tracing_subscriber::EnvFilter;
 
     fn setup() {
-        let _ = kona_cli::init_tracing_subscriber(4, None::<EnvFilter>);
+        let _ = kona_cli::init_tracing_subscriber(1, None::<EnvFilter>);
     }
 
     fn teardown() {
@@ -542,8 +607,11 @@ pub mod tests {
 
     pub fn test_stitching(
         boot_info: BootInfo,
-        precondition_validation_data: Option<PreconditionValidationData>,
+        precondition_validation_data: Option<ProposalPrecondition>,
         stitched_executions: Vec<Vec<Execution>>,
+        derivation_cache: Option<CachedDriver>,
+        derivation_trace: bool,
+        stitched_preconditions: Vec<Precondition>,
         stitched_boot_info: Vec<StitchedBootInfo>,
     ) {
         let precondition_hash = precondition_validation_data
@@ -553,6 +621,9 @@ pub mod tests {
             boot_info.clone(),
             precondition_validation_data,
             stitched_executions,
+            derivation_cache,
+            derivation_trace,
+            stitched_preconditions,
             stitched_boot_info,
         );
         validate_proof_journal(proof_journal, boot_info, precondition_hash);
@@ -560,171 +631,143 @@ pub mod tests {
 
     pub fn test_stitching_client(
         boot_info: BootInfo,
-        precondition_validation_data: Option<PreconditionValidationData>,
+        proposal_precondition: Option<ProposalPrecondition>,
         stitched_executions: Vec<Vec<Execution>>,
+        derivation_cache: Option<CachedDriver>,
+        derivation_trace: bool,
+        stitched_preconditions: Vec<Precondition>,
         stitched_boot_info: Vec<StitchedBootInfo>,
     ) -> ProofJournal {
         let oracle = Arc::new(TestOracle::new(boot_info.clone()));
-        let precondition_validation_data_hash = match precondition_validation_data {
+        let precondition_validation_data_hash = match proposal_precondition {
             None => B256::ZERO,
             Some(data) => oracle.add_precondition_data(data),
         };
-        run_stitching_client::<StatelessL2Builder<_, _>, _, _>(
-            precondition_validation_data_hash,
-            oracle.clone(),
-            oracle.clone(),
-            OracleBlobProvider::new(oracle.clone()),
-            B256::ZERO,
-            Address::ZERO,
-            stitched_executions,
-            stitched_boot_info,
-        )
-    }
-
-    /// Test client with data access analysis
-    pub fn test_stitching_client_with_analysis(
-        test_name: &str,
-        boot_info: BootInfo,
-        precondition_validation_data: Option<PreconditionValidationData>,
-        stitched_executions: Vec<Vec<Execution>>,
-        stitched_boot_info: Vec<StitchedBootInfo>,
-    ) -> ProofJournal {
-        println!("\nStarting analysis test: {}", test_name);
-
-        let oracle = create_analyzed_oracle(boot_info.clone());
-
-        let precondition_validation_data_hash = match precondition_validation_data {
-            None => B256::ZERO,
-            Some(data) => oracle.add_precondition_data(data),
-        };
-
-        let result = run_stitching_client::<StatelessL2Builder<_, _>, _, _>(
-            precondition_validation_data_hash,
-            oracle.clone(),
-            oracle.clone(),
-            OracleBlobProvider::new(oracle.clone()),
-            B256::ZERO,
-            Address::ZERO,
-            stitched_executions,
-            stitched_boot_info,
-        );
-
-        // Print access analysis results
-        oracle.inner.print_analysis(test_name);
-
-        result
+        KonaStitchingClient(EthereumDataSourceProvider)
+            .run_stitching_client(
+                precondition_validation_data_hash,
+                oracle.clone(),
+                oracle.clone(),
+                OracleBlobProvider::new(oracle.clone()),
+                B256::ZERO,
+                Address::ZERO,
+                stitched_executions,
+                derivation_cache,
+                derivation_trace,
+                stitched_preconditions,
+                stitched_boot_info,
+            )
+            .1
     }
 
     pub fn test_stitching_boots(
         boot_info: BootInfo,
-        precondition_validation_data: Option<PreconditionValidationData>,
+        precondition_validation_data: Option<ProposalPrecondition>,
     ) -> anyhow::Result<()> {
-        let stitched_executions =
-            test_derivation(boot_info.clone(), precondition_validation_data.clone())
-                .context("test_derivation")?
-                .into_iter()
-                .map(|e| e.as_ref().clone())
-                .collect::<Vec<_>>();
+        let stitched_executions = test_derivation(
+            boot_info.clone(),
+            precondition_validation_data.clone(),
+            None,
+            None,
+        )
+            .context("test_derivation")?
+            .into_iter()
+            .map(|e| e.as_ref().clone())
+            .collect::<Vec<_>>();
         let stitched_boot_info = stitched_executions
             .iter()
             .map(|e| StitchedBootInfo {
                 l1_head: boot_info.l1_head,
                 agreed_l2_output_root: e.agreed_output,
                 claimed_l2_output_root: e.claimed_output,
-                claimed_l2_block_number: e.artifacts.block_info.block_info.number,
+                claimed_l2_block_number: e.artifacts.header.number,
             })
             .collect::<Vec<_>>();
         let precondition_hash = precondition_validation_data
             .as_ref()
             .map(|d| d.precondition_hash());
-        // forward stitching pass
-        let starting_block_number = stitched_executions
-            .first()
-            .map(|e| e.artifacts.block_info.block_info.number - 1)
+        let stitched_preconditions = repeat_n(
+            Precondition::default().proposal(precondition_hash.unwrap_or_default()),
+            stitched_boot_info.len(),
+        )
+            .collect::<Vec<_>>();
+        // backward stitching pass
+        let ending_block_number = stitched_executions
+            .last()
+            .map(|e| e.artifacts.header.number)
             .unwrap_or(boot_info.claimed_l2_block_number);
         let proof_journal = test_stitching_client(
             BootInfo {
                 l1_head: boot_info.l1_head,
-                agreed_l2_output_root: boot_info.agreed_l2_output_root,
-                agreed_l2_block_number: boot_info.agreed_l2_block_number,
-                claimed_l2_output_root: boot_info.agreed_l2_output_root,
-                claimed_l2_block_number: starting_block_number,
+                agreed_l2_output_root: boot_info.claimed_l2_output_root,
+                claimed_l2_output_root: boot_info.claimed_l2_output_root,
+                claimed_l2_block_number: ending_block_number,
                 chain_id: boot_info.chain_id,
                 rollup_config: boot_info.rollup_config.clone(),
             },
             precondition_validation_data.clone(),
             vec![],
-            stitched_boot_info.clone(),
+            None,
+            false,
+            stitched_preconditions.clone().into_iter().rev().collect(),
+            stitched_boot_info.clone().into_iter().rev().collect(),
         );
         validate_proof_journal(proof_journal, boot_info.clone(), precondition_hash);
-
-        // TODO: disable backward and out of order stitching because we can only get output root at
-        // specific block numbers for soon now (so can't get output root at random block numbers)
-
-        // // backward stitching pass
-        // let ending_block_number = stitched_executions
-        //     .last()
-        //     .map(|e| e.artifacts.block_info.block_info.number)
-        //     .unwrap_or(boot_info.claimed_l2_block_number);
-        // let proof_journal = test_stitching_client(
-        //     BootInfo {
-        //         l1_head: boot_info.l1_head,
-        //         agreed_l2_output_root: boot_info.claimed_l2_output_root,
-        //         agreed_l2_block_number: boot_info.claimed_l2_block_number,
-        //         claimed_l2_output_root: boot_info.claimed_l2_output_root,
-        //         claimed_l2_block_number: ending_block_number,
-        //         chain_id: boot_info.chain_id,
-        //         rollup_config: boot_info.rollup_config.clone(),
-        //     },
-        //     precondition_validation_data.clone(),
-        //     vec![],
-        //     stitched_boot_info.clone().into_iter().rev().collect(),
-        // );
-        // validate_proof_journal(proof_journal, boot_info.clone(), precondition_hash);
-        // // fail out of order stitching
-        // let n = stitched_executions.len();
-        // (0..n).into_par_iter().for_each(|i| {
-        //     (i + 1..n).into_par_iter().for_each(|j| {
-        //         let mut stitched_boot_info = stitched_boot_info.clone();
-        //         stitched_boot_info.swap(i, j);
-        //         let result = std::panic::catch_unwind(|| {
-        //             test_stitching_client(
-        //                 BootInfo {
-        //                     l1_head: boot_info.l1_head,
-        //                     agreed_l2_output_root: boot_info.claimed_l2_output_root,
-        //                     agreed_l2_block_number: boot_info.claimed_l2_block_number,
-        //                     claimed_l2_output_root: boot_info.claimed_l2_output_root,
-        //                     claimed_l2_block_number: ending_block_number,
-        //                     chain_id: boot_info.chain_id,
-        //                     rollup_config: boot_info.rollup_config.clone(),
-        //                 },
-        //                 precondition_validation_data.clone(),
-        //                 vec![],
-        //                 stitched_boot_info.clone().into_iter().rev().collect(),
-        //             )
-        //         });
-        //         assert!(result.is_err());
-        //     })
-        // });
+        // fail out of order stitching
+        let n = stitched_executions.len();
+        (0..n).into_par_iter().for_each(|i| {
+            (i + 1..n).into_par_iter().for_each(|j| {
+                let mut stitched_preconditions = stitched_preconditions.clone();
+                let mut stitched_boot_info = stitched_boot_info.clone();
+                stitched_boot_info.swap(i, j);
+                stitched_preconditions.swap(i, j);
+                let result = std::panic::catch_unwind(|| {
+                    test_stitching_client(
+                        BootInfo {
+                            l1_head: boot_info.l1_head,
+                            agreed_l2_output_root: boot_info.claimed_l2_output_root,
+                            claimed_l2_output_root: boot_info.claimed_l2_output_root,
+                            claimed_l2_block_number: ending_block_number,
+                            chain_id: boot_info.chain_id,
+                            rollup_config: boot_info.rollup_config.clone(),
+                        },
+                        precondition_validation_data.clone(),
+                        vec![],
+                        None,
+                        false,
+                        stitched_preconditions.clone().into_iter().rev().collect(),
+                        stitched_boot_info.clone().into_iter().rev().collect(),
+                    )
+                });
+                assert!(result.is_err());
+            })
+        });
 
         Ok(())
     }
 
     pub fn test_stitching_executions(
         boot_info: BootInfo,
-        precondition_validation_data: Option<PreconditionValidationData>,
+        precondition_validation_data: Option<ProposalPrecondition>,
     ) -> anyhow::Result<()> {
-        let stitched_executions =
-            test_derivation(boot_info.clone(), precondition_validation_data.clone())
-                .context("test_derivation")?
-                .into_iter()
-                .map(|e| e.as_ref().clone())
-                .collect::<Vec<_>>();
+        let stitched_executions = test_derivation(
+            boot_info.clone(),
+            precondition_validation_data.clone(),
+            None,
+            None,
+        )
+            .context("test_derivation")?
+            .into_iter()
+            .map(|e| e.as_ref().clone())
+            .collect::<Vec<_>>();
         // flat pass
         test_stitching(
             boot_info.clone(),
             precondition_validation_data.clone(),
             vec![stitched_executions.clone()],
+            None,
+            false,
+            vec![],
             vec![],
         );
         let n = stitched_executions.len();
@@ -738,6 +781,9 @@ pub mod tests {
             boot_info.clone(),
             precondition_validation_data.clone(),
             vec![left.to_vec(), right.to_vec()],
+            None,
+            false,
+            vec![],
             vec![],
         );
         // fully fragmented pass
@@ -745,6 +791,9 @@ pub mod tests {
             boot_info.clone(),
             precondition_validation_data.clone(),
             stitched_executions.into_iter().map(|e| vec![e]).collect(),
+            None,
+            false,
+            vec![],
             vec![],
         );
         Ok(())
@@ -752,47 +801,57 @@ pub mod tests {
 
     pub fn test_stitching_execution_only(
         mut boot_info: BootInfo,
-        precondition_validation_data: Option<PreconditionValidationData>,
+        precondition_validation_data: Option<ProposalPrecondition>,
+        stitched_preconditions: Vec<Precondition>,
         stitched_boot_info: Vec<StitchedBootInfo>,
     ) -> anyhow::Result<()> {
-        let stitched_executions =
-            test_derivation(boot_info.clone(), precondition_validation_data.clone())
-                .context("test_derivation")?
-                .into_iter()
-                .map(|e| e.as_ref().clone())
-                .collect::<Vec<_>>();
+        let stitched_executions = test_derivation(
+            boot_info.clone(),
+            precondition_validation_data.clone(),
+            None,
+            None,
+        )
+            .context("test_derivation")?
+            .into_iter()
+            .map(|e| e.as_ref().clone())
+            .collect::<Vec<_>>();
         // flat pass
         boot_info.l1_head = B256::ZERO;
         test_stitching(
             boot_info.clone(),
             precondition_validation_data.clone(),
             vec![stitched_executions.clone()],
-            stitched_boot_info.clone(),
+            None,
+            false,
+            stitched_preconditions,
+            stitched_boot_info,
         );
         Ok(())
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_soon_local_0_1() {
+    pub async fn test_op_sepolia_16491249_16491250() {
         setup();
 
         test_stitching(
             BootInfo {
                 l1_head: b256!(
-                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
+                    "0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"
                 ),
                 agreed_l2_output_root: b256!(
-                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
+                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
                 ),
                 claimed_l2_output_root: b256!(
-                    "0xc1702320d71294e6c0e4f6a47cc7c40502aec4230f69d3ba6fe57bb5dc96370f"
+                    "0xa130fbfa315391b28668609252e4c09c3df3b77562281b996af30bf056cbb2c1"
                 ),
-                agreed_l2_block_number: 0,
-                claimed_l2_block_number: 1,
-                chain_id: 0,
+                claimed_l2_block_number: 16491250,
+                chain_id: 11155420,
                 rollup_config: Default::default(),
             },
             None,
+            vec![],
+            None,
+            false,
             vec![],
             vec![],
         );
@@ -801,58 +860,59 @@ pub mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_soon_local_0_1_stitched_execution() {
+    pub async fn test_op_sepolia_16491249_16491250_stitched_execution() {
         setup();
 
         test_stitching_executions(
             BootInfo {
                 l1_head: b256!(
-                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
+                    "0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"
                 ),
                 agreed_l2_output_root: b256!(
-                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
+                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
                 ),
                 claimed_l2_output_root: b256!(
-                    "0xc1702320d71294e6c0e4f6a47cc7c40502aec4230f69d3ba6fe57bb5dc96370f"
+                    "0xa130fbfa315391b28668609252e4c09c3df3b77562281b996af30bf056cbb2c1"
                 ),
-                agreed_l2_block_number: 0,
-                claimed_l2_block_number: 1,
-                chain_id: 0,
+                claimed_l2_block_number: 16491250,
+                chain_id: 11155420,
                 rollup_config: Default::default(),
             },
             None,
         )
-        .unwrap();
+            .unwrap();
 
         teardown();
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_soon_local_0_50() {
+    pub async fn test_op_sepolia_16491249_16491349() {
         setup();
 
         test_stitching(
             BootInfo {
                 l1_head: b256!(
-                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
+                    "0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"
                 ),
                 agreed_l2_output_root: b256!(
-                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
+                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
                 ),
                 claimed_l2_output_root: b256!(
-                    "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
+                    "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
                 ),
-                agreed_l2_block_number: 0,
-                claimed_l2_block_number: 50,
-                chain_id: 0,
+                claimed_l2_block_number: 16491349,
+                chain_id: 11155420,
                 rollup_config: Default::default(),
             },
-            Some(PreconditionValidationData::Validity {
-                proposal_l2_head_number: 0,
+            Some(ProposalPrecondition {
+                proposal_l2_head_number: 16491249,
                 proposal_output_count: 1,
-                output_block_span: 50,
+                output_block_span: 100,
                 blob_hashes: vec![],
             }),
+            vec![],
+            None,
+            false,
             vec![],
             vec![],
         );
@@ -861,246 +921,92 @@ pub mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_soon_local_0_50_stitched_executions() {
+    pub async fn test_op_sepolia_16491249_16491349_stitched_executions() {
         setup();
 
         test_stitching_executions(
             BootInfo {
                 l1_head: b256!(
-                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
+                    "0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"
                 ),
                 agreed_l2_output_root: b256!(
-                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
+                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
                 ),
                 claimed_l2_output_root: b256!(
-                    "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
+                    "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
                 ),
-                agreed_l2_block_number: 0,
-                claimed_l2_block_number: 50,
-                chain_id: 0,
+                claimed_l2_block_number: 16491349,
+                chain_id: 11155420,
                 rollup_config: Default::default(),
             },
-            Some(PreconditionValidationData::Validity {
-                proposal_l2_head_number: 0,
+            Some(ProposalPrecondition {
+                proposal_l2_head_number: 16491249,
                 proposal_output_count: 1,
-                output_block_span: 50,
+                output_block_span: 100,
                 blob_hashes: vec![],
             }),
         )
-        .unwrap();
+            .unwrap();
 
         teardown();
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_soon_local_0_50_execution_only() {
+    pub async fn test_op_sepolia_16491249_16491349_execution_only() {
         setup();
 
         test_stitching_execution_only(
             BootInfo {
                 l1_head: b256!(
-                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
+                    "0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"
                 ),
                 agreed_l2_output_root: b256!(
-                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
+                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
                 ),
                 claimed_l2_output_root: b256!(
-                    "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
+                    "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
                 ),
-                agreed_l2_block_number: 0,
-                claimed_l2_block_number: 50,
-                chain_id: 0,
+                claimed_l2_block_number: 16491349,
+                chain_id: 11155420,
                 rollup_config: Default::default(),
             },
             None,
             vec![],
+            vec![],
         )
-        .unwrap();
+            .unwrap();
 
         teardown();
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_soon_local_0_50_stitched_boots() {
+    pub async fn test_op_sepolia_16491249_16491349_stitched_boots() {
         setup();
 
         test_stitching_boots(
             BootInfo {
                 l1_head: b256!(
-                    "0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"
+                    "0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"
                 ),
                 agreed_l2_output_root: b256!(
-                    "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
+                    "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
                 ),
                 claimed_l2_output_root: b256!(
-                    "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
+                    "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
                 ),
-                agreed_l2_block_number: 0,
-                claimed_l2_block_number: 50,
-                chain_id: 0,
+                claimed_l2_block_number: 16491349,
+                chain_id: 11155420,
                 rollup_config: Default::default(),
             },
-            Some(PreconditionValidationData::Validity {
-                proposal_l2_head_number: 0,
+            Some(ProposalPrecondition {
+                proposal_l2_head_number: 16491249,
                 proposal_output_count: 1,
-                output_block_span: 50,
+                output_block_span: 100,
                 blob_hashes: vec![],
             }),
         )
-        .unwrap();
+            .unwrap();
 
         teardown();
-    }
-
-    /// Data access analysis test
-    #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_data_access_analysis() {
-        setup();
-
-        let boot_info = BootInfo {
-            l1_head: b256!("0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"),
-            agreed_l2_output_root: b256!(
-                "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
-            ),
-            claimed_l2_output_root: b256!(
-                "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
-            ),
-            agreed_l2_block_number: 0,
-            claimed_l2_block_number: 50,
-            chain_id: 0,
-            rollup_config: Default::default(),
-        };
-
-        // Analyze data access patterns in different scenarios
-        println!("\n=== Starting TestData Data Access Analysis ===");
-
-        // Scenario 1: Simple stitching test
-        test_stitching_client_with_analysis(
-            "Simple Stitching Test",
-            boot_info.clone(),
-            None,
-            vec![],
-            vec![],
-        );
-
-        // Scenario 2: Test with preconditions
-        test_stitching_client_with_analysis(
-            "Stitching Test with Preconditions",
-            boot_info.clone(),
-            Some(PreconditionValidationData::Validity {
-                proposal_l2_head_number: 0,
-                proposal_output_count: 1,
-                output_block_span: 50,
-                blob_hashes: vec![],
-            }),
-            vec![],
-            vec![],
-        );
-
-        // Scenario 3: Execution analysis test (if execution data exists)
-        if let Ok(executions) = test_derivation(boot_info.clone(), None) {
-            let stitched_executions =
-                vec![executions.into_iter().map(|e| e.as_ref().clone()).collect()];
-            test_stitching_client_with_analysis(
-                "Execution Data Stitching Test",
-                boot_info.clone(),
-                None,
-                stitched_executions,
-                vec![],
-            );
-        }
-
-        println!("\n=== TestData Data Access Analysis Complete ===");
-
-        teardown();
-    }
-
-    /// Analyze data access patterns of a specific existing test
-    #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_analyze_specific_test_data_access() {
-        setup();
-
-        let boot_info = BootInfo {
-            l1_head: b256!("0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"),
-            agreed_l2_output_root: b256!(
-                "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
-            ),
-            claimed_l2_output_root: b256!(
-                "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
-            ),
-            agreed_l2_block_number: 0,
-            claimed_l2_block_number: 50,
-            chain_id: 0,
-            rollup_config: Default::default(),
-        };
-
-        println!("\n=== Starting Single Test Data Access Analysis ===");
-
-        // Re-run a specific test scenario using monitored Oracle
-        test_stitching_client_with_analysis(
-            "Sepolia 16491249-16491349 Analysis",
-            boot_info.clone(),
-            Some(PreconditionValidationData::Validity {
-                proposal_l2_head_number: 0,
-                proposal_output_count: 1,
-                output_block_span: 50,
-                blob_hashes: vec![],
-            }),
-            vec![],
-            vec![],
-        );
-
-        println!("\n=== Single Test Data Access Analysis Complete ===");
-
-        teardown();
-    }
-
-    /// Analyze various scenarios in existing tests
-    #[tokio::test(flavor = "multi_thread")]
-    pub async fn test_analyze_all_scenarios() {
-        setup();
-
-        let boot_info = BootInfo {
-            l1_head: b256!("0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"),
-            agreed_l2_output_root: b256!(
-                "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
-            ),
-            claimed_l2_output_root: b256!(
-                "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
-            ),
-            agreed_l2_block_number: 0,
-            claimed_l2_block_number: 50,
-            chain_id: 0,
-            rollup_config: Default::default(),
-        };
-
-        println!("\n=== Starting All Scenarios Data Access Analysis ===");
-
-        // Scenario 1: Basic stitching
-        test_stitching_client_with_analysis(
-            "Scenario 1: Basic Stitching",
-            boot_info.clone(),
-            None,
-            vec![],
-            vec![],
-        );
-
-        // Scenario 2: With precondition validation
-        test_stitching_client_with_analysis(
-            "Scenario 2: With Precondition Validation",
-            boot_info.clone(),
-            Some(PreconditionValidationData::Validity {
-                proposal_l2_head_number: 0,
-                proposal_output_count: 1,
-                output_block_span: 50,
-                blob_hashes: vec![],
-            }),
-            vec![],
-            vec![],
-        );
-
-        println!("\n=== All Scenarios Data Access Analysis Complete ===");
-
-        teardown()
     }
 }

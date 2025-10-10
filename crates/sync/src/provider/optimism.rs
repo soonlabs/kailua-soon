@@ -1,4 +1,4 @@
-// Copyright 2024 RISC Zero, Inc.
+// Copyright 2024, 2025 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,39 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::args::KailuaHostArgs;
+use std::path::PathBuf;
 use anyhow::Context;
+use soon_primitives::rollup_config::SoonRollupConfig;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::{FutureExt, TraceContextExt, Tracer};
-use serde_json::Value;
+use serde_json::{json, Value};
+use std::str::FromStr;
 use soon_l2_chain_provider::chain_provider::L2BlockFetcher;
-use soon_primitives::rollup_config::SoonRollupConfig;
-use std::path::PathBuf;
-use tempfile::TempDir;
 use tokio::fs;
+use tracing::log::warn;
 use tracing::{debug, info};
-
-pub async fn generate_rollup_config(
-    cfg: &mut KailuaHostArgs,
-    tmp_dir: &TempDir,
-) -> anyhow::Result<SoonRollupConfig> {
-    // generate a RollupConfig for the target network
-    Ok(match cfg.kona.read_rollup_config().ok() {
-        Some(rollup_config) => rollup_config,
-        None => {
-            let tmp_cfg_file = tmp_dir.path().join("rollup-config.json");
-            info!("Fetching rollup config from nodes.");
-            fetch_rollup_config(
-                cfg.kona.l2_node_address.as_ref().unwrap().as_str(),
-                Some(&tmp_cfg_file),
-            )
-            .await?;
-            cfg.kona.rollup_config_path = Some(tmp_cfg_file);
-            debug!("{:?}", cfg.kona.rollup_config_path);
-            cfg.kona.read_rollup_config()?
-        }
-    })
-}
 
 pub async fn fetch_rollup_config(
     l2_node_address: &str,

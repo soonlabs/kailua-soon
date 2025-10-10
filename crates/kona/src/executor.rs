@@ -24,7 +24,7 @@ use anyhow::Context;
 use async_trait::async_trait;
 use fraud_executor::outcome::BlockBuildingOutcome;
 use kona_driver::{Executor, PipelineCursor, TipCursor};
-use kona_executor::TrieDBProvider;
+use kona_executor::{L2BlockBuilder, TrieDBProvider};
 use kona_mpt::TrieHinter;
 use kona_proof::errors::OracleProviderError;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
@@ -35,6 +35,8 @@ use soon_primitives::rollup_config::SoonRollupConfig;
 use spin::RwLock;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
+use alloy_op_evm::OpEvmFactory;
+use kona_proof::executor::KonaExecutor;
 
 /// Represents a block execution process and its results.
 ///
@@ -70,6 +72,37 @@ pub struct CachedExecutor<E: Executor + Send + Sync + Debug> {
     pub executor: E,
     /// An optional shared target for collecting executed tasks.
     pub collection_target: Option<Arc<Mutex<Vec<Execution>>>>,
+}
+
+impl<P, H, E> CachedExecutor<KonaExecutor<P, H, E>>
+where
+    P: TrieDBProvider + Send + Sync + Clone + Debug,
+    H: TrieHinter + Send + Sync + Clone + Debug,
+    E: L2BlockBuilder<P, H> + Send + Sync + Debug,
+{
+    pub fn new(
+        execution_cache: Vec<Arc<Execution>>,
+        rollup_config: Arc<SoonRollupConfig>,
+        trie_provider: P,
+        trie_hinter: H,
+        collection_target: Option<Arc<Mutex<Vec<Execution>>>>,
+    ) -> CachedExecutor<KonaExecutor<P, H, E>> {
+        CachedExecutor {
+            cache: {
+                // The cache elements will be popped from first to last
+                let mut cache = execution_cache;
+                cache.reverse();
+                cache
+            },
+            executor: KonaExecutor::new(
+                rollup_config,
+                trie_provider,
+                trie_hinter,
+                None,
+            ),
+            collection_target,
+        }
+    }
 }
 
 impl<E: Executor + Send + Sync + Debug> Drop for CachedExecutor<E> {

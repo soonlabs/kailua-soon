@@ -30,9 +30,9 @@ use kailua_contracts::{
     IDisputeGameFactory::{gameAtIndexReturn, IDisputeGameFactoryInstance},
     *,
 };
-use kailua_kona::blobs::hash_to_fe;
-use kailua_kona::config::config_hash;
-use kona_genesis::RollupConfig;
+use kailua_soon_kona::blobs::hash_to_fe;
+use kailua_soon_kona::config::config_hash;
+use soon_primitives::rollup_config::SoonRollupConfig;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::FutureExt;
 use opentelemetry::trace::{TraceContextExt, Tracer};
@@ -52,7 +52,7 @@ pub struct SyncAgent {
     /// Telemetry object for reporting synchronization state
     pub telemetry: SyncTelemetry,
     /// L2 Configuration of the rollup being monitored
-    pub config: RollupConfig,
+    pub config: SoonRollupConfig,
     /// Kailua deployment configuration for instance being synchronized
     pub deployment: SyncDeployment,
     /// Local persistent key-value store
@@ -77,7 +77,7 @@ impl SyncAgent {
         mut data_dir: PathBuf,
         game_impl_address: Option<Address>,
         anchor_address: Option<Address>,
-        bypass_chain_registry: bool,
+        _bypass_chain_registry: bool,
     ) -> anyhow::Result<Self> {
         let tracer = tracer("kailua");
         let context = opentelemetry::Context::current_with_span(tracer.start("SymcAgemt::new"));
@@ -96,10 +96,8 @@ impl SyncAgent {
         let config = await_tel_res!(
             context,
             fetch_rollup_config(
-                &provider_args.op_node_url,
-                &provider_args.op_geth_url,
-                None,
-                bypass_chain_registry
+                &provider_args.soon_node_url,
+                None
             ),
             "fetch_rollup_config"
         )?;
@@ -116,13 +114,7 @@ impl SyncAgent {
         {
             let known_image_ids = [
                 B256::from(bytemuck::cast::<[u32; 8], [u8; 32]>(
-                    kailua_build::KAILUA_FPVM_KONA_ID,
-                )),
-                B256::from(bytemuck::cast::<[u32; 8], [u8; 32]>(
-                    kailua_build::KAILUA_FPVM_HOKULEA_ID,
-                )),
-                B256::from(bytemuck::cast::<[u32; 8], [u8; 32]>(
-                    kailua_build::KAILUA_FPVM_HANA_ID,
+                    kailua_build::KAILUA_FPVM_ID,
                 )),
             ];
             if !known_image_ids.contains(&deployment.image_id) {
@@ -240,15 +232,15 @@ impl SyncAgent {
             context,
             tracer,
             "sync_status",
-            retry_res_ctx_timeout!(self.provider.op_provider.sync_status().await)
+            retry_res_ctx_timeout!(self.provider.l2_provider.sync_status().await)
         );
-        let safe_l2_number = sync_status["safe_l2"]["number"]
+        let safe_l2_number = sync_status["l2State"]["finalizedL2"]["block_info"]["number"]
             .as_u64()
             .ok_or_else(|| anyhow::anyhow!("failed to parse safe_l2"))?
             .saturating_sub(op_rpc_delay);
         let output_block_number = safe_l2_number
             .min(self.cursor.last_output_index + self.deployment.blocks_per_proposal());
-        if self.cursor.last_output_index + self.deployment.output_block_span < output_block_number {
+        if self.cursor.last_output_index + self.deployment.output_block_span <= output_block_number {
             info!(
                 "Syncing with op-node from block {} until block {output_block_number}",
                 self.cursor.last_output_index
@@ -605,6 +597,12 @@ impl SyncAgent {
 
         // Update claim status
         proposal.correct_claim = Some(local_claim == proposal.output_root);
+        if local_claim != proposal.output_root {
+            info!(
+                "claim mismatch: local_claim: {} != proposal.output_root:{}",
+                local_claim, proposal.output_root
+            );
+        }
         // Check intermediate output correctness for KailuaGame instances
         if proposal.has_parent() {
             let starting_block_number = proposal
@@ -753,11 +751,11 @@ impl SyncAgent {
                 .step_by(step as usize)
                 .filter(|i| !self.outputs.contains_key(i))
                 .map(|i| {
-                    let provider = self.provider.op_provider.clone();
+                    let provider = self.provider.l2_provider.clone();
                     Box::pin(async move {
                         (
                             i,
-                            retry_res_timeout!(provider.output_at_block(i).await).await,
+                            retry_res_timeout!(provider.output_at_block(i).await).await.hash(),
                         )
                     })
                 })

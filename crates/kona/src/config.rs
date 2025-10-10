@@ -68,6 +68,24 @@ pub fn safe_default<V: Debug + Eq>(opt: Option<V>, default: V) -> anyhow::Result
     }
 }
 
+pub fn opt_byte_arr<const N: usize>(data: Option<[u8; N]>) -> Vec<u8> {
+    let Some(data) = data else {
+        return vec![0xFF; N + 1];
+    };
+    let mut res = vec![0x00; N + 1];
+    res[1..].copy_from_slice(&data);
+    res
+}
+
+pub fn opt_byte_vec(data: Option<Vec<u8>>) -> Vec<u8> {
+    let Some(data) = data else {
+        return vec![0xFF];
+    };
+    let mut res = data.len().to_be_bytes().to_vec();
+    res.extend(data);
+    res
+}
+
 /// Computes the hash of the genesis system configuration.
 ///
 /// # Arguments
@@ -188,7 +206,7 @@ pub fn genesis_system_config_hash(system_config: &SystemConfig) -> anyhow::Resul
 /// * `safe_default` is used extensively to provide fallback values for optional configuration
 ///   fields, ensuring robust handling of missing or invalid data.
 /// * All numeric values are serialized in big-endian format for consistency.
-pub fn config_hash(rollup_config: &SoonRollupConfig) -> anyhow::Result<[u8; 32]> {
+pub fn config_hash(rollup_config: &SoonRollupConfig) -> [u8; 32] {
     let rollup_config_bytes = [
         rollup_config.l1_chain_id.to_be_bytes().as_slice(),
         rollup_config.max_sequencer_drift.to_be_bytes().as_slice(),
@@ -210,7 +228,7 @@ pub fn config_hash(rollup_config: &SoonRollupConfig) -> anyhow::Result<[u8; 32]>
     ]
     .concat();
     let digest = SHA2::hash_bytes(rollup_config_bytes.as_slice());
-    Ok::<[u8; 32], anyhow::Error>(digest.as_bytes().try_into().expect("infallible"))
+    digest.as_bytes().try_into().expect("infallible")
 }
 
 // #[cfg(test)]

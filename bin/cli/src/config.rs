@@ -21,7 +21,7 @@ use kailua_build::{
     KAILUA_FPVM_HOKULEA_ELF, KAILUA_FPVM_HOKULEA_ID, KAILUA_FPVM_KONA_ELF, KAILUA_FPVM_KONA_ID,
 };
 use kailua_contracts::SystemConfig;
-use kailua_kona::config::config_hash;
+use kailua_soon_kona::config::config_hash;
 use kailua_sync::provider::optimism::fetch_rollup_config;
 use kailua_sync::provider::optimism::load_registry_config;
 use kailua_sync::stall::Stall;

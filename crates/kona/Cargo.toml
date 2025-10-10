@@ -77,6 +77,7 @@ l1-block-info = { workspace = true }
 spl-token = { workspace = true }
 bridge = { workspace = true }
 crossbeam-channel = { workspace = true }
+futures.workspace = true
 # soon-node = { path = '../../../soon/node/node', features = ["__test"] }
 # soon-storage = { path = '../../../soon/node/storage' }
 # batcher = { path = '../../../soon/batcher' }

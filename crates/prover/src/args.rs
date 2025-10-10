@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::hana::args::HanaArgs;
-use crate::hokulea::args::HokuleaArgs;
 use crate::risczero::boundless::BoundlessArgs;
 use alloy_primitives::{Address, B256};
 use clap::Parser;
@@ -66,11 +64,6 @@ pub struct ProvingArgs {
     /// Whether to keep cache data after successful completion
     #[clap(long, env, default_value_t = false)]
     pub clear_cache_data: bool,
-
-    #[clap(flatten)]
-    pub hokulea: HokuleaArgs,
-    #[clap(flatten)]
-    pub hana: HanaArgs,
 }
 
 impl ProvingArgs {
@@ -106,10 +99,7 @@ impl ProvingArgs {
                 payout_recipient_address.to_string(),
             ]);
         }
-        // Hokulea
-        proving_args.extend(self.hokulea.to_arg_vec());
-        // Hana
-        proving_args.extend(self.hana.to_arg_vec());
+
         // Return
         proving_args
     }
@@ -118,32 +108,12 @@ impl ProvingArgs {
         self.skip_derivation_proof || self.skip_await_proof
     }
 
-    pub fn use_hokulea(&self) -> bool {
-        self.hokulea.is_set()
-    }
-
-    pub fn use_hana(&self) -> bool {
-        !self.hokulea.is_set() && self.hana.is_set()
-    }
-
     pub fn image_id(&self) -> [u32; 8] {
-        if self.use_hokulea() {
-            kailua_build::KAILUA_FPVM_HOKULEA_ID
-        } else if self.use_hana() {
-            kailua_build::KAILUA_FPVM_HANA_ID
-        } else {
-            kailua_build::KAILUA_FPVM_KONA_ID
-        }
+        kailua_build::KAILUA_FPVM_ID
     }
 
     pub fn elf(&self) -> &'static [u8] {
-        if self.use_hokulea() {
-            kailua_build::KAILUA_FPVM_HOKULEA_ELF
-        } else if self.use_hana() {
-            kailua_build::KAILUA_FPVM_HANA_ELF
-        } else {
-            kailua_build::KAILUA_FPVM_KONA_ELF
-        }
+        kailua_build::KAILUA_FPVM_ELF
     }
 
     pub fn image(&self) -> ([u32; 8], &'static [u8]) {
@@ -157,9 +127,9 @@ pub struct ProveArgs {
     #[clap(flatten)]
     pub kona: kona_host::single::SingleChainHost,
 
-    /// Address of OP-NODE endpoint to use
+    /// Address of SOON-NODE endpoint to use
     #[clap(long, env)]
-    pub op_node_address: Option<String>,
+    pub soon_node_address: Option<String>,
 
     #[clap(flatten)]
     pub proving: ProvingArgs,
@@ -201,8 +171,8 @@ impl ProveArgs {
             String::from("--l1-head"),
             self.kona.l1_head.to_string(),
             // l2 starting block hash from on-chain proposal
-            String::from("--agreed-l2-head-hash"),
-            self.kona.agreed_l2_head_hash.to_string(),
+            String::from("--agreed-l2-block-number"),
+            self.kona.agreed_l2_block_number.to_string(),
             // l2 starting output root
             String::from("--agreed-l2-output-root"),
             self.kona.agreed_l2_output_root.to_string(),
@@ -250,11 +220,11 @@ impl ProveArgs {
         }
 
         // op-node
-        if let Some(op_node_address) = &self.op_node_address {
+        if let Some(soon_node_address) = &self.soon_node_address {
             prove_args.extend(vec![
                 // l2 el node
-                String::from("--op-node-address"),
-                op_node_address.to_string(),
+                String::from("--soon-node-address"),
+                soon_node_address.to_string(),
             ])
         }
 

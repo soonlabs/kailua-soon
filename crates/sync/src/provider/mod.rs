@@ -17,8 +17,10 @@ use crate::{await_tel, retry_res_ctx};
 use alloy::providers::RootProvider;
 use opentelemetry::trace::{FutureExt, TraceContextExt, Tracer};
 use soon_l2_chain_provider::chain_provider::L2BlockFetcher;
+use anyhow::Context;
 
 pub mod beacon;
+pub mod optimism;
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct ProviderArgs {

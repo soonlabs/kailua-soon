@@ -12,15 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::fmt::Debug;
 use crate::blobs::PreloadedBlobProvider;
 use crate::client::log;
+use crate::client::stitching::StitchingClient;
 use crate::journal::ProofJournal;
 use crate::oracle::WitnessOracle;
 use crate::witness::Witness;
+use std::sync::Arc;
 use kona_executor::L2BlockBuilder;
 use kona_proof::l2::OracleL2ChainProvider;
-use std::fmt::Debug;
-use std::sync::Arc;
 
 /// Executes a stateless client workflow by validating witness data, and running the stitching
 /// client to produce a unified proof journal.
@@ -50,11 +51,9 @@ use std::sync::Arc;
 /// * Logs the count of preimages provided via the `oracle_witness`.
 /// * Logs the count of blobs contained in the `blobs_witness`.
 /// * Logs a warning if any extra preimages are found during execution.
-pub fn run_stateless_client<
-    O: WitnessOracle,
-    E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug,
->(
+pub fn run_stateless_client<O: WitnessOracle, E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug, S: StitchingClient<E, O, PreloadedBlobProvider>>(
     witness: Witness<O>,
+    stitching_client: S,
 ) -> ProofJournal {
     log(&format!(
         "ORACLE: {} PREIMAGES",
@@ -73,7 +72,7 @@ pub fn run_stateless_client<
     ));
     let beacon = PreloadedBlobProvider::from(witness.blobs_witness);
 
-    let proof_journal = crate::client::stitching::run_stitching_client::<E, O, _>(
+    let (_, proof_journal, _) = stitching_client.run_stitching_client(
         witness.precondition_validation_data_hash,
         oracle.clone(),
         stream,
@@ -81,6 +80,9 @@ pub fn run_stateless_client<
         witness.fpvm_image_id,
         witness.payout_recipient_address,
         witness.stitched_executions,
+        witness.derivation_cache,
+        witness.trace_derivation,
+        witness.stitched_preconditions,
         witness.stitched_boot_info,
     );
 
@@ -96,28 +98,28 @@ pub fn run_stateless_client<
 pub mod tests {
     use super::*;
     use crate::client::core::tests::test_derivation;
-    use crate::test::TestOracle;
+    use crate::client::core::EthereumDataSourceProvider;
+    use crate::client::stitching::KonaStitchingClient;
+    use crate::client::tests::TestOracle;
     use alloy_primitives::{b256, B256};
     use anyhow::Context;
-    use kona_executor::StatelessL2Builder;
     use kona_proof::BootInfo;
 
     #[test]
     fn test_stateless_client() -> anyhow::Result<()> {
         let mut boot_info = BootInfo {
-            l1_head: b256!("0x56e2ceace7adabe548bd898b285b3fb2c6361121c8c0d11e02e838748ee366dd"),
+            l1_head: b256!("0x417ffee9dd1ccbd35755770dd8c73dbdcd96ba843c532788850465bdd08ea495"),
             agreed_l2_output_root: b256!(
-                "0x10e854c0f0895650d8f3e479ee0535bf1ef678a52b432a8bc945eedb66644209"
+                "0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75"
             ),
             claimed_l2_output_root: b256!(
-                "0x2b274338b40a5bce17e0825fbac47b1cb13ce1d71e4e2f1393fa6598d1919fc0"
+                "0x6984e5ae4d025562c8a571949b985692d80e364ddab46d5c8af5b36a20f611d1"
             ),
-            agreed_l2_block_number: 0,
-            claimed_l2_block_number: 50,
-            chain_id: 0,
+            claimed_l2_block_number: 16491349,
+            chain_id: 11155420,
             rollup_config: Default::default(),
         };
-        let stitched_executions = test_derivation(boot_info.clone(), None)
+        let stitched_executions = test_derivation(boot_info.clone(), None, None, None)
             .context("test_derivation")?
             .into_iter()
             .map(|e| e.as_ref().clone())
@@ -132,11 +134,14 @@ pub mod tests {
             payout_recipient_address: Default::default(),
             precondition_validation_data_hash: Default::default(),
             stitched_executions: vec![stitched_executions],
+            derivation_cache: None,
+            trace_derivation: false,
+            stitched_preconditions: vec![],
             stitched_boot_info: vec![],
             fpvm_image_id: Default::default(),
         };
 
-        run_stateless_client::<_, StatelessL2Builder<_, _>>(witness);
+        run_stateless_client(witness, KonaStitchingClient(EthereumDataSourceProvider));
 
         Ok(())
     }

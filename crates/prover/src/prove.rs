@@ -20,14 +20,12 @@ use crate::preflight::{concurrent_execution_preflight, fetch_precondition_data};
 use crate::tasks::{handle_oneshot_tasks, CachedTask, Oneshot, OneshotResult};
 use crate::ProvingError;
 use alloy::eips::BlockNumberOrTag;
-use alloy::providers::{Provider, RootProvider};
 use alloy_primitives::B256;
 use anyhow::{anyhow, bail, Context};
 use human_bytes::human_bytes;
-use kailua_kona::boot::StitchedBootInfo;
-use kailua_kona::driver::CachedDriver;
-use kailua_kona::precondition::Precondition;
-use kailua_sync::provider::optimism::OpNodeProvider;
+use kailua_soon_kona::boot::StitchedBootInfo;
+use kailua_soon_kona::driver::CachedDriver;
+use kailua_soon_kona::precondition::Precondition;
 use kailua_sync::{await_tel, retry_res_ctx_timeout};
 use opentelemetry::global::tracer;
 use opentelemetry::trace::FutureExt;
@@ -52,13 +50,6 @@ pub async fn prove(mut args: ProveArgs) -> anyhow::Result<bool> {
                 .l2,
         )
     };
-    let op_node_provider = args.op_node_address.as_ref().map(|addr| {
-        OpNodeProvider(RootProvider::new_http(
-            addr.as_str()
-                .try_into()
-                .expect("Failed to parse op_node_address"),
-        ))
-    });
 
     // set tmp data dir if data dir unset
     let tmp_dir = tempdir().map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
@@ -103,7 +94,7 @@ pub async fn prove(mut args: ProveArgs) -> anyhow::Result<bool> {
     if !concurrent_execution_preflight(
         &args,
         rollup_config.clone(),
-        op_node_provider.as_ref().expect("Missing op_node_provider"),
+        l2_provider.as_ref().expect("Missing soon_node_provider"),
         disk_kv_store.clone(),
     )
     .await
@@ -130,24 +121,9 @@ pub async fn prove(mut args: ProveArgs) -> anyhow::Result<bool> {
     let mut derivation_cache_receiver = None;
     // dispatch requested proof
     let mut num_proofs = 0;
-    if let (Some(l2_provider), Some(op_node_provider)) =
-        (l2_provider.as_ref(), op_node_provider.as_ref())
-    {
-        // divide into subtasks
-        let mut agreed_l2_block_number = await_tel!(
-            context,
-            tracer,
-            "l2_provider get_block_by_hash agreed_l2_head_hash",
-            retry_res_ctx_timeout!(l2_provider
-                .get_block_by_hash(args.kona.agreed_l2_head_hash)
-                .await
-                .context("l2_provider get_block_by_hash agreed_l2_head_hash")?
-                .ok_or_else(|| anyhow!("Failed to fetch agreed l2 block number")))
-        )
-        .header
-        .number;
+    if let Some(l2_provider) = l2_provider.as_ref() {
         let mut agreed_l2_output_root = args.kona.agreed_l2_output_root;
-        let mut agreed_l2_head_hash = args.kona.agreed_l2_head_hash;
+        let mut agreed_l2_block_number = args.kona.agreed_l2_block_number;
         while agreed_l2_output_root != args.kona.claimed_l2_output_root {
             let claimed_l2_block_number = agreed_l2_block_number
                 .saturating_add(args.proving.max_block_derivations as u64)
@@ -155,33 +131,21 @@ pub async fn prove(mut args: ProveArgs) -> anyhow::Result<bool> {
             // Create sub-proof job
             let mut job_args = args.clone();
             job_args.kona.agreed_l2_output_root = agreed_l2_output_root;
-            job_args.kona.agreed_l2_head_hash = agreed_l2_head_hash;
+            job_args.kona.agreed_l2_block_number = agreed_l2_block_number;
             job_args.kona.claimed_l2_output_root = await_tel!(
                 context,
                 tracer,
                 "claimed_l2_output_root",
                 retry_res_ctx_timeout!(
-                    op_node_provider
+                    l2_provider
                         .output_at_block(claimed_l2_block_number)
                         .await
                 )
-            );
+            ).hash();
             job_args.kona.claimed_l2_block_number = claimed_l2_block_number;
             // advance agreed pointers
             agreed_l2_block_number = claimed_l2_block_number;
             agreed_l2_output_root = job_args.kona.claimed_l2_output_root;
-            agreed_l2_head_hash = await_tel!(
-                context,
-                tracer,
-                "l2_provider get_block_by_number claimed_l2_block_number",
-                retry_res_ctx_timeout!(l2_provider
-                    .get_block_by_number(BlockNumberOrTag::Number(claimed_l2_block_number))
-                    .await
-                    .context("l2_provider get_block_by_number claimed_l2_block_number")?
-                    .ok_or_else(|| anyhow!("Failed to fetch claimed l2 block")))
-            )
-            .header
-            .hash;
             // instantiate cached driver relays
             let is_last_iteration = agreed_l2_output_root == args.kona.claimed_l2_output_root;
             let (derivation_trace_sender, new_receiver) = (!is_last_iteration)
@@ -223,23 +187,7 @@ pub async fn prove(mut args: ProveArgs) -> anyhow::Result<bool> {
                     .await
                     .expect("Failed to recv prover task");
 
-            let starting_block = if let Some(l2_provider) = l2_provider.as_ref() {
-                await_tel!(
-                    context,
-                    tracer,
-                    "l2_provider get_block_by_hash starting_block",
-                    retry_res_ctx_timeout!(l2_provider
-                        .get_block_by_hash(job_args.kona.agreed_l2_head_hash)
-                        .await
-                        .context("l2_provider get_block_by_hash starting_block")?
-                        .ok_or_else(|| anyhow!("Failed to fetch starting block")))
-                )
-                .header
-                .number
-            } else {
-                0
-            };
-
+            let starting_block = job_args.kona.agreed_l2_block_number;
             let num_blocks = job_args.kona.claimed_l2_block_number - starting_block;
             if starting_block > 0 {
                 info!(
@@ -386,27 +334,15 @@ pub async fn prove(mut args: ProveArgs) -> anyhow::Result<bool> {
                 num_proofs += 1;
                 // Split workload at midpoint (num_blocks > 1)
                 let mid_point = starting_block + num_blocks / 2;
-                let op_node_provider = op_node_provider.as_ref().expect("Missing op_node_provider");
                 let mid_output = await_tel!(
                     context,
                     tracer,
-                    "op_node_provider output_at_block mid_output",
-                    retry_res_ctx_timeout!(op_node_provider
+                    "soon_node_provider output_at_block mid_output",
+                    retry_res_ctx_timeout!(l2_provider.clone().unwrap()
                         .output_at_block(mid_point)
                         .await
                         .context("op_node_provider output_at_block mid_output"))
-                );
-                let l2_provider = l2_provider.as_ref().expect("Missing l2_provider");
-                let mid_block = await_tel!(
-                    context,
-                    tracer,
-                    "l2_provider get_block_by_number mid_block",
-                    retry_res_ctx_timeout!(l2_provider
-                        .get_block_by_number(BlockNumberOrTag::Number(mid_point))
-                        .await
-                        .context("l2_provider get_block_by_number mid_block")?
-                        .ok_or_else(|| anyhow!("Block {mid_point} not found")))
-                );
+                ).hash();
                 // Instantiate derivation trace channel
                 let (lower_sender, upper_receiver) = async_channel::bounded(1);
                 // Lower half workload ends at midpoint (inclusive)
@@ -430,7 +366,7 @@ pub async fn prove(mut args: ProveArgs) -> anyhow::Result<bool> {
                 // upper half workload starts after midpoint
                 let mut upper_job_args = job_args;
                 upper_job_args.kona.agreed_l2_output_root = mid_output;
-                upper_job_args.kona.agreed_l2_head_hash = mid_block.header.hash;
+                upper_job_args.kona.agreed_l2_block_number= mid_point;
                 prover_channel
                     .0
                     .send((true, upper_job_args, Some(upper_receiver), derivation_trace))
@@ -457,21 +393,7 @@ pub async fn prove(mut args: ProveArgs) -> anyhow::Result<bool> {
         {
             // set last block as starting point
             base_args.kona.agreed_l2_output_root = base_args.kona.claimed_l2_output_root;
-            let l2_provider = l2_provider.as_ref().unwrap();
-            base_args.kona.agreed_l2_head_hash = await_tel!(
-                context,
-                tracer,
-                "l2_provider get_block_by_number claimed_l2_block_number",
-                retry_res_ctx_timeout!(l2_provider
-                    .get_block_by_number(BlockNumberOrTag::Number(
-                        base_args.kona.claimed_l2_block_number,
-                    ))
-                    .await
-                    .context("l2_provider get_block_by_number claimed_l2_block_number")?
-                    .ok_or_else(|| anyhow!("Claimed L2 block not found")))
-            )
-            .header
-            .hash;
+            base_args.kona.agreed_l2_block_number = base_args.kona.claimed_l2_block_number;
         }
         // construct a list of boot info to backward stitch
         let (proofs, stitched_preconditions): (Vec<_>, Vec<_>) = results.into_iter().unzip();

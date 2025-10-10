@@ -22,14 +22,6 @@ use alloy_primitives::B256;
 use anyhow::{anyhow, Context};
 use async_channel::{Receiver, Sender};
 use human_bytes::human_bytes;
-use kailua_kona::boot::StitchedBootInfo;
-use kailua_kona::client::stitching::{split_executions, stitch_boot_info};
-use kailua_kona::driver::CachedDriver;
-use kailua_kona::executor::Execution;
-use kailua_kona::oracle::vec::VecOracle;
-use kailua_kona::precondition::execution::exec_precondition_hash;
-use kailua_kona::precondition::Precondition;
-use kailua_sync::provider::optimism::OpNodeProvider;
 use soon_primitives::rollup_config::SoonRollupConfig;
 use kona_proof::BootInfo;
 use risc0_zkvm::sha::Digestible;
@@ -40,6 +32,14 @@ use std::convert::identity;
 use std::path::Path;
 use std::sync::Arc;
 use tracing::{error, info, warn};
+use kailua_soon_kona::boot::StitchedBootInfo;
+use kailua_soon_kona::client::stitching::{split_executions, stitch_boot_info};
+use kailua_soon_kona::config::config_hash;
+use kailua_soon_kona::driver::CachedDriver;
+use kailua_soon_kona::executor::Execution;
+use kailua_soon_kona::oracle::vec::VecOracle;
+use kailua_soon_kona::precondition::execution::exec_precondition_hash;
+use kailua_soon_kona::precondition::Precondition;
 
 #[derive(Clone, Debug)]
 pub struct CachedTask {
@@ -378,20 +378,20 @@ pub async fn compute_fpvm_proof(
     let mut num_proofs = 0;
     let mut next_claim_index = args.proving.max_block_executions.min(execution_cache.len()) - 1;
     let mut agreed_l2_output_root = args.kona.agreed_l2_output_root;
-    let mut agreed_l2_head_hash = args.kona.agreed_l2_head_hash;
+    let mut agreed_l2_block_number = args.kona.agreed_l2_block_number;
     let last_claim_index = execution_cache.len() - 1;
     while agreed_l2_output_root != args.kona.claimed_l2_output_root {
         // Create sub-proof job
         let mut job_args = args.clone();
         job_args.kona.l1_head = B256::ZERO;
         job_args.kona.agreed_l2_output_root = agreed_l2_output_root;
-        job_args.kona.agreed_l2_head_hash = agreed_l2_head_hash;
+        job_args.kona.agreed_l2_block_number = agreed_l2_block_number;
         job_args.kona.claimed_l2_output_root = execution_cache[next_claim_index].claimed_output;
         job_args.kona.claimed_l2_block_number =
-            execution_cache[next_claim_index].artifacts.header.number;
+            execution_cache[next_claim_index].artifacts.block_info.block_info.number;
         // advance pointers
         agreed_l2_output_root = job_args.kona.claimed_l2_output_root;
-        agreed_l2_head_hash = execution_cache[next_claim_index].artifacts.header.hash();
+        agreed_l2_block_number = execution_cache[next_claim_index].artifacts.block_info.block_info.number;
         // queue up job
         num_proofs += 1;
         task_sender
@@ -429,7 +429,7 @@ pub async fn compute_fpvm_proof(
         // Require additional proof
         num_proofs += 1;
         let executed_blocks = oneshot_result.cached_task.stitched_executions[0].clone();
-        let agreed_block = executed_blocks[0].artifacts.header.number - 1;
+        let agreed_block = executed_blocks[0].artifacts.block_info.block_info.number - 1;
         let num_blocks =
             oneshot_result.cached_task.args.kona.claimed_l2_block_number - agreed_block;
         let forced_attempt = num_blocks == 1;
@@ -484,7 +484,7 @@ pub async fn compute_fpvm_proof(
         let mid_point = agreed_block + num_blocks / 2;
         let mid_exec = executed_blocks
             .iter()
-            .find(|e| e.artifacts.header.number == mid_point)
+            .find(|e| e.artifacts.block_info.block_info.number == mid_point)
             .expect("Failed to find the midpoint of execution.");
         let mid_output = mid_exec.claimed_output;
 
@@ -508,7 +508,7 @@ pub async fn compute_fpvm_proof(
         // upper half workload starts after midpoint
         let mut upper_job_args = oneshot_result.cached_task.args;
         upper_job_args.kona.agreed_l2_output_root = mid_output;
-        upper_job_args.kona.agreed_l2_head_hash = mid_exec.artifacts.header.hash();
+        upper_job_args.kona.agreed_l2_block_number = mid_exec.artifacts.block_info.block_info.number;
         task_sender
             .send(Oneshot {
                 cached_task: create_cached_execution_task(
@@ -585,7 +585,8 @@ pub fn create_cached_execution_task(
         .find(|e| e.agreed_output == args.kona.agreed_l2_output_root)
         .expect("Failed to find the first execution.")
         .artifacts
-        .header
+        .block_info
+        .block_info
         .number
         - 1;
     let num_blocks = args.kona.claimed_l2_block_number - starting_block;
@@ -597,7 +598,7 @@ pub fn create_cached_execution_task(
     let executed_blocks = execution_cache
         .iter()
         .filter(|e| {
-            let executed_block_number = e.artifacts.header.number;
+            let executed_block_number = e.artifacts.block_info.block_info.number;
 
             starting_block < executed_block_number
                 && executed_block_number <= args.kona.claimed_l2_block_number
@@ -653,12 +654,26 @@ pub async fn compute_cached_proof(
     // extract single chain kona config
     let boot = BootInfo {
         l1_head: args.kona.l1_head,
+        agreed_l2_block_number: args.kona.agreed_l2_block_number,
         agreed_l2_output_root: args.kona.agreed_l2_output_root,
         claimed_l2_output_root: args.kona.claimed_l2_output_root,
         claimed_l2_block_number: args.kona.claimed_l2_block_number,
-        chain_id: rollup_config.l2_chain_id,
-        rollup_config,
+        chain_id: 0,
+        rollup_config:rollup_config.clone(),
     };
+    let rollup_config_hash = config_hash(&rollup_config);
+
+    // Print complete boot information
+    println!("=== Boot Information ===");
+    println!("l1_head: {:?}", boot.l1_head);
+    println!("agreed_l2_block_number: {}", boot.agreed_l2_block_number);
+    println!("agreed_l2_output_root: {:?}", boot.agreed_l2_output_root);
+    println!("claimed_l2_output_root: {:?}", boot.claimed_l2_output_root);
+    println!("claimed_l2_block_number: {}", boot.claimed_l2_block_number);
+    println!("chain_id: {}", boot.chain_id);
+    println!("rollup_config: {:?}", boot.rollup_config);
+    println!("rollup_config_hash: {:?}", B256::from(rollup_config_hash));
+    println!("========================");
     // Choose image id
     let image_id = args.proving.image_id();
 
@@ -711,49 +726,6 @@ pub async fn compute_cached_proof(
             info!("Computing uncached proof {proof_file}.");
         } else {
             info!("Running native client.");
-        }
-
-        // preflight
-        if args.kona.enable_experimental_witness_endpoint
-            && !args.kona.is_offline()
-            && args.op_node_address.is_some()
-        {
-            let l2_provider = args
-                .kona
-                .l2_node_address
-                .as_ref()
-                .map(|addr| {
-                    RootProvider::new_http(
-                        addr.as_str()
-                            .try_into()
-                            .expect("Failed to parse l2_node_address"),
-                    )
-                })
-                .unwrap();
-            let op_node_provider = args
-                .op_node_address
-                .as_ref()
-                .map(|addr| {
-                    OpNodeProvider(RootProvider::new_http(
-                        addr.as_str()
-                            .try_into()
-                            .expect("Failed to parse op_node_address"),
-                    ))
-                })
-                .unwrap();
-            if crate::client::payload::run_payload_client(
-                boot.clone(),
-                l2_provider,
-                op_node_provider,
-                disk_kv_store.clone(),
-            )
-            .await
-            .map_err(|e| ProvingError::OtherError(anyhow!(e)))?
-            {
-                // If we have used debug_executionWitness sucessfully then don't use Kona's
-                // debug_executePayload logic as it doesn't have caching
-                args.kona.enable_experimental_witness_endpoint = false;
-            }
         }
 
         // generate a proof using the kailua client and kona server

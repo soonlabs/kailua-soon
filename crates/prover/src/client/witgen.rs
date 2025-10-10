@@ -17,35 +17,34 @@ use alloy::eips::eip4844::IndexedBlobHash;
 use alloy_primitives::{Address, B256};
 use anyhow::Context;
 use async_trait::async_trait;
-use kailua_kona::blobs::BlobWitnessData;
-use kailua_kona::boot::StitchedBootInfo;
-use kailua_kona::client::core::{recover_collected_executions, DASourceProvider};
-use kailua_kona::client::stitching::stitch_boot_info;
-use kailua_kona::driver::CachedDriver;
-use kailua_kona::executor::Execution;
-use kailua_kona::journal::ProofJournal;
-use kailua_kona::kona::OracleL1ChainProvider;
-use kailua_kona::oracle::WitnessOracle;
-use kailua_kona::precondition::Precondition;
-use kailua_kona::witness::Witness;
+use kailua_soon_kona::blobs::BlobWitnessData;
+use kailua_soon_kona::boot::StitchedBootInfo;
+use kailua_soon_kona::client::core::{recover_collected_executions};
+use kailua_soon_kona::client::stitching::stitch_boot_info;
+use kailua_soon_kona::driver::CachedDriver;
+use kailua_soon_kona::executor::Execution;
+use kailua_soon_kona::journal::ProofJournal;
+use kailua_soon_kona::kona::OracleL1ChainProvider;
+use kailua_soon_kona::oracle::WitnessOracle;
+use kailua_soon_kona::precondition::Precondition;
+use kailua_soon_kona::witness::Witness;
 use soon_derive::prelude::BlobProvider;
 use kona_preimage::errors::PreimageOracleResult;
 use kona_preimage::{CommsClient, HintWriterClient, PreimageKey, PreimageOracleClient};
 use kona_proof::{BootInfo, FlushableCache};
-use kona_protocol::BlockInfo;
 use std::fmt::Debug;
 use std::ops::DerefMut;
 use std::sync::{Arc, Mutex};
+use soon_primitives::blocks::BlockInfo;
 use tracing::info;
 use tracing::log::error;
 
 #[allow(clippy::too_many_arguments)]
-pub async fn run_witgen_client<P, B, O, D>(
+pub async fn run_witgen_client<P, B, O>(
     fpvm_image_id: B256,
     preimage_oracle: Arc<P>,
     preimage_oracle_shard_size: usize,
     blob_provider: B,
-    da_source_provider: D,
     payout_recipient: Address,
     proposal_data_hash: B256,
     execution_cache: Vec<Arc<Execution>>,
@@ -65,7 +64,6 @@ where
     B: BlobProvider + Send + Sync + Debug + Clone,
     <B as BlobProvider>::Error: Debug,
     O: WitnessOracle + Send + Sync + Debug + Clone + Default,
-    D: DASourceProvider<OracleL1ChainProvider<OracleWitnessProvider<P, O>>, BlobWitnessProvider<B>>,
 {
     let oracle_witness = Arc::new(Mutex::new(O::default()));
     let stream_witness = Arc::new(Mutex::new(O::default()));
@@ -87,12 +85,11 @@ where
     // Run client
     let execution_trace = Arc::new(Mutex::new(Vec::new()));
     let derivation_trace = Arc::new(Mutex::new(None));
-    let (boot, precondition) = kailua_kona::client::core::run_core_client(
+    let (boot, precondition) = kailua_soon_kona::client::core::run_core_client(
         proposal_data_hash,
         oracle,
         stream.clone(),
         beacon,
-        da_source_provider,
         execution_cache,
         Some(execution_trace.clone()),
         derivation_cache.clone(),

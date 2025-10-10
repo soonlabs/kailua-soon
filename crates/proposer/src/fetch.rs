@@ -25,25 +25,6 @@ use kailua_sync::transact::rpc::get_block;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::{FutureExt, TraceContextExt, Tracer};
 
-pub async fn fetch_vanguard(agent: &SyncAgent) -> Address {
-    let tracer = tracer("kailua");
-    let context = opentelemetry::Context::current_with_span(tracer.start("fetch_vanguard"));
-    KailuaTreasury::new(agent.deployment.treasury, &agent.provider.l1_provider)
-        .vanguard()
-        .stall_with_context(context.clone(), "KailuaTreasury::vanguard")
-        .await
-}
-
-pub async fn fetch_vanguard_advantage(agent: &SyncAgent) -> u64 {
-    let tracer = tracer("kailua");
-    let context =
-        opentelemetry::Context::current_with_span(tracer.start("fetch_vanguard_advantage"));
-    KailuaTreasury::new(agent.deployment.treasury, &agent.provider.l1_provider)
-        .vanguardAdvantage()
-        .stall_with_context(context.clone(), "KailuaTreasury::vanguardAdvantage")
-        .await
-}
-
 pub async fn fetch_participation_bond(agent: &SyncAgent) -> U256 {
     let tracer = tracer("kailua");
     let context =

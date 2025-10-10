@@ -14,16 +14,14 @@
 
 use alloy_primitives::B256;
 use async_channel::Sender;
-use kailua_kona::driver::CachedDriver;
-use kailua_kona::executor::Execution;
+use kailua_soon_kona::driver::CachedDriver;
+use kailua_soon_kona::executor::Execution;
 
 pub mod args;
 pub mod channel;
 pub mod client;
 pub mod config;
 pub mod driver;
-pub mod hana;
-pub mod hokulea;
 pub mod kv;
 pub mod preflight;
 pub mod proof;

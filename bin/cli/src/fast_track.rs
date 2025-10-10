@@ -19,7 +19,7 @@ use alloy::sol_types::SolValue;
 use anyhow::{anyhow, bail, Context};
 use kailua_build::KAILUA_FPVM_KONA_ID;
 use kailua_contracts::*;
-use kailua_kona::config::config_hash;
+use kailua_soon_kona::config::config_hash;
 use kailua_sync::provider::optimism::fetch_rollup_config;
 use kailua_sync::provider::optimism::OpNodeProvider;
 use kailua_sync::stall::Stall;

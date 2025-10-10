@@ -21,21 +21,21 @@ use alloy::eips::BlockNumberOrTag;
 use alloy::providers::{Provider, RootProvider};
 use alloy_primitives::B256;
 use anyhow::{anyhow, bail, Context};
-use kailua_kona::blobs::BlobFetchRequest;
-use kailua_kona::journal::ProofJournal;
-use kailua_kona::precondition::proposal::ProposalPrecondition;
-use kailua_kona::precondition::Precondition;
-use kailua_sync::provider::optimism::OpNodeProvider;
 use kailua_sync::{await_tel, retry_res_ctx_timeout};
-use kona_genesis::RollupConfig;
+use soon_primitives::rollup_config::SoonRollupConfig;
 use kona_preimage::{PreimageKey, PreimageKeyType};
-use kona_protocol::BlockInfo;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::FutureExt;
 use opentelemetry::trace::{TraceContextExt, Tracer};
 use std::env::set_var;
 use std::iter::zip;
+use soon_l2_chain_provider::chain_provider::L2BlockFetcher;
+use soon_primitives::blocks::BlockInfo;
 use tracing::{error, info, warn};
+use kailua_soon_kona::blobs::BlobFetchRequest;
+use kailua_soon_kona::journal::ProofJournal;
+use kailua_soon_kona::precondition::Precondition;
+use kailua_soon_kona::precondition::proposal::ProposalPrecondition;
 
 pub async fn get_blob_fetch_request(
     l1_provider: &RootProvider,
@@ -150,34 +150,19 @@ pub async fn fetch_precondition_data(
 #[allow(clippy::too_many_arguments)]
 pub async fn concurrent_execution_preflight(
     args: &ProveArgs,
-    rollup_config: RollupConfig,
-    op_node_provider: &OpNodeProvider,
+    rollup_config: SoonRollupConfig,
+    soon_node_provider: &L2BlockFetcher,
     disk_kv_store: Option<RWLKeyValueStore>,
 ) -> anyhow::Result<bool> {
     let tracer = tracer("kailua");
     let context =
         opentelemetry::Context::current_with_span(tracer.start("concurrent_execution_preflight"));
 
-    let l2_provider = retry_res_ctx_timeout!(20, args.create_providers().await)
-        .await
-        .l2;
-    let starting_block = await_tel!(
-        context,
-        tracer,
-        "l2_provider get_block_by_hash agreed_l2_head_hash",
-        retry_res_ctx_timeout!(l2_provider
-            .get_block_by_hash(args.kona.agreed_l2_head_hash)
-            .await
-            .context("l2_provider get_block_by_hash agreed_l2_head_hash")?
-            .ok_or_else(|| anyhow!("Failed to fetch agreed l2 block")))
-    )
-    .header
-    .number;
-
-    let mut num_blocks = args.kona.claimed_l2_block_number - starting_block;
+    let mut num_blocks = args.kona.claimed_l2_block_number - args.kona.agreed_l2_block_number;
     if num_blocks == 0 {
         return Ok(true);
     }
+
     let blocks_per_thread = num_blocks / args.proving.num_concurrent_preflights;
     let mut extra_blocks = num_blocks % args.proving.num_concurrent_preflights;
     let mut jobs = vec![];
@@ -192,29 +177,12 @@ pub async fn concurrent_execution_preflight(
         num_blocks = num_blocks.saturating_sub(processed_blocks);
 
         // update ending block
-        args.kona.claimed_l2_block_number = await_tel!(
-            context,
-            tracer,
-            "l2_provider get_block_by_hash agreed_l2_head_hash",
-            retry_res_ctx_timeout!(l2_provider
-                .get_block_by_hash(args.kona.agreed_l2_head_hash)
-                .await
-                .context("l2_provider get_block_by_hash agreed_l2_head_hash")?
-                .ok_or_else(|| anyhow!("Failed to fetch agreed l2 block")))
-        )
-        .header
-        .number
-            + processed_blocks;
-        args.kona.claimed_l2_output_root = await_tel!(
-            context,
-            tracer,
-            "output_at_block claimed_l2_block_number",
-            retry_res_ctx_timeout!(
-                op_node_provider
-                    .output_at_block(args.kona.claimed_l2_block_number)
-                    .await
-            )
-        );
+        args.kona.claimed_l2_block_number = args.kona.agreed_l2_block_number + processed_blocks;
+        args.kona.claimed_l2_output_root = soon_node_provider
+            .output_at_block(args.kona.claimed_l2_block_number)
+            .await?
+            .hash();
+
         // queue and start new job
         let task = tokio::spawn(crate::tasks::compute_cached_proof(
             args.clone(),
@@ -235,21 +203,7 @@ pub async fn concurrent_execution_preflight(
         jobs.push((args.kona.claimed_l2_block_number, task));
         // update starting block for next job
         if num_blocks > 0 {
-            args.kona.agreed_l2_head_hash = await_tel!(
-                context,
-                tracer,
-                "l2_provider get_block_by_number claimed_l2_block_number",
-                retry_res_ctx_timeout!(l2_provider
-                    .get_block_by_number(BlockNumberOrTag::Number(
-                        args.kona.claimed_l2_block_number
-                    ))
-                    .await
-                    .context("l2_provider get_block_by_number claimed_l2_block_number")?
-                    .ok_or_else(|| anyhow!("Failed to claimed l2 block")))
-            )
-            .header
-            .hash;
-
+            args.kona.agreed_l2_block_number = args.kona.claimed_l2_block_number;
             args.kona.agreed_l2_output_root = args.kona.claimed_l2_output_root;
         }
     }

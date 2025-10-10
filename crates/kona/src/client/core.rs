@@ -38,7 +38,12 @@ use soon_primitives::output_root::OutputRoot;
 use std::fmt::Debug;
 use std::mem::take;
 use std::sync::{Arc, Mutex};
+use risc0_zkvm::sha::Digestible;
 use tracing::info;
+use crate::client::log;
+use crate::driver::CachedDriver;
+use crate::oracle::local::LocalOnceOracle;
+use crate::precondition::{Precondition, proposal};
 
 /// Initializes the L1, L2, and DA providers for the core client.
 ///
@@ -67,7 +72,7 @@ where
         .context("BootInfo::load")?;
     let rollup_config = Arc::new(boot.rollup_config.clone());
 
-    client::log("SAFE HEAD HASH");
+    log("SAFE HEAD HASH");
     let safe_head_hash = fetch_safe_head_hash(oracle.as_ref(), boot.agreed_l2_output_root).await?;
 
     let l1_provider = OracleL1ChainProvider::new(boot.l1_head, stream)
@@ -135,8 +140,10 @@ pub fn run_core_client<
     stream: Arc<O>,
     beacon: B,
     execution_cache: Vec<Arc<Execution>>,
-    collection_target: Option<Arc<Mutex<Vec<Execution>>>>,
-) -> anyhow::Result<(BootInfo, B256)>
+    execution_trace: Option<Arc<Mutex<Vec<Execution>>>>,
+    derivation_cache: Option<CachedDriver>,
+    derivation_trace: Option<Arc<Mutex<Option<CachedDriver>>>>,
+) -> anyhow::Result<(BootInfo, Precondition)>
 where
     <B as BlobProvider>::Error: Debug,
 {
@@ -159,7 +166,9 @@ where
         l2_provider,
         da_provider,
         execution_cache,
-        collection_target,
+        execution_trace,
+        derivation_cache,
+        derivation_trace,
     )
 }
 
@@ -172,39 +181,48 @@ pub fn run_core_client_ex<
     L2: TrieDBProvider + TrieHinter + L2ChainProvider + CursorSetter + Send + Sync + Debug + Clone,
     DA: DAProvider + Send + Sync + Debug + Clone,
 >(
-    precondition_validation_data_hash: B256,
+    proposal_data_hash: B256,
     oracle: Arc<O>,
     mut beacon: B,
     mut l1_provider: L1,
     mut l2_provider: L2,
     da_provider: DA,
     execution_cache: Vec<Arc<Execution>>,
-    collection_target: Option<Arc<Mutex<Vec<Execution>>>>,
-) -> anyhow::Result<(BootInfo, B256)>
+    execution_trace: Option<Arc<Mutex<Vec<Execution>>>>,
+    derivation_cache: Option<CachedDriver>,
+    derivation_trace: Option<Arc<Mutex<Option<CachedDriver>>>>,
+) -> anyhow::Result<(BootInfo, Precondition)>
 where
     <B as BlobProvider>::Error: Debug,
     E: L2BlockBuilder<L2, L2> + Send + Sync + Debug,
     L2: L2ChainProvider<Error = OracleProviderError>,
     L1: ChainProvider<Error = OracleProviderError>,
 {
-    let (boot, precondition_hash, output_hash) = kona_proof::block_on(async move {
+    let oracle = Arc::new(LocalOnceOracle::new(oracle));
+    kona_proof::block_on(async move {
         ////////////////////////////////////////////////////////////////
         //                          PROLOGUE                          //
         ////////////////////////////////////////////////////////////////
-        client::log("BOOT");
+        log("BOOT");
         let boot = BootInfo::load(oracle.as_ref())
             .await
             .context("BootInfo::load")?;
+        log(&format!("{:?} L1_HEAD", boot.l1_head));
+        log(&format!("{:?} L2_AGREED", boot.agreed_l2_output_root));
+        log(&format!(
+            "{:?} L2_CLAIMED (#{})",
+            boot.claimed_l2_output_root, boot.claimed_l2_block_number
+        ));
         let rollup_config = Arc::new(boot.rollup_config.clone());
-        client::log(&format!("rollup_config: {:?}", rollup_config));
-        client::log(&format!(
+        log(&format!("rollup_config: {:?}", rollup_config));
+        log(&format!(
             "rollup_config_hash: {:?}",
             config_hash(&boot.rollup_config)
         ));
 
         // The claimed L2 block number must be greater than or equal to the L2 safe head.
         // Fetch the safe head's block header.
-        client::log("SAFE HEAD");
+        log("SAFE HEAD");
         let safe_head = l2_provider
             .l2_block_info_by_number(boot.agreed_l2_block_number)
             .await?;
@@ -215,10 +233,10 @@ where
             account_root: safe_head_output.state_root,
             widthdraw_root: safe_head_output.bridge_storage_root,
         };
-        client::log("SAFE HEAD done");
+        log("SAFE HEAD done");
 
         if boot.claimed_l2_block_number < safe_head_header.block_info.number {
-            bail!("Invalid claim");
+            bail!("Invalid claim: Safe l2 head block number below claimed l2 block number.");
         }
         let safe_head_number = safe_head_header.block_info.number;
         info!(
@@ -231,7 +249,7 @@ where
         //                     EXECUTION CACHING                      //
         ////////////////////////////////////////////////////////////////
         if boot.l1_head.is_zero() {
-            client::log("EXECUTION ONLY");
+            log("EXECUTION ONLY");
             let cursor =
                 new_execution_cursor(rollup_config.as_ref(), safe_head_header, &mut l2_provider)
                     .await
@@ -253,7 +271,7 @@ where
             assert!(!execution_cache.is_empty());
 
             // Calculate precondition hash
-            let precondition_hash = exec_precondition_hash(execution_cache.as_slice());
+            let execution_trace_hash = exec_precondition_hash(execution_cache.as_slice());
 
             // Validate terminating block number
             assert_eq!(
@@ -274,19 +292,26 @@ where
                     "enter execution {}/{}",
                     execution.artifacts.block_info.block_info.number, boot.claimed_l2_block_number
                 );
+                // Unpack [Execution]
+                let Execution {
+                    agreed_output,
+                    attributes,
+                    artifacts,
+                    claimed_output,
+                } = execution.as_ref();
                 // Verify initial state
-                assert_eq!(execution.agreed_output, latest_output_root);
+                assert_eq!(agreed_output, &latest_output_root);
                 // Verify transition
                 let executor_result = kona_executor
-                    .execute_payload(execution.attributes.clone())
+                    .execute_payload(attributes.clone())
                     .await?;
                 latest_output_root = kona_executor
                     .compute_output_root()
                     .context("compute_output_root: Verify post state")?;
 
                 // check l2 header
-                assert_eq!(execution.artifacts.block_info, executor_result.block_info);
-                assert_eq!(execution.artifacts.state_root, executor_result.state_root);
+                assert_eq!(artifacts.block_info, executor_result.block_info);
+                assert_eq!(artifacts.state_root, executor_result.state_root);
                 //TODO check result
                 // assert_eq!(
                 //     execution.artifacts.execution_result,
@@ -295,35 +320,37 @@ where
 
                 // Update state
                 kona_executor.update_safe_head(L2BlockHeader {
-                    block_info: execution.artifacts.block_info.block_info,
+                    block_info: artifacts.block_info.block_info,
                     account_root: executor_result.state_root,
                     widthdraw_root: executor_result.withdraw_root,
                 })?;
                 // Verify post state
-                assert_eq!(execution.claimed_output, latest_output_root);
-                client::log(&format!(
+                assert_eq!(claimed_output, &latest_output_root);
+                log(&format!(
                     "OUTPUT: {}/{}",
-                    execution.artifacts.block_info.block_info.number, boot.claimed_l2_block_number
+                    artifacts.block_info.block_info.number, boot.claimed_l2_block_number
                 ));
             }
 
-            // Return latest_output_root from closure to be validated against claimed_l2_output_root
-            return Ok((boot, precondition_hash, Some(latest_output_root)));
+            // Validate claimed_l2_output_root against latest_output_root
+            assert_eq!(boot.claimed_l2_output_root, latest_output_root);
+            // Return result
+            return Ok((
+                boot,
+                Precondition::default().execution(execution_trace_hash),
+            ));
         }
 
         ////////////////////////////////////////////////////////////////
         //                   DERIVATION & EXECUTION                   //
         ////////////////////////////////////////////////////////////////
-        client::log("PRECONDITION");
-        let precondition_data = precondition::load_precondition_data(
-            precondition_validation_data_hash,
-            oracle.clone(),
-            &mut beacon,
-        )
-        .await
-        .context("load_precondition_data")?;
+        log("PRECONDITION");
+        let proposal_precondition_data =
+            proposal::load_proposal_data(proposal_data_hash, oracle.clone(), &mut beacon)
+                .await
+                .context("load_precondition_data")?;
 
-        client::log("DERIVATION & EXECUTION");
+        log("DERIVATION & EXECUTION");
         // Create a new derivation driver with the given boot information and oracle.
         let cursor = new_oracle_pipeline_cursor(
             rollup_config.as_ref(),
@@ -340,36 +367,50 @@ where
             da_provider,
             rollup_config.batch_inbox_address,
         );
-        let pipeline = OraclePipeline::new(
+        // Load the Kailua executor with caching support
+        let cached_executor: CachedExecutor<KonaExecutor<_, _, E>> = CachedExecutor::new(
+            execution_cache,
             rollup_config.clone(),
-            cursor.clone(),
-            oracle.clone(),
-            da_source,
-            l1_provider.clone(),
             l2_provider.clone(),
-        )
-        .await
-        .context("OraclePipeline::new")?;
-        let cached_executor = CachedExecutor {
-            cache: {
-                // The cache elements will be popped from first to last
-                let mut cache = execution_cache;
-                cache.reverse();
-                cache
-            },
-            executor: KonaExecutor::<_, _, E>::new(
-                rollup_config.clone(),
-                l2_provider.clone(),
-                l2_provider.clone(),
-                None,
+            l2_provider.clone(),
+            execution_trace,
+        );
+        // Resume from cached derivation pipeline or start a new one
+        let (derivation_cache_hash, mut driver) = match derivation_cache {
+            None => (
+                B256::ZERO,
+                Driver::new(
+                    cursor.clone(),
+                    cached_executor,
+                    OraclePipeline::new(
+                        rollup_config.clone(),
+                        cursor,
+                        oracle.clone(),
+                        da_source,
+                        l1_provider.clone(),
+                        l2_provider.clone(),
+                    )
+                        .await
+                        .context("OraclePipeline::new")?,
+                ),
             ),
-            collection_target,
+            Some(cached_driver) => (
+                B256::new(cached_driver.digest().into()),
+                cached_driver.uncache(
+                    cached_executor,
+                    rollup_config.clone(),
+                    cursor,
+                    oracle.clone(),
+                    da_source,
+                    l1_provider.clone(),
+                    l2_provider.clone(),
+                ),
+            ),
         };
-        let mut driver = Driver::new(cursor, cached_executor, pipeline);
 
         // Run the derivation pipeline until we are able to produce the output root of the claimed
         // L2 block.
-        let mut output_roots = Vec::with_capacity(expected_output_count);
+        let mut derived_output_roots = Vec::with_capacity(expected_output_count);
         for starting_block in safe_head_number..boot.claimed_l2_block_number {
             // Advance to the next target
             let (output_block, output_root) = driver
@@ -378,18 +419,18 @@ where
                 .context("advance_to_target")?;
             // Stop if nothing new was derived
             if output_block.block_info.number == starting_block {
-                // A mismatch indicates that there is insufficient L1 data available to produce
-                // an L2 output root at the claimed block number
-                client::log("HALT");
+                // No progress implies that there is insufficient L1 data available to produce
+                // an L2 output root at this L2 height
+                log("HALT");
                 break;
             } else {
-                client::log(&format!(
+                log(&format!(
                     "OUTPUT: {}/{}",
                     output_block.block_info.number, boot.claimed_l2_block_number
                 ));
             }
             // Append newly computed output root
-            output_roots.push(output_root);
+            derived_output_roots.push(output_root);
         }
 
         ////////////////////////////////////////////////////////////////
@@ -397,49 +438,49 @@ where
         ////////////////////////////////////////////////////////////////
         client::log("EPILOGUE");
 
-        let precondition_hash = precondition_data
-            .map(|(precondition_validation_data, blobs)| {
-                precondition::validate_precondition(
-                    precondition_validation_data,
+        // Record derivation driver state
+        let derivation_trace_hash = derivation_trace
+            .map(|trace| {
+                let derivation_trace = CachedDriver::from(driver);
+                let trace_digest = B256::new(derivation_trace.digest().into());
+                log(&format!("DERIVATION TRACE {trace_digest}"));
+                let _ = trace.lock().unwrap().insert(derivation_trace);
+                trace_digest
+            })
+            .unwrap_or_default();
+
+        // Record intermediate output commitment precondition
+        let proposal_precondition_hash = proposal_precondition_data
+            .map(|(proposal_precondition, blobs)| {
+                proposal::validate_proposal_precondition(
+                    proposal_precondition,
                     blobs,
                     safe_head_number,
-                    &output_roots,
+                    &derived_output_roots,
                 )
             })
             .unwrap_or(Ok(B256::ZERO))
             .context("validate_precondition")?;
 
-        if output_roots.len() != expected_output_count {
-            // Not enough data to derive output root at claimed height
-            Ok((boot, precondition_hash, None))
-        } else if output_roots.is_empty() {
-            // note: This implies expected_output_count == 0
-            // Claimed output height is equal to agreed output height
-            let real_output_hash = boot.agreed_l2_output_root;
-            Ok((boot, precondition_hash, Some(real_output_hash)))
-        } else {
-            // Derived output root at future height
-            Ok((boot, precondition_hash, output_roots.pop()))
-        }
-    })?;
+        // Compile final [Precondition]
+        let precondition = Precondition::default()
+            .proposal(proposal_precondition_hash)
+            .derivation(derivation_cache_hash, derivation_trace_hash);
 
-    // Check claimed_l2_output_root correctness
-    if let Some(computed_output) = output_hash {
-        // With sufficient data, the input l2_claim must be true
-        client::log("============================");
-        client::log(&format!(
-            "boot.claimed_l2_output_root:{}",
-            boot.claimed_l2_output_root
-        ));
-        client::log(&format!("computed_output:{}", computed_output));
-        client::log("============================");
-        assert_eq!(boot.claimed_l2_output_root, computed_output);
-    } else if !boot.claimed_l2_output_root.is_zero() {
-        // We use the zero claim hash to denote that the data as of l1 head is insufficient
-        bail!("Expected zero claim hash.");
-    }
+        // Compile the final [BootInfo]
+        let claimed_l2_block_number = safe_head_number + derived_output_roots.len() as u64;
+        let claimed_l2_output_root = derived_output_roots
+            .pop()
+            .unwrap_or(boot.agreed_l2_output_root);
+        let boot = BootInfo {
+            claimed_l2_output_root,
+            claimed_l2_block_number,
+            ..boot
+        };
 
-    Ok((boot, precondition_hash))
+        // Return results
+        Ok((boot, precondition))
+    })
 }
 
 /// Fetches the safe head hash of the L2 chain based on the agreed upon L2 output root in the
@@ -509,7 +550,7 @@ where
 pub fn recover_collected_executions(
     collection_target: Arc<Mutex<Vec<Execution>>>,
     claimed_l2_output_root: B256,
-) -> Vec<Arc<Execution>> {
+) -> Vec<Execution> {
     let mut executions = collection_target.lock().unwrap();
     for i in 1..executions.len() {
         executions[i - 1].claimed_output = executions[i].agreed_output;
@@ -518,9 +559,6 @@ pub fn recover_collected_executions(
         last_exec.claimed_output = claimed_l2_output_root;
     }
     take::<Vec<Execution>>(executions.as_mut())
-        .into_iter()
-        .map(Arc::new)
-        .collect::<Vec<_>>()
 }
 
 #[cfg(test)]

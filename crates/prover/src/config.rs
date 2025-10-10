@@ -14,7 +14,7 @@
 
 use crate::args::ProveArgs;
 use kailua_sync::provider::optimism::fetch_rollup_config;
-use kona_genesis::RollupConfig;
+use soon_primitives::rollup_config::SoonRollupConfig;
 use tempfile::TempDir;
 use tokio::fs;
 use tracing::debug;
@@ -22,7 +22,7 @@ use tracing::debug;
 pub async fn generate_rollup_config_file(
     args: &mut ProveArgs,
     tmp_dir: &TempDir,
-) -> anyhow::Result<RollupConfig> {
+) -> anyhow::Result<SoonRollupConfig> {
     // generate a RollupConfig for the target network
     Ok(match args.kona.read_rollup_config().ok() {
         Some(rollup_config) => rollup_config,
@@ -30,14 +30,8 @@ pub async fn generate_rollup_config_file(
             let tmp_cfg_file = tmp_dir.path().join("rollup-config.json");
             // read/fetch config
             let rollup_config = fetch_rollup_config(
-                args.op_node_address.as_ref().unwrap().as_str(),
-                args.kona
-                    .l2_node_address
-                    .clone()
-                    .expect("Missing l2-node-address")
-                    .as_str(),
-                args.kona.l2_chain_id,
-                args.proving.bypass_chain_registry,
+                args.soon_node_address.as_ref().unwrap().as_str(),
+                None
             )
             .await?;
             // export

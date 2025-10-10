@@ -27,6 +27,7 @@ use soon_derive::traits::ChainProvider;
 use soon_primitives::blocks::{BlockInfo, L1Header, L1Transaction};
 use std::sync::Arc;
 use std::sync::RwLock;
+use alloy_consensus::transaction::SignerRecoverable;
 
 /// The oracle-backed L1 chain provider for the client program.
 /// Forked from [kona_proof::l1::OracleL1ChainProvider]
@@ -296,7 +297,7 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
                 };
                 Ok(L1Transaction {
                     hash: *tx.hash(),
-                    from: tx.recover_signer().unwrap(),
+                    from: tx.recover_signer_unchecked().unwrap(),
                     to,
                     input: data.to_vec(),
                 })

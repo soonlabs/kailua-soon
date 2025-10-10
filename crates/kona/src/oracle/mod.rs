@@ -14,6 +14,7 @@
 #[cfg(test)]
 pub mod offline;
 pub mod vec;
+pub mod local;
 
 use alloy_primitives::keccak256;
 use kona_preimage::errors::{PreimageOracleError, PreimageOracleResult};
