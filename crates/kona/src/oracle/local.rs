@@ -42,7 +42,7 @@ impl<O: CommsClient + FlushableCache + Send + Sync + Debug + Clone> LocalOnceOra
 
 #[async_trait]
 impl<O: CommsClient + FlushableCache + Send + Sync + Debug + Clone> PreimageOracleClient
-for LocalOnceOracle<O>
+    for LocalOnceOracle<O>
 {
     async fn get(&self, key: PreimageKey) -> PreimageOracleResult<Vec<u8>> {
         // Bypass cache for non-local keys
@@ -84,7 +84,7 @@ for LocalOnceOracle<O>
 
 #[async_trait]
 impl<O: CommsClient + FlushableCache + Send + Sync + Debug + Clone> HintWriterClient
-for LocalOnceOracle<O>
+    for LocalOnceOracle<O>
 {
     async fn write(&self, hint: &str) -> PreimageOracleResult<()> {
         self.oracle.write(hint).await
@@ -93,7 +93,7 @@ for LocalOnceOracle<O>
 
 #[async_trait]
 impl<O: CommsClient + FlushableCache + Send + Sync + Debug + Clone> FlushableCache
-for LocalOnceOracle<O>
+    for LocalOnceOracle<O>
 {
     fn flush(&self) {
         self.oracle.flush();

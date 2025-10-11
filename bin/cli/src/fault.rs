@@ -19,17 +19,17 @@ use alloy::providers::RootProvider;
 use alloy::sol_types::SolValue;
 use anyhow::Context;
 use kailua_contracts::*;
+use kailua_proposer::args::ProposeArgs;
 use kailua_soon_kona::blobs::hash_to_fe;
 use kailua_soon_kona::config::config_hash;
-use kailua_proposer::args::ProposeArgs;
 use kailua_sync::proposal::Proposal;
 use kailua_sync::provider::optimism::fetch_rollup_config;
-use kailua_sync::provider::optimism::OpNodeProvider;
 use kailua_sync::stall::Stall;
 use kailua_sync::transact::Transact;
 use kailua_sync::{await_tel, await_tel_res, retry_res_ctx_timeout, KAILUA_GAME_TYPE};
 use opentelemetry::global::tracer;
 use opentelemetry::trace::{FutureExt, TraceContextExt, Tracer};
+use soon_l2_chain_provider::chain_provider::L2BlockFetcher;
 use tracing::{error, info};
 
 /// Publish a faulty sequencing proposal to test fault proofs
@@ -51,14 +51,8 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
     let tracer = tracer("kailua");
     let context = opentelemetry::Context::current_with_span(tracer.start("fault"));
 
-    let op_node_provider = OpNodeProvider(RootProvider::new_http(
-        args.propose_args
-            .sync
-            .provider
-            .op_node_url
-            .as_str()
-            .try_into()?,
-    ));
+    let soon_node_provider =
+        L2BlockFetcher::new_with_url(args.propose_args.sync.provider.soon_node_url.as_str());
     let eth_rpc_provider = RootProvider::<Ethereum>::new_http(
         args.propose_args
             .sync
@@ -72,12 +66,7 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
     // fetch rollup config
     let config = await_tel!(
         context,
-        fetch_rollup_config(
-            &args.propose_args.sync.provider.op_node_url,
-            &args.propose_args.sync.provider.op_geth_url,
-            None,
-            args.propose_args.bypass_chain_registry
-        )
+        fetch_rollup_config(&args.propose_args.sync.provider.soon_node_url, None,)
     )
     .context("fetch_rollup_config")?;
     let rollup_config_hash = config_hash(&config);
@@ -160,6 +149,10 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
     let faulty_root_claim = B256::from(games_count.to_be_bytes());
     // Prepare remainder of proposal
     let proposed_block_number = parent_block_number + proposal_block_count;
+    info!(
+        "faulty parent block number:{}, faulty_block_number:{}, proposed_block_number:{}",
+        parent_block_number, faulty_block_number, proposed_block_number
+    );
     let proposed_output_root = if proposed_block_number == faulty_block_number {
         faulty_root_claim
     } else {
@@ -168,11 +161,12 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
             tracer,
             "proposed_output_root",
             retry_res_ctx_timeout!(
-                op_node_provider
+                soon_node_provider
                     .output_at_block(proposed_block_number)
                     .await
             )
         )
+        .hash()
     };
 
     // Prepare intermediate outputs
@@ -190,8 +184,9 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
                 context,
                 tracer,
                 "output_hash",
-                retry_res_ctx_timeout!(op_node_provider.output_at_block(io_block_number).await)
+                retry_res_ctx_timeout!(soon_node_provider.output_at_block(io_block_number).await)
             )
+            .hash()
         } else {
             B256::ZERO
         };

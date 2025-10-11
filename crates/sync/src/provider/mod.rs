@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::await_tel;
 use crate::provider::beacon::BlobProvider;
-use crate::{await_tel, retry_res_ctx};
 use alloy::providers::RootProvider;
+use anyhow::Context;
 use opentelemetry::trace::{FutureExt, TraceContextExt, Tracer};
 use soon_l2_chain_provider::chain_provider::L2BlockFetcher;
-use anyhow::Context;
 
 pub mod beacon;
 pub mod optimism;

@@ -158,11 +158,11 @@ pub async fn handle_blocks(
             context,
             tracer,
             "sync_status",
-            retry_res_ctx_timeout!(provider.op_provider.sync_status().await)
+            retry_res_ctx_timeout!(provider.l2_provider.sync_status().await)
         );
-        let Some(safe_l2_number) = sync_status["safe_l2"]["number"]
+        let Some(safe_l2_number) = sync_status["l2State"]["finalizedL2"]["block_info"]["number"]
             .as_u64()
-            .map(|v| v.saturating_sub(args.provider.op_rpc_delay))
+            .map(|v| v.saturating_sub(args.provider.soon_rpc_delay))
         else {
             error!("Failed to parse safe_l2_number");
             continue;
@@ -188,28 +188,18 @@ pub async fn handle_blocks(
         // queue required proofs
         while last_proven.unwrap() + args.num_blocks_per_proof < safe_l2_number {
             let agreed_l2_block_number = last_proven.unwrap();
-            let agreed_l2_block = await_tel!(
-                context,
-                tracer,
-                "agreed_l2_block",
-                retry_res_ctx_timeout!(provider
-                    .l2_provider
-                    .get_block_by_number(BlockNumberOrTag::Number(agreed_l2_block_number))
-                    .await
-                    .context("get_block_by_number")?
-                    .ok_or_else(|| anyhow!("Failed to fetch agreed l2 block")))
-            );
             let agreed_l2_output_root = await_tel!(
                 context,
                 tracer,
                 "agreed_l2_output_root",
                 retry_res_ctx_timeout!(
                     provider
-                        .op_provider
+                        .l2_provider
                         .output_at_block(agreed_l2_block_number)
                         .await
                 )
-            );
+            )
+            .hash();
             let claimed_l2_block_number = agreed_l2_block_number + args.num_blocks_per_proof;
             let claimed_l2_output_root = await_tel!(
                 context,
@@ -217,11 +207,12 @@ pub async fn handle_blocks(
                 "claimed_l2_output_root",
                 retry_res_ctx_timeout!(
                     provider
-                        .op_provider
+                        .l2_provider
                         .output_at_block(claimed_l2_block_number)
                         .await
                 )
-            );
+            )
+            .hash();
             // request proof
             if n == args.nth_proof_to_process {
                 channel
@@ -230,7 +221,7 @@ pub async fn handle_blocks(
                         index: last_proven.unwrap(),
                         precondition_validation_data: None,
                         l1_head: l1_head.header.hash,
-                        agreed_l2_head_hash: agreed_l2_block.header.hash,
+                        agreed_l2_block_number: agreed_l2_block_number,
                         agreed_l2_output_root,
                         claimed_l2_block_number,
                         claimed_l2_output_root,

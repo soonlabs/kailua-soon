@@ -13,9 +13,7 @@
 // limitations under the License.
 
 use crate::args::ProposeArgs;
-use crate::fetch::{
-    fetch_paid_bond, fetch_participation_bond,
-};
+use crate::fetch::{fetch_paid_bond, fetch_participation_bond};
 use crate::resolve::resolve_next_pending_proposal;
 use alloy::consensus::BlockHeader;
 use alloy::eips::BlockNumberOrTag;
@@ -25,6 +23,7 @@ use alloy::providers::Provider;
 use alloy::sol_types::SolValue;
 use anyhow::{bail, Context};
 use kailua_contracts::*;
+use kailua_soon_kona::blobs::hash_to_fe;
 use kailua_sync::agent::{SyncAgent, FINAL_L2_BLOCK_RESOLVED};
 use kailua_sync::proposal::Proposal;
 use kailua_sync::stall::Stall;
@@ -39,7 +38,6 @@ use std::path::PathBuf;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{error, info, warn};
-use kailua_soon_kona::blobs::hash_to_fe;
 
 pub async fn propose(args: ProposeArgs, data_dir: PathBuf) -> anyhow::Result<()> {
     // Telemetry

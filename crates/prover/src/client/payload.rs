@@ -15,8 +15,9 @@
 use alloy_primitives::hex::FromHex;
 use alloy_primitives::keccak256;
 use kona_host::KeyValueStore;
-use kona_preimage::{PreimageKey};
+use kona_preimage::PreimageKey;
 
+#[allow(dead_code)]
 fn dump_payload_to_kv_store(payload: &serde_json::Value, kv: &mut dyn KeyValueStore) -> u64 {
     if let Some(obj) = payload.as_object() {
         obj.iter()
@@ -31,6 +32,7 @@ fn dump_payload_to_kv_store(payload: &serde_json::Value, kv: &mut dyn KeyValueSt
     }
 }
 
+#[allow(dead_code)]
 fn save_hex_preimage_to_kv(preimage: &str, kv: &mut dyn KeyValueStore) -> u64 {
     alloy_primitives::Bytes::from_hex(preimage)
         .map(|preimage| {

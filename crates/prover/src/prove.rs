@@ -19,7 +19,6 @@ use crate::kv::create_disk_kv_store;
 use crate::preflight::{concurrent_execution_preflight, fetch_precondition_data};
 use crate::tasks::{handle_oneshot_tasks, CachedTask, Oneshot, OneshotResult};
 use crate::ProvingError;
-use alloy::eips::BlockNumberOrTag;
 use alloy_primitives::B256;
 use anyhow::{anyhow, bail, Context};
 use human_bytes::human_bytes;
@@ -136,12 +135,9 @@ pub async fn prove(mut args: ProveArgs) -> anyhow::Result<bool> {
                 context,
                 tracer,
                 "claimed_l2_output_root",
-                retry_res_ctx_timeout!(
-                    l2_provider
-                        .output_at_block(claimed_l2_block_number)
-                        .await
-                )
-            ).hash();
+                retry_res_ctx_timeout!(l2_provider.output_at_block(claimed_l2_block_number).await)
+            )
+            .hash();
             job_args.kona.claimed_l2_block_number = claimed_l2_block_number;
             // advance agreed pointers
             agreed_l2_block_number = claimed_l2_block_number;
@@ -338,11 +334,14 @@ pub async fn prove(mut args: ProveArgs) -> anyhow::Result<bool> {
                     context,
                     tracer,
                     "soon_node_provider output_at_block mid_output",
-                    retry_res_ctx_timeout!(l2_provider.clone().unwrap()
+                    retry_res_ctx_timeout!(l2_provider
+                        .clone()
+                        .unwrap()
                         .output_at_block(mid_point)
                         .await
                         .context("op_node_provider output_at_block mid_output"))
-                ).hash();
+                )
+                .hash();
                 // Instantiate derivation trace channel
                 let (lower_sender, upper_receiver) = async_channel::bounded(1);
                 // Lower half workload ends at midpoint (inclusive)
@@ -366,7 +365,7 @@ pub async fn prove(mut args: ProveArgs) -> anyhow::Result<bool> {
                 // upper half workload starts after midpoint
                 let mut upper_job_args = job_args;
                 upper_job_args.kona.agreed_l2_output_root = mid_output;
-                upper_job_args.kona.agreed_l2_block_number= mid_point;
+                upper_job_args.kona.agreed_l2_block_number = mid_point;
                 prover_channel
                     .0
                     .send((true, upper_job_args, Some(upper_receiver), derivation_trace))

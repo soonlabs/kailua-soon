@@ -17,25 +17,24 @@ use crate::kv::RWLKeyValueStore;
 use crate::ProvingError;
 use alloy::consensus::Transaction;
 use alloy::eips::eip4844::IndexedBlobHash;
-use alloy::eips::BlockNumberOrTag;
 use alloy::providers::{Provider, RootProvider};
 use alloy_primitives::B256;
 use anyhow::{anyhow, bail, Context};
+use kailua_soon_kona::blobs::BlobFetchRequest;
+use kailua_soon_kona::journal::ProofJournal;
+use kailua_soon_kona::precondition::proposal::ProposalPrecondition;
+use kailua_soon_kona::precondition::Precondition;
 use kailua_sync::{await_tel, retry_res_ctx_timeout};
-use soon_primitives::rollup_config::SoonRollupConfig;
 use kona_preimage::{PreimageKey, PreimageKeyType};
 use opentelemetry::global::tracer;
 use opentelemetry::trace::FutureExt;
 use opentelemetry::trace::{TraceContextExt, Tracer};
-use std::env::set_var;
-use std::iter::zip;
 use soon_l2_chain_provider::chain_provider::L2BlockFetcher;
 use soon_primitives::blocks::BlockInfo;
+use soon_primitives::rollup_config::SoonRollupConfig;
+use std::env::set_var;
+use std::iter::zip;
 use tracing::{error, info, warn};
-use kailua_soon_kona::blobs::BlobFetchRequest;
-use kailua_soon_kona::journal::ProofJournal;
-use kailua_soon_kona::precondition::Precondition;
-use kailua_soon_kona::precondition::proposal::ProposalPrecondition;
 
 pub async fn get_blob_fetch_request(
     l1_provider: &RootProvider,
@@ -154,10 +153,6 @@ pub async fn concurrent_execution_preflight(
     soon_node_provider: &L2BlockFetcher,
     disk_kv_store: Option<RWLKeyValueStore>,
 ) -> anyhow::Result<bool> {
-    let tracer = tracer("kailua");
-    let context =
-        opentelemetry::Context::current_with_span(tracer.start("concurrent_execution_preflight"));
-
     let mut num_blocks = args.kona.claimed_l2_block_number - args.kona.agreed_l2_block_number;
     if num_blocks == 0 {
         return Ok(true);

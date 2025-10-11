@@ -24,10 +24,9 @@ use tracing::info;
 
 use bridge::pda::{spl_token_mint_pubkey, spl_token_owner_pubkey};
 use kona_executor::{
-    cal_init_state_root_hash, cal_soon_accounts_hash, cal_svm_bank_hash,
-    cal_svm_clock_timestamp,
+    cal_init_state_root_hash, cal_soon_accounts_hash, cal_svm_bank_hash, cal_svm_clock_timestamp,
 };
-use soon_node::node::tests::{new_derive_block_with_mock_l1, MockEthL1Node, create_spl_tx};
+use soon_node::node::tests::{create_spl_tx, new_derive_block_with_mock_l1, MockEthL1Node};
 use soon_node::{
     derive::mock::MockInstant,
     executor::{ExecutorOperator, SharedExecutor},

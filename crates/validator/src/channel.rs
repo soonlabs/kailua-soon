@@ -51,7 +51,7 @@ pub enum Message {
         index: u64,
         precondition_validation_data: Option<ProposalPrecondition>,
         l1_head: FixedBytes<32>,
-        agreed_l2_head_hash: FixedBytes<32>,
+        agreed_l2_block_number: u64,
         agreed_l2_output_root: FixedBytes<32>,
         claimed_l2_block_number: u64,
         claimed_l2_output_root: FixedBytes<32>,

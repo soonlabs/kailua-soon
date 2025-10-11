@@ -32,11 +32,11 @@ use kailua_contracts::{
 };
 use kailua_soon_kona::blobs::hash_to_fe;
 use kailua_soon_kona::config::config_hash;
-use soon_primitives::rollup_config::SoonRollupConfig;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::FutureExt;
 use opentelemetry::trace::{TraceContextExt, Tracer};
 use opentelemetry::KeyValue;
+use soon_primitives::rollup_config::SoonRollupConfig;
 use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
@@ -95,10 +95,7 @@ impl SyncAgent {
         info!("Fetching rollup configuration from rpc endpoints.");
         let config = await_tel_res!(
             context,
-            fetch_rollup_config(
-                &provider_args.soon_node_url,
-                None
-            ),
+            fetch_rollup_config(&provider_args.soon_node_url, None),
             "fetch_rollup_config"
         )?;
         let rollup_config_hash = config_hash(&config);
@@ -112,11 +109,9 @@ impl SyncAgent {
         )?;
         #[cfg(not(feature = "devnet"))]
         {
-            let known_image_ids = [
-                B256::from(bytemuck::cast::<[u32; 8], [u8; 32]>(
-                    kailua_build::KAILUA_FPVM_ID,
-                )),
-            ];
+            let known_image_ids = [B256::from(bytemuck::cast::<[u32; 8], [u8; 32]>(
+                kailua_build::KAILUA_FPVM_ID,
+            ))];
             if !known_image_ids.contains(&deployment.image_id) {
                 bail!("Deployment image ID {:?} unknown.", deployment.image_id);
             }
@@ -240,7 +235,8 @@ impl SyncAgent {
             .saturating_sub(op_rpc_delay);
         let output_block_number = safe_l2_number
             .min(self.cursor.last_output_index + self.deployment.blocks_per_proposal());
-        if self.cursor.last_output_index + self.deployment.output_block_span <= output_block_number {
+        if self.cursor.last_output_index + self.deployment.output_block_span <= output_block_number
+        {
             info!(
                 "Syncing with op-node from block {} until block {output_block_number}",
                 self.cursor.last_output_index
@@ -755,7 +751,9 @@ impl SyncAgent {
                     Box::pin(async move {
                         (
                             i,
-                            retry_res_timeout!(provider.output_at_block(i).await).await.hash(),
+                            retry_res_timeout!(provider.output_at_block(i).await)
+                                .await
+                                .hash(),
                         )
                     })
                 })

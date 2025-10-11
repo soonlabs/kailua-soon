@@ -17,14 +17,10 @@ use alloy_eips::eip4895::Withdrawal;
 use alloy_eips::eip7685::Requests;
 use alloy_eips::{BlockNumHash, Typed2718};
 use alloy_evm::block::BlockExecutionResult;
-use alloy_primitives::{Bytes, Sealable, Signature, U256};
+use alloy_primitives::{Bytes, Signature, U256};
 use alloy_rpc_types_engine::PayloadAttributes;
-use kona_driver::{PipelineCursor, TipCursor};
 use fraud_executor::outcome::BlockBuildingOutcome;
-use soon_primitives::system::SystemConfig;
-use soon_derive::{
-    batch::{Batch, BatchWithInclusionBlock}, stages::{BatchReader},
-};
+use kona_driver::{PipelineCursor, TipCursor};
 use op_alloy_consensus::OpReceiptEnvelope;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use rkyv::rancor::{Fallible, Source};
@@ -32,11 +28,18 @@ use rkyv::ser::{Allocator, Writer};
 use rkyv::with::{ArchiveWith, DeserializeWith, SerializeWith};
 use rkyv::{Archive, Archived, Place, Resolver};
 use solana_program::fee_calculator::FeeRateGovernor;
-use soon_derive::batch::{SingleBatch, SpanBatch, SpanBatchBits, SpanBatchElement, SpanBatchTransactions};
+use soon_derive::batch::{
+    SingleBatch, SpanBatch, SpanBatchBits, SpanBatchElement, SpanBatchTransactions,
+};
+use soon_derive::{
+    batch::{Batch, BatchWithInclusionBlock},
+    stages::BatchReader,
+};
 use soon_primitives::blocks::{BlockInfo, L2BlockHeader, L2BlockInfo};
 use soon_primitives::da::channel::{Channel, ChannelId};
 use soon_primitives::da::frame::Frame;
 use soon_primitives::derive::OpAttributesWithParent;
+use soon_primitives::system::SystemConfig;
 
 pub fn sorted<T: Ord>(mut values: Vec<T>) -> Vec<T> {
     values.sort();
@@ -535,7 +538,7 @@ impl SpanBatchRkyv {
                 contract_creation_bits: SpanBatchBits(rkyved.7 .1),
                 tx_sigs: rkyved
                     .7
-                    .2
+                     .2
                     .into_iter()
                     .map(|s| Signature::from_raw_array(&s).unwrap())
                     .collect(),
@@ -546,7 +549,7 @@ impl SpanBatchRkyv {
                 protected_bits: SpanBatchBits(rkyved.7 .7),
                 tx_types: rkyved
                     .7
-                    .8
+                     .8
                     .into_iter()
                     .map(|t| t.try_into().unwrap())
                     .collect(),
@@ -649,7 +652,7 @@ where
 }
 
 impl<D> DeserializeWith<Archived<RkyvedBatchWithInclusionBlock>, BatchWithInclusionBlock, D>
-for BatchWithInclusionBlockRkyv
+    for BatchWithInclusionBlockRkyv
 where
     D: Fallible + ?Sized,
     <D as Fallible>::Error: Source,
@@ -786,11 +789,7 @@ impl OpPayloadAttributesRkyv {
     }
 }
 
-pub type RkyvedOpAttributesWithParent = (
-    RkyvedOpPayloadAttributes,
-    RkyvedL2BlockInfo,
-    bool,
-);
+pub type RkyvedOpAttributesWithParent = (RkyvedOpPayloadAttributes, RkyvedL2BlockInfo, bool);
 
 pub struct OpAttributesWithParentRkyv;
 
@@ -841,7 +840,7 @@ where
 }
 
 impl<D> DeserializeWith<Archived<RkyvedOpAttributesWithParent>, OpAttributesWithParent, D>
-for OpAttributesWithParentRkyv
+    for OpAttributesWithParentRkyv
 where
     D: Fallible + ?Sized,
     <D as Fallible>::Error: Source,
@@ -997,7 +996,6 @@ impl L2BlockHeaderRkyv {
     }
 }
 
-
 pub type RkyvedBlockBuildingOutcome = (RkyvedL2BlockInfo, [u8; 32], [u8; 32], Vec<u8>, u64);
 
 pub struct BlockBuildingOutcomeRkyv;
@@ -1009,7 +1007,7 @@ impl BlockBuildingOutcomeRkyv {
             value.state_root.0,
             value.withdraw_root.0,
             bincode::serialize(&value.execution_result).unwrap(),
-            value.signature_count
+            value.signature_count,
         )
     }
 
@@ -1083,7 +1081,6 @@ where
         Ok(HeadArtifactsRkyv::raw(rkyved))
     }
 }
-
 
 pub type RkyvedTipCursor = (RkyvedL2BlockInfo, RkyvedL2BlockHeader, [u8; 32]);
 

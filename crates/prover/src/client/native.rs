@@ -30,7 +30,6 @@ use kona_host::{
 use kona_preimage::{
     BidirectionalChannel, Channel, HintReader, HintWriter, OracleReader, OracleServer,
 };
-use kona_proof::HintType;
 use opentelemetry::trace::{TraceContextExt, Tracer};
 use risc0_zkvm::Receipt;
 use std::sync::Arc;
@@ -83,8 +82,8 @@ pub async fn run_native_client(
         retry_res_ctx_timeout!(20, args.create_providers().await).await,
         args.kona.is_offline(),
     )
-        .await
-        .map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
+    .await
+    .map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
 
     // Start the client program in a separate thread
     let client_task = tokio::spawn(crate::client::proving::run_proving_client(

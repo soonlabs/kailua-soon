@@ -80,7 +80,7 @@ impl Digestible for Precondition {
                 merge_precondition_hashes(self.derivation_cache, self.derivation_trace),
                 self.proposal_blobs,
             )
-                .0,
+            .0,
         )
     }
 }

@@ -29,11 +29,9 @@ pub async fn generate_rollup_config_file(
         None => {
             let tmp_cfg_file = tmp_dir.path().join("rollup-config.json");
             // read/fetch config
-            let rollup_config = fetch_rollup_config(
-                args.soon_node_address.as_ref().unwrap().as_str(),
-                None
-            )
-            .await?;
+            let rollup_config =
+                fetch_rollup_config(args.soon_node_address.as_ref().unwrap().as_str(), None)
+                    .await?;
             // export
             let ser_config = serde_json::to_string(&rollup_config)?;
             fs::write(&tmp_cfg_file, &ser_config).await?;

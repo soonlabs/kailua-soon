@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt::Debug;
 use crate::blobs::PreloadedBlobProvider;
 use crate::client::log;
 use crate::client::stitching::StitchingClient;
 use crate::journal::ProofJournal;
 use crate::oracle::WitnessOracle;
 use crate::witness::Witness;
-use std::sync::Arc;
 use kona_executor::L2BlockBuilder;
 use kona_proof::l2::OracleL2ChainProvider;
+use std::fmt::Debug;
+use std::sync::Arc;
 
 /// Executes a stateless client workflow by validating witness data, and running the stitching
 /// client to produce a unified proof journal.
@@ -51,7 +51,11 @@ use kona_proof::l2::OracleL2ChainProvider;
 /// * Logs the count of preimages provided via the `oracle_witness`.
 /// * Logs the count of blobs contained in the `blobs_witness`.
 /// * Logs a warning if any extra preimages are found during execution.
-pub fn run_stateless_client<O: WitnessOracle, E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug, S: StitchingClient<E, O, PreloadedBlobProvider>>(
+pub fn run_stateless_client<
+    O: WitnessOracle,
+    E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug,
+    S: StitchingClient<E, O, PreloadedBlobProvider>,
+>(
     witness: Witness<O>,
     stitching_client: S,
 ) -> ProofJournal {

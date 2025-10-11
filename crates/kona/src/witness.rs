@@ -125,7 +125,7 @@ pub mod tests {
             let recoded = rkyv::from_bytes::<Witness<VecOracle>, rkyv::rancor::Error>(
                 &rkyv::to_bytes::<rkyv::rancor::Error>(&witness).unwrap(),
             )
-                .unwrap();
+            .unwrap();
             assert_eq!(
                 witness.oracle_witness.preimages.lock().unwrap().to_vec(),
                 recoded.oracle_witness.preimages.lock().unwrap().to_vec()

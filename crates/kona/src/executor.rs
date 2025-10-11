@@ -27,6 +27,7 @@ use kona_driver::{Executor, PipelineCursor, TipCursor};
 use kona_executor::{L2BlockBuilder, TrieDBProvider};
 use kona_mpt::TrieHinter;
 use kona_proof::errors::OracleProviderError;
+use kona_proof::executor::KonaExecutor;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use risc0_zkvm::sha::{Impl as SHA2, Sha256};
 use soon_derive::prelude::L2ChainProvider;
@@ -35,8 +36,6 @@ use soon_primitives::rollup_config::SoonRollupConfig;
 use spin::RwLock;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
-use alloy_op_evm::OpEvmFactory;
-use kona_proof::executor::KonaExecutor;
 
 /// Represents a block execution process and its results.
 ///
@@ -94,12 +93,7 @@ where
                 cache.reverse();
                 cache
             },
-            executor: KonaExecutor::new(
-                rollup_config,
-                trie_provider,
-                trie_hinter,
-                None,
-            ),
+            executor: KonaExecutor::new(rollup_config, trie_provider, trie_hinter, None),
             collection_target,
         }
     }

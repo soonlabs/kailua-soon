@@ -16,25 +16,24 @@ use crate::args::ValidateArgs;
 use crate::channel::{DuplexChannel, Message};
 use crate::tasks::{handle_proving_tasks, Task};
 use alloy::eips::eip4844::IndexedBlobHash;
-use alloy::network::primitives::HeaderResponse;
-use alloy::network::{BlockResponse, TxSigner};
+use alloy::network::TxSigner;
 use alloy::primitives::B256;
 use anyhow::{bail, Context};
+use kailua_prover::args::{ProveArgs, ProvingArgs};
+use kailua_prover::channel::AsyncChannel;
+use kailua_prover::proof::proof_file_name;
 use kailua_soon_kona::blobs::BlobFetchRequest;
 use kailua_soon_kona::config::config_hash;
 use kailua_soon_kona::journal::ProofJournal;
 use kailua_soon_kona::precondition::proposal::ProposalPrecondition;
-use kailua_prover::args::{ProveArgs, ProvingArgs};
-use kailua_prover::channel::AsyncChannel;
-use kailua_prover::proof::proof_file_name;
 use kailua_sync::agent::SyncAgent;
 use kailua_sync::proposal::Proposal;
 use kailua_sync::provider::optimism::fetch_rollup_config;
-use kailua_sync::transact::rpc::{get_block_by_number, get_next_block};
+use kailua_sync::transact::rpc::get_next_block;
 use kailua_sync::{await_tel, await_tel_res};
-use kona_protocol::BlockInfo;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::{FutureExt, TraceContextExt, Tracer};
+use soon_primitives::blocks::BlockInfo;
 use std::path::PathBuf;
 use tokio::spawn;
 use tracing::{debug, error, info, warn};
@@ -52,12 +51,7 @@ pub async fn handle_proof_requests(
     // Fetch rollup configuration
     let rollup_config = await_tel!(
         context,
-        fetch_rollup_config(
-            &args.sync.provider.op_node_url,
-            &args.sync.provider.op_geth_url,
-            None,
-            args.proving.bypass_chain_registry
-        )
+        fetch_rollup_config(&args.sync.provider.soon_node_url, None,)
     )
     .context("fetch_rollup_config")?;
     let config_hash = B256::from(config_hash(&rollup_config));
@@ -96,7 +90,7 @@ pub async fn handle_proof_requests(
             index: proposal_index,
             precondition_validation_data,
             l1_head,
-            agreed_l2_head_hash,
+            agreed_l2_block_number,
             agreed_l2_output_root,
             claimed_l2_block_number,
             claimed_l2_output_root,
@@ -153,21 +147,22 @@ pub async fn handle_proof_requests(
         let prove_args = ProveArgs {
             kona: kona_host::single::SingleChainHost {
                 l1_head,
-                agreed_l2_head_hash,
+                agreed_l2_block_number,
                 agreed_l2_output_root,
                 claimed_l2_output_root,
                 claimed_l2_block_number,
-                l2_node_address: Some(args.sync.provider.op_geth_url.clone()),
+                l2_node_address: Some(args.sync.provider.soon_node_url.clone()),
                 l1_node_address: Some(args.sync.provider.eth_rpc_url.clone()),
                 l1_beacon_address: Some(args.sync.provider.beacon_rpc_url.clone()),
+                da_proxy_url: None,
                 data_dir: Some(data_dir),
                 native: true,
                 server: false,
-                l2_chain_id: Some(rollup_config.l2_chain_id),
+                l2_chain_id: Some(0),
                 rollup_config_path: None,
                 enable_experimental_witness_endpoint: args.enable_experimental_witness_endpoint,
             },
-            op_node_address: Some(args.sync.provider.op_node_url.clone()),
+            soon_node_address: Some(args.sync.provider.soon_node_url.clone()),
             proving: ProvingArgs {
                 payout_recipient_address: Some(payout_recipient),
                 ..args.proving.clone()
@@ -211,9 +206,6 @@ pub async fn request_fault_proof(
     proposal: &Proposal,
     l1_head: B256,
 ) -> anyhow::Result<()> {
-    let tracer = tracer("kailua");
-    let context = opentelemetry::Context::current_with_span(tracer.start("request_fault_proof"));
-
     let Some(fault) = proposal.fault() else {
         bail!("Proposal {} does not diverge from canon.", proposal.index);
     };
@@ -229,15 +221,6 @@ pub async fn request_fault_proof(
     let agreed_l2_head_number =
         parent.output_block_number + agent.deployment.output_block_span * divergence_point;
     debug!("l2_head_number {:?}", &agreed_l2_head_number);
-
-    // Get L2 head hash
-    let agreed_l2_head_hash = await_tel!(
-        context,
-        get_block_by_number(&agent.provider.l2_provider, agreed_l2_head_number,)
-    )?
-    .header()
-    .hash();
-    debug!("l2_head {:?}", &agreed_l2_head_hash);
 
     // Get L2 head output root
     let Some(agreed_l2_output_root) = agent.outputs.get(&agreed_l2_head_number).copied() else {
@@ -257,7 +240,7 @@ pub async fn request_fault_proof(
             index: proposal.index,
             precondition_validation_data: None,
             l1_head,
-            agreed_l2_head_hash,
+            agreed_l2_block_number: agreed_l2_head_number,
             agreed_l2_output_root,
             claimed_l2_block_number,
             claimed_l2_output_root,
@@ -309,14 +292,6 @@ pub async fn request_validity_proof(
     } else {
         None
     };
-    // Get L2 head hash
-    let agreed_l2_head_hash = await_tel!(
-        context,
-        get_block_by_number(&agent.provider.l2_provider, parent.output_block_number)
-    )?
-    .header
-    .hash;
-    debug!("l2_head {:?}", &agreed_l2_head_hash);
     // Message proving task
     channel
         .sender
@@ -324,7 +299,7 @@ pub async fn request_validity_proof(
             index: proposal.index,
             precondition_validation_data,
             l1_head,
-            agreed_l2_head_hash,
+            agreed_l2_block_number: parent.output_block_number,
             agreed_l2_output_root: parent.output_root,
             claimed_l2_block_number: proposal.output_block_number,
             claimed_l2_output_root: proposal.output_root,

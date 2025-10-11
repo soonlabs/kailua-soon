@@ -14,20 +14,21 @@
 
 use crate::config;
 use crate::driver::{
-    CachedAttributesQueueStage, CachedBatchQueue, CachedBatchStream,
-    CachedBatchValidator, CachedChannelAssembler, CachedChannelBank, CachedChannelProvider,
-    CachedChannelReader, CachedDerivationPipeline, CachedDriver, CachedFrameQueue,
-    CachedL1Retrieval, CachedL1Traversal,
+    CachedAttributesQueueStage, CachedBatchQueue, CachedBatchStream, CachedBatchValidator,
+    CachedChannelAssembler, CachedChannelBank, CachedChannelProvider, CachedChannelReader,
+    CachedDerivationPipeline, CachedDriver, CachedFrameQueue, CachedL1Retrieval, CachedL1Traversal,
 };
 use crate::rkyv::driver::sorted_by_key;
 use alloy_eips::eip4895::Withdrawal;
 use alloy_eips::Typed2718;
 use alloy_primitives::Bytes;
-use kona_driver::PipelineCursor;
 use fraud_executor::outcome::BlockBuildingOutcome;
+use kona_driver::PipelineCursor;
 use risc0_zkvm::sha::{Digestible, Impl as SHA2, Sha256};
 use risc0_zkvm::Digest;
-use soon_derive::batch::{Batch, BatchWithInclusionBlock, SingleBatch, SpanBatch, SpanBatchElement, SpanBatchTransactions};
+use soon_derive::batch::{
+    Batch, BatchWithInclusionBlock, SingleBatch, SpanBatch, SpanBatchElement, SpanBatchTransactions,
+};
 use soon_primitives::blocks::{BlockInfo, L2BlockHeader, L2BlockInfo};
 use soon_primitives::da::channel::Channel;
 use soon_primitives::da::frame::Frame;
@@ -58,11 +59,11 @@ pub fn flatten_pipeline_cursor(pipeline_cursor: &PipelineCursor) -> Vec<u8> {
                 .into_iter()
                 .collect::<Vec<_>>(),
         )
-            .iter()
-            .map(|(k, v)| [k.to_be_bytes().as_slice(), flatten_block_info(v).as_slice()].concat())
-            .collect::<Vec<_>>()
-            .concat()
-            .as_slice(),
+        .iter()
+        .map(|(k, v)| [k.to_be_bytes().as_slice(), flatten_block_info(v).as_slice()].concat())
+        .collect::<Vec<_>>()
+        .concat()
+        .as_slice(),
         (pipeline_cursor.tips.len() as u64).to_be_bytes().as_slice(),
         pipeline_cursor
             .tips
@@ -74,13 +75,13 @@ pub fn flatten_pipeline_cursor(pipeline_cursor: &PipelineCursor) -> Vec<u8> {
                     flatten_l2_block_header(&v.l2_safe_head_header).as_slice(),
                     v.l2_safe_head_output_root.as_slice(),
                 ]
-                    .concat()
+                .concat()
             })
             .collect::<Vec<_>>()
             .concat()
             .as_slice(),
     ]
-        .concat()
+    .concat()
 }
 
 pub fn flatten_safe_head_artifacts(artifacts: &(BlockBuildingOutcome, Vec<Bytes>)) -> Vec<u8> {
@@ -95,7 +96,7 @@ pub fn flatten_safe_head_artifacts(artifacts: &(BlockBuildingOutcome, Vec<Bytes>
             .concat()
             .as_slice(),
     ]
-        .concat()
+    .concat()
 }
 
 pub fn flatten_block_build_outcome(outcome: &BlockBuildingOutcome) -> Vec<u8> {
@@ -103,10 +104,12 @@ pub fn flatten_block_build_outcome(outcome: &BlockBuildingOutcome) -> Vec<u8> {
         flatten_l2_block_info(&outcome.block_info).as_slice(),
         outcome.state_root.as_slice(),
         outcome.withdraw_root.as_slice(),
-        bincode::serialize(&outcome.execution_result).unwrap().as_slice(),
+        bincode::serialize(&outcome.execution_result)
+            .unwrap()
+            .as_slice(),
         outcome.signature_count.to_be_bytes().as_slice(),
     ]
-        .concat()
+    .concat()
 }
 
 pub fn flatten_op_attrib_with_parent(op_attrib_with_parent: &OpAttributesWithParent) -> Vec<u8> {
@@ -167,19 +170,31 @@ pub fn flatten_op_attrib_with_parent(op_attrib_with_parent: &OpAttributesWithPar
             .unwrap_or_default()
             .concat()
             .as_slice(),
-        config::opt_byte_arr(op_attrib_with_parent.attributes.no_tx_pool.map(|v| [v as u8])).as_slice(),
+        config::opt_byte_arr(
+            op_attrib_with_parent
+                .attributes
+                .no_tx_pool
+                .map(|v| [v as u8]),
+        )
+        .as_slice(),
         config::opt_byte_arr(
             op_attrib_with_parent
                 .attributes
                 .gas_limit
                 .map(|v| v.to_be_bytes()),
         )
-            .as_slice(),
-        config::opt_byte_arr(op_attrib_with_parent.attributes.eip_1559_params.map(|v| v.0)).as_slice(),
+        .as_slice(),
+        config::opt_byte_arr(
+            op_attrib_with_parent
+                .attributes
+                .eip_1559_params
+                .map(|v| v.0),
+        )
+        .as_slice(),
         flatten_l2_block_info(&op_attrib_with_parent.parent).as_slice(),
         &[op_attrib_with_parent.is_last_in_span as u8],
     ]
-        .concat()
+    .concat()
 }
 
 pub fn flatten_withdrawal(withdrawal: &Withdrawal) -> Vec<u8> {
@@ -189,7 +204,7 @@ pub fn flatten_withdrawal(withdrawal: &Withdrawal) -> Vec<u8> {
         withdrawal.address.as_slice(),
         withdrawal.amount.to_be_bytes().as_slice(),
     ]
-        .concat()
+    .concat()
 }
 
 pub fn flatten_l2_block_info(l2_block_info: &L2BlockInfo) -> Vec<u8> {
@@ -199,7 +214,7 @@ pub fn flatten_l2_block_info(l2_block_info: &L2BlockInfo) -> Vec<u8> {
         l2_block_info.l1_origin.hash.as_slice(),
         l2_block_info.seq_num.to_be_bytes().as_slice(),
     ]
-        .concat()
+    .concat()
 }
 
 pub fn flatten_l2_block_header(l2_block_header: &L2BlockHeader) -> Vec<u8> {
@@ -208,7 +223,7 @@ pub fn flatten_l2_block_header(l2_block_header: &L2BlockHeader) -> Vec<u8> {
         l2_block_header.account_root.as_slice(),
         l2_block_header.widthdraw_root.as_slice(),
     ]
-        .concat()
+    .concat()
 }
 
 pub fn flatten_batch_with_inclusion_block(
@@ -218,7 +233,7 @@ pub fn flatten_batch_with_inclusion_block(
         flatten_block_info(&batch_with_inclusion_block.inclusion_block).as_slice(),
         flatten_batch(&batch_with_inclusion_block.batch).as_slice(),
     ]
-        .concat()
+    .concat()
 }
 
 pub fn flatten_batch(batch: &Batch) -> Vec<u8> {
@@ -257,7 +272,7 @@ pub fn flatten_span_batch(span_batch: &SpanBatch) -> Vec<u8> {
             .as_slice(),
         flatten_span_batch_transactions(&span_batch.txs).as_slice(),
     ]
-        .concat()
+    .concat()
 }
 
 pub fn flatten_span_batch_transactions(span_batch_transactions: &SpanBatchTransactions) -> Vec<u8> {
@@ -332,7 +347,7 @@ pub fn flatten_span_batch_transactions(span_batch_transactions: &SpanBatchTransa
             .to_be_bytes()
             .as_slice(),
     ]
-        .concat()
+    .concat()
 }
 
 pub fn flatten_span_batch_element(span_batch_element: &SpanBatchElement) -> Vec<u8> {
@@ -347,7 +362,7 @@ pub fn flatten_span_batch_element(span_batch_element: &SpanBatchElement) -> Vec<
             .concat()
             .as_slice(),
     ]
-        .concat()
+    .concat()
 }
 
 pub fn flatten_single_batch(single_batch: &SingleBatch) -> Vec<u8> {
@@ -364,7 +379,7 @@ pub fn flatten_single_batch(single_batch: &SingleBatch) -> Vec<u8> {
             .concat()
             .as_slice(),
     ]
-        .concat()
+    .concat()
 }
 
 pub fn flatten_bytes(bytes: impl AsRef<[u8]>) -> Vec<u8> {
@@ -380,10 +395,10 @@ pub fn flatten_channel(channel: &Channel) -> Vec<u8> {
             .map(|(k, v)| (*k, flatten_frame(v)))
             .collect(),
     )
-        .into_iter()
-        .map(|(_, v)| v)
-        .collect::<Vec<_>>()
-        .concat();
+    .into_iter()
+    .map(|(_, v)| v)
+    .collect::<Vec<_>>()
+    .concat();
     [
         channel.id.as_slice(),
         flatten_block_info(&channel.open_block).as_slice(),
@@ -394,7 +409,7 @@ pub fn flatten_channel(channel: &Channel) -> Vec<u8> {
         inputs.as_slice(),
         flatten_block_info(&channel.highest_l1_inclusion_block).as_slice(),
     ]
-        .concat()
+    .concat()
 }
 
 pub fn flatten_frame(frame: &Frame) -> Vec<u8> {
@@ -404,7 +419,7 @@ pub fn flatten_frame(frame: &Frame) -> Vec<u8> {
         frame.data.as_slice(),
         &[frame.is_last as u8],
     ]
-        .concat()
+    .concat()
 }
 
 pub fn flatten_block_info(block_info: &BlockInfo) -> Vec<u8> {
@@ -414,7 +429,7 @@ pub fn flatten_block_info(block_info: &BlockInfo) -> Vec<u8> {
         block_info.parent_hash.as_slice(),
         block_info.timestamp.to_be_bytes().as_slice(),
     ]
-        .concat()
+    .concat()
 }
 
 impl Digestible for CachedDriver {
@@ -429,7 +444,7 @@ impl Digestible for CachedDriver {
                 .as_bytes(),
             self.pipeline.digest().as_bytes(),
         ]
-            .concat();
+        .concat();
         *SHA2::hash_bytes(fields.as_slice())
     }
 }
@@ -446,7 +461,7 @@ impl Digestible for CachedDerivationPipeline {
                 .as_bytes(),
             self.attributes.digest().as_bytes(),
         ]
-            .concat();
+        .concat();
         *SHA2::hash_bytes(fields.as_slice())
     }
 }
@@ -463,7 +478,7 @@ impl Digestible for CachedAttributesQueueStage {
                 .as_bytes(),
             self.prev.digest().as_bytes(),
         ]
-            .concat();
+        .concat();
         *SHA2::hash_bytes(fields.as_slice())
     }
 }
@@ -498,7 +513,7 @@ impl Digestible for CachedBatchQueue {
                 .as_bytes(),
             self.prev.digest().as_bytes(),
         ]
-            .concat();
+        .concat();
         *SHA2::hash_bytes(fields.as_slice())
     }
 }
@@ -521,7 +536,7 @@ impl Digestible for CachedBatchValidator {
                 .as_bytes(),
             self.prev.digest().as_bytes(),
         ]
-            .concat();
+        .concat();
         *SHA2::hash_bytes(fields.as_slice())
     }
 }
@@ -544,7 +559,7 @@ impl Digestible for CachedBatchStream {
             buffer.digest().as_bytes(),
             self.prev.digest().as_bytes(),
         ]
-            .concat();
+        .concat();
         *SHA2::hash_bytes(fields.as_slice())
     }
 }
@@ -563,13 +578,13 @@ impl Digestible for CachedChannelReader {
                             .to_be_bytes()
                             .as_slice(),
                     ]
-                        .concat()
+                    .concat()
                 })
                 .unwrap_or_default()
                 .as_slice(),
             self.prev.digest().as_bytes(),
         ]
-            .concat();
+        .concat();
         *SHA2::hash_bytes(fields.as_slice())
     }
 }
@@ -598,7 +613,7 @@ impl Digestible for CachedChannelBank {
             self.channel_queue.concat().as_slice(),
             self.prev.digest().as_bytes(),
         ]
-            .concat();
+        .concat();
         *SHA2::hash_bytes(fields.as_slice())
     }
 }
@@ -614,7 +629,7 @@ impl Digestible for CachedChannelAssembler {
                 .as_slice(),
             self.prev.digest().as_bytes(),
         ]
-            .concat();
+        .concat();
         *SHA2::hash_bytes(fields.as_slice())
     }
 }
@@ -627,7 +642,7 @@ impl Digestible for CachedFrameQueue {
             queue_frames.digest().as_bytes(),
             self.prev.digest().as_bytes(),
         ]
-            .concat();
+        .concat();
         *SHA2::hash_bytes(fields.as_slice())
     }
 }
@@ -644,7 +659,7 @@ impl Digestible for CachedL1Retrieval {
             next_bytes.as_slice(),
             self.prev.digest().as_bytes(),
         ]
-            .concat();
+        .concat();
         *SHA2::hash_bytes(fields.as_slice())
     }
 }
@@ -688,7 +703,7 @@ impl Digestible for CachedL1Traversal {
                     .map(|v| v.to_be_bytes()),
             ),
         ]
-            .concat();
+        .concat();
 
         let fields = [
             &[0x01],
@@ -696,7 +711,7 @@ impl Digestible for CachedL1Traversal {
             &[self.done as u8],
             system_config_bytes.as_slice(),
         ]
-            .concat();
+        .concat();
 
         *SHA2::hash_bytes(fields.as_slice())
     }

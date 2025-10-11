@@ -16,14 +16,10 @@ use alloy::primitives::address;
 use alloy::providers::ProviderBuilder;
 use anyhow::Context;
 use human_bytes::human_bytes;
-use kailua_build::{
-    KAILUA_DA_HOKULEA_ELF, KAILUA_DA_HOKULEA_ID, KAILUA_FPVM_HANA_ELF, KAILUA_FPVM_HANA_ID,
-    KAILUA_FPVM_HOKULEA_ELF, KAILUA_FPVM_HOKULEA_ID, KAILUA_FPVM_KONA_ELF, KAILUA_FPVM_KONA_ID,
-};
+use kailua_build::{KAILUA_FPVM_ELF, KAILUA_FPVM_ID};
 use kailua_contracts::SystemConfig;
 use kailua_soon_kona::config::config_hash;
 use kailua_sync::provider::optimism::fetch_rollup_config;
-use kailua_sync::provider::optimism::load_registry_config;
 use kailua_sync::stall::Stall;
 use kailua_sync::telemetry::TelemetryArgs;
 use kailua_sync::{await_tel, KAILUA_GAME_TYPE};
@@ -37,12 +33,9 @@ use tracing::debug;
 /// Inspect the configuration of a running rollup
 #[derive(clap::Args, Debug, Clone)]
 pub struct ConfigArgs {
-    /// URL of OP-NODE endpoint to use
+    /// URL of SOON-NODE endpoint to use
     #[clap(long, env)]
-    pub op_node_url: String,
-    /// URL of OP-GETH endpoint to use (eth and debug namespace required).
-    #[clap(long, env)]
-    pub op_geth_url: String,
+    pub soon_node_url: String,
     /// Address of the ethereum rpc endpoint to use (eth namespace required)
     #[clap(long, env)]
     pub eth_rpc_url: String,
@@ -58,53 +51,16 @@ pub async fn config(args: ConfigArgs) -> anyhow::Result<()> {
     let tracer = tracer("kailua");
     let context = opentelemetry::Context::current_with_span(tracer.start("config"));
 
-    let config = await_tel!(
-        context,
-        fetch_rollup_config(
-            &args.op_node_url,
-            &args.op_geth_url,
-            None,
-            args.bypass_chain_registry
-        )
-    )
-    .context("fetch_rollup_config")?;
+    let config = await_tel!(context, fetch_rollup_config(&args.soon_node_url, None,))
+        .context("fetch_rollup_config")?;
     debug!("{config:?}");
     let rollup_config_hash = config_hash(&config);
-
-    if let Some(registry_config) = load_registry_config(config.l2_chain_id) {
-        debug!("{registry_config:?}");
-        let registry_config_hash = config_hash(&registry_config);
-        if rollup_config_hash != registry_config_hash {
-            eprintln!("LOADED ROLLUP CONFIG DOES NOT MATCH REGISTRY ROLLUP CONFIG.");
-        }
-    }
 
     // report risc0 version
     println!("RISC0_VERSION: {}", risc0_zkvm::get_version()?);
 
     // report image ids
-    for (image_id, elf, label) in [
-        (
-            KAILUA_FPVM_KONA_ID,
-            KAILUA_FPVM_KONA_ELF,
-            "KAILUA_FPVM_KONA",
-        ),
-        (
-            KAILUA_FPVM_HOKULEA_ID,
-            KAILUA_FPVM_HOKULEA_ELF,
-            "KAILUA_FPVM_HOKULEA",
-        ),
-        (
-            KAILUA_DA_HOKULEA_ID,
-            KAILUA_DA_HOKULEA_ELF,
-            "KAILUA_DA_HOKULEA",
-        ),
-        (
-            KAILUA_FPVM_HANA_ID,
-            KAILUA_FPVM_HANA_ELF,
-            "KAILUA_FPVM_HANA",
-        ),
-    ] {
+    for (image_id, elf, label) in [(KAILUA_FPVM_ID, KAILUA_FPVM_ELF, "KAILUA_FPVM")] {
         report_image_id(image_id, elf, label);
     }
 
@@ -156,9 +112,6 @@ pub async fn config(args: ConfigArgs) -> anyhow::Result<()> {
             .map(|a| hex::encode_upper(a.as_slice()))
             .unwrap_or_default()
     );
-
-    // report genesis time
-    println!("GENESIS_TIMESTAMP: {}", config.genesis.l2_time);
     // report inter-block time
     println!("BLOCK_TIME: {}", config.block_time);
     // report rollup config hash

@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::path::PathBuf;
 use anyhow::Context;
-use soon_primitives::rollup_config::SoonRollupConfig;
 use opentelemetry::global::tracer;
 use opentelemetry::trace::{FutureExt, TraceContextExt, Tracer};
-use serde_json::{json, Value};
-use std::str::FromStr;
+use serde_json::Value;
 use soon_l2_chain_provider::chain_provider::L2BlockFetcher;
+use soon_primitives::rollup_config::SoonRollupConfig;
+use std::path::PathBuf;
 use tokio::fs;
-use tracing::log::warn;
-use tracing::{debug, info};
+use tracing::info;
 
 pub async fn fetch_rollup_config(
     l2_node_address: &str,
@@ -39,7 +37,7 @@ pub async fn fetch_rollup_config(
         .await
         .context("rollup_config")?;
 
-    debug!("Rollup config: {:?}", rollup_config);
+    info!("Rollup config: {:?}", rollup_config);
 
     // export
     let ser_config = serde_json::to_string(&rollup_config)?;

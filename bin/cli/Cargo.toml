@@ -45,6 +45,8 @@ kona-cli.workspace = true
 risc0-circuit-recursion.workspace = true
 risc0-zkvm.workspace = true
 
+soon-l2-chain-provider.workspace = true
+
 [dev-dependencies]
 kona-host.workspace = true
 lazy_static.workspace = true

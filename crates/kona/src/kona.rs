@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use alloy_consensus::transaction::SignerRecoverable;
 use alloy_consensus::TxEip4844Variant::{TxEip4844, TxEip4844WithSidecar};
 use alloy_consensus::{Header, Receipt, ReceiptEnvelope, TxEnvelope};
 use alloy_eips::{BlockNumberOrTag, Decodable2718};
@@ -27,7 +28,6 @@ use soon_derive::traits::ChainProvider;
 use soon_primitives::blocks::{BlockInfo, L1Header, L1Transaction};
 use std::sync::Arc;
 use std::sync::RwLock;
-use alloy_consensus::transaction::SignerRecoverable;
 
 /// The oracle-backed L1 chain provider for the client program.
 /// Forked from [kona_proof::l1::OracleL1ChainProvider]

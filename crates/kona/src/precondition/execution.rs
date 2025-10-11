@@ -83,20 +83,20 @@ pub fn attributes_hash(attributes: &OpPayloadAttributes) -> anyhow::Result<B256>
                 .map(|wds| withdrawals_hash(wds.as_slice())),
             B256::ZERO,
         )
-            .expect("infallible")
-            .as_slice(),
+        .expect("infallible")
+        .as_slice(),
         safe_default(
             attributes.payload_attributes.parent_beacon_block_root,
             B256::ZERO,
         )
-            .context("safe_default parent_beacon_block_root")?
-            .as_slice(),
+        .context("safe_default parent_beacon_block_root")?
+        .as_slice(),
         safe_default(
             attributes.transactions.as_ref().map(transactions_hash),
             B256::ZERO,
         )
-            .expect("infallible")
-            .as_slice(),
+        .expect("infallible")
+        .as_slice(),
         &[safe_default(attributes.no_tx_pool.map(|b| b as u8), 0xff).expect("infallible")],
         safe_default(attributes.gas_limit, u64::MAX)
             .context("safe_default gas_limit")?
@@ -106,7 +106,7 @@ pub fn attributes_hash(attributes: &OpPayloadAttributes) -> anyhow::Result<B256>
             .context("safe_default eip_1559_params")?
             .as_slice(),
     ]
-        .concat();
+    .concat();
     let digest: [u8; 32] = SHA2::hash_bytes(hashed_bytes.as_slice())
         .as_bytes()
         .try_into()?;
@@ -165,7 +165,7 @@ pub fn withdrawals_hash(withdrawals: &[Withdrawal]) -> B256 {
                 w.address.as_slice(),
                 w.amount.to_be_bytes().as_slice(),
             ]
-                .concat()
+            .concat()
         })
         .collect::<Vec<_>>()
         .concat();
@@ -250,7 +250,7 @@ pub fn exec_precondition_hash(executions: &[Arc<Execution>]) -> B256 {
                 flatten_block_build_outcome(&e.artifacts).as_slice(),
                 e.claimed_output.as_slice(),
             ]
-                .concat()
+            .concat()
         })
         .collect::<Vec<_>>()
         .concat();

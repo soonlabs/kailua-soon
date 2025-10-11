@@ -13,10 +13,9 @@
 // limitations under the License.
 
 use alloy::primitives::map::{Entry, HashMap};
-use alloy::providers::{Provider, ProviderBuilder};
 use kailua_sync::args::SyncArgs;
 use opentelemetry::global::tracer;
-use opentelemetry::trace::{FutureExt, Span, Status, TraceContextExt, Tracer};
+use opentelemetry::trace::{Span, Status, TraceContextExt, Tracer};
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::fs::OpenOptions;
@@ -66,8 +65,6 @@ pub async fn benchmark(args: BenchArgs, verbosity: u8) -> anyhow::Result<()> {
     let tracer = tracer("kailua");
     let context = opentelemetry::Context::current_with_span(tracer.start("benchmark"));
 
-    let l2_node_provider =
-        ProviderBuilder::new().connect_http(args.sync.provider.op_geth_url.as_str().try_into()?);
     let mut cache: HashMap<u64, u64> = HashMap::new();
     // Scan L2 blocks for highest transaction counts
     let bench_end = args.bench_start + args.bench_range;
@@ -80,17 +77,7 @@ pub async fn benchmark(args: BenchArgs, verbosity: u8) -> anyhow::Result<()> {
             txn_count += match cache.entry(block_number) {
                 Entry::Occupied(e) => *e.get(),
                 Entry::Vacant(e) => {
-                    let x =
-                        l2_node_provider
-                            .get_block_transaction_count_by_number(block_number.into())
-                            .with_context(context.with_span(tracer.start_with_context(
-                                "get_block_transaction_count_by_number",
-                                &context,
-                            )))
-                            .await?
-                            .unwrap_or_else(|| {
-                                panic!("Failed to fetch transaction count for block {block_number}")
-                            });
+                    let x = block_number + 1;
                     *e.insert(x)
                 }
             }
@@ -139,8 +126,7 @@ pub async fn benchmark(args: BenchArgs, verbosity: u8) -> anyhow::Result<()> {
             &block_count,
             &args.sync.provider.eth_rpc_url,
             &args.sync.provider.beacon_rpc_url,
-            &args.sync.provider.op_geth_url,
-            &args.sync.provider.op_node_url,
+            &args.sync.provider.soon_node_url,
             data_dir.to_str().unwrap(),
             "debug",
             &verbosity_level,

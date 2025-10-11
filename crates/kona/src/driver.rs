@@ -14,35 +14,35 @@
 
 use crate::rkyv::driver::{
     sorted_by_key, BatchReaderRkyv, BatchWithInclusionBlockRkyv, BlockInfoRkyv, ChannelRkyv,
-    FrameRkyv, IdChannelRkyv, OpAttributesWithParentRkyv, PipelineCursorRkyv,
-    SingleBatchRkyv, SpanBatchRkyv, SystemConfigRkyv, HeadArtifactsRkyv,
+    FrameRkyv, HeadArtifactsRkyv, IdChannelRkyv, OpAttributesWithParentRkyv, PipelineCursorRkyv,
+    SingleBatchRkyv, SpanBatchRkyv, SystemConfigRkyv,
 };
 use alloy_primitives::Bytes;
+use fraud_executor::outcome::BlockBuildingOutcome;
+use kona_driver::{Driver, Executor, PipelineCursor};
+use kona_preimage::CommsClient;
+use kona_proof::l1::{OraclePipeline, ProviderDerivationPipeline};
+use kona_proof::FlushableCache;
 use soon_derive::attributes::StatefulAttributesBuilder;
+use soon_derive::batch::{BatchWithInclusionBlock, SingleBatch, SpanBatch};
 use soon_derive::pipeline::{
-    AttributesQueueStage, BatchStreamStage, ChannelProviderStage,
-    ChannelReaderStage, DerivationPipeline, FrameQueueStage, L1RetrievalStage,
+    AttributesQueueStage, BatchStreamStage, ChannelProviderStage, ChannelReaderStage,
+    DerivationPipeline, FrameQueueStage, L1RetrievalStage,
 };
 use soon_derive::prelude::{
     BatchQueue, BatchValidator, ChainProvider, ChannelAssembler, ChannelBank,
     DataAvailabilityProvider, L1Traversal, L2ChainProvider,
 };
-use kona_driver::{Driver, Executor, PipelineCursor};
-use fraud_executor::outcome::BlockBuildingOutcome;
-use soon_primitives::rollup_config::SoonRollupConfig;
-use soon_primitives::system::SystemConfig;
-use kona_preimage::CommsClient;
-use kona_proof::l1::{OraclePipeline, ProviderDerivationPipeline};
-use kona_proof::FlushableCache;
-use spin::RwLock;
-use std::fmt::Debug;
-use std::sync::Arc;
-use soon_derive::batch::{BatchWithInclusionBlock, SingleBatch, SpanBatch};
 use soon_derive::stages::BatchReader;
 use soon_primitives::blocks::BlockInfo;
 use soon_primitives::da::channel::{Channel, ChannelId};
 use soon_primitives::da::frame::Frame;
 use soon_primitives::derive::OpAttributesWithParent;
+use soon_primitives::rollup_config::SoonRollupConfig;
+use soon_primitives::system::SystemConfig;
+use spin::RwLock;
+use std::fmt::Debug;
+use std::sync::Arc;
 
 pub type KonaDriver<E, O, L1, L2, DA> =
     Driver<E, OraclePipeline<O, L1, L2, DA>, ProviderDerivationPipeline<L1, L2, DA>>;
@@ -838,8 +838,8 @@ where
 pub mod tests {
     use super::*;
     use crate::boot::StitchedBootInfo;
+    use crate::client::core::fetch_safe_head_hash;
     use crate::client::core::tests::test_derivation;
-    use crate::client::core::{fetch_safe_head_hash};
     use crate::client::stitching::tests::test_stitching_client;
     use crate::client::tests::TestOracle;
     use crate::kona::OracleL1ChainProvider;

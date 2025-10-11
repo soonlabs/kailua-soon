@@ -12,11 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::client;
+use crate::client::log;
 use crate::config::config_hash;
+use crate::driver::CachedDriver;
 use crate::executor::{exec_precondition_hash, new_execution_cursor, CachedExecutor, Execution};
 use crate::kona::OracleL1ChainProvider;
-use crate::{client, precondition};
-// use alloy_op_evm::OpEvmFactory;
+use crate::oracle::local::LocalOnceOracle;
+use crate::precondition::{proposal, Precondition};
 use alloy_primitives::B256;
 use anyhow::{bail, Context};
 use kona_driver::{Driver, Executor};
@@ -30,6 +33,7 @@ use kona_proof::l1::OraclePipeline;
 use kona_proof::l2::{CursorSetter, OracleL2ChainProvider};
 use kona_proof::sync::new_oracle_pipeline_cursor;
 use kona_proof::{BootInfo, FlushableCache, HintType};
+use risc0_zkvm::sha::Digestible;
 use soon_derive::prelude::{ChainProvider, DAProvider};
 use soon_derive::sources::DAServerSource;
 use soon_derive::traits::{BlobProvider, L2ChainProvider};
@@ -38,12 +42,7 @@ use soon_primitives::output_root::OutputRoot;
 use std::fmt::Debug;
 use std::mem::take;
 use std::sync::{Arc, Mutex};
-use risc0_zkvm::sha::Digestible;
 use tracing::info;
-use crate::client::log;
-use crate::driver::CachedDriver;
-use crate::oracle::local::LocalOnceOracle;
-use crate::precondition::{Precondition, proposal};
 
 /// Initializes the L1, L2, and DA providers for the core client.
 ///
@@ -302,9 +301,7 @@ where
                 // Verify initial state
                 assert_eq!(agreed_output, &latest_output_root);
                 // Verify transition
-                let executor_result = kona_executor
-                    .execute_payload(attributes.clone())
-                    .await?;
+                let executor_result = kona_executor.execute_payload(attributes.clone()).await?;
                 latest_output_root = kona_executor
                     .compute_output_root()
                     .context("compute_output_root: Verify post state")?;
@@ -390,8 +387,8 @@ where
                         l1_provider.clone(),
                         l2_provider.clone(),
                     )
-                        .await
-                        .context("OraclePipeline::new")?,
+                    .await
+                    .context("OraclePipeline::new")?,
                 ),
             ),
             Some(cached_driver) => (

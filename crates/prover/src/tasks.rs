@@ -17,21 +17,10 @@ use crate::driver::{driver_file_name, signal_derivation_trace, try_read_driver};
 use crate::kv::RWLKeyValueStore;
 use crate::proof::{proof_file_name, read_bincoded_file};
 use crate::ProvingError;
-use alloy::providers::RootProvider;
 use alloy_primitives::B256;
 use anyhow::{anyhow, Context};
 use async_channel::{Receiver, Sender};
 use human_bytes::human_bytes;
-use soon_primitives::rollup_config::SoonRollupConfig;
-use kona_proof::BootInfo;
-use risc0_zkvm::sha::Digestible;
-use risc0_zkvm::Receipt;
-use std::cmp::Ordering;
-use std::collections::BinaryHeap;
-use std::convert::identity;
-use std::path::Path;
-use std::sync::Arc;
-use tracing::{error, info, warn};
 use kailua_soon_kona::boot::StitchedBootInfo;
 use kailua_soon_kona::client::stitching::{split_executions, stitch_boot_info};
 use kailua_soon_kona::config::config_hash;
@@ -40,6 +29,16 @@ use kailua_soon_kona::executor::Execution;
 use kailua_soon_kona::oracle::vec::VecOracle;
 use kailua_soon_kona::precondition::execution::exec_precondition_hash;
 use kailua_soon_kona::precondition::Precondition;
+use kona_proof::BootInfo;
+use risc0_zkvm::sha::Digestible;
+use risc0_zkvm::Receipt;
+use soon_primitives::rollup_config::SoonRollupConfig;
+use std::cmp::Ordering;
+use std::collections::BinaryHeap;
+use std::convert::identity;
+use std::path::Path;
+use std::sync::Arc;
+use tracing::{error, info, warn};
 
 #[derive(Clone, Debug)]
 pub struct CachedTask {
@@ -387,11 +386,18 @@ pub async fn compute_fpvm_proof(
         job_args.kona.agreed_l2_output_root = agreed_l2_output_root;
         job_args.kona.agreed_l2_block_number = agreed_l2_block_number;
         job_args.kona.claimed_l2_output_root = execution_cache[next_claim_index].claimed_output;
-        job_args.kona.claimed_l2_block_number =
-            execution_cache[next_claim_index].artifacts.block_info.block_info.number;
+        job_args.kona.claimed_l2_block_number = execution_cache[next_claim_index]
+            .artifacts
+            .block_info
+            .block_info
+            .number;
         // advance pointers
         agreed_l2_output_root = job_args.kona.claimed_l2_output_root;
-        agreed_l2_block_number = execution_cache[next_claim_index].artifacts.block_info.block_info.number;
+        agreed_l2_block_number = execution_cache[next_claim_index]
+            .artifacts
+            .block_info
+            .block_info
+            .number;
         // queue up job
         num_proofs += 1;
         task_sender
@@ -508,7 +514,8 @@ pub async fn compute_fpvm_proof(
         // upper half workload starts after midpoint
         let mut upper_job_args = oneshot_result.cached_task.args;
         upper_job_args.kona.agreed_l2_output_root = mid_output;
-        upper_job_args.kona.agreed_l2_block_number = mid_exec.artifacts.block_info.block_info.number;
+        upper_job_args.kona.agreed_l2_block_number =
+            mid_exec.artifacts.block_info.block_info.number;
         task_sender
             .send(Oneshot {
                 cached_task: create_cached_execution_task(
@@ -636,7 +643,7 @@ pub fn create_cached_execution_task(
 /// Launches the native kailua-soon-kona client-server pair to compute a [OneshotResultResponse]
 #[allow(clippy::too_many_arguments)]
 pub async fn compute_cached_proof(
-    mut args: ProveArgs,
+    args: ProveArgs,
     rollup_config: SoonRollupConfig,
     disk_kv_store: Option<RWLKeyValueStore>,
     mut precondition: Precondition,
@@ -659,7 +666,7 @@ pub async fn compute_cached_proof(
         claimed_l2_output_root: args.kona.claimed_l2_output_root,
         claimed_l2_block_number: args.kona.claimed_l2_block_number,
         chain_id: 0,
-        rollup_config:rollup_config.clone(),
+        rollup_config: rollup_config.clone(),
     };
     let rollup_config_hash = config_hash(&rollup_config);
 

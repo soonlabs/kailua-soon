@@ -29,7 +29,6 @@ use kailua_soon_kona::executor::Execution;
 use kailua_soon_kona::oracle::vec::{PreimageVecEntry, VecOracle};
 use kailua_soon_kona::precondition::Precondition;
 use kailua_soon_kona::witness::Witness;
-use soon_derive::prelude::ChainProvider;
 use kona_preimage::{HintWriterClient, PreimageOracleClient};
 use kona_proof::l1::OracleBlobProvider;
 use kona_proof::CachingOracle;
@@ -101,9 +100,7 @@ where
         extra_frames,
         extra_proofs,
     ) = witgen::run_witgen_client(
-        B256::from(bytemuck::cast::<_, [u8; 32]>(
-            kailua_build::KAILUA_FPVM_ID,
-        )),
+        B256::from(bytemuck::cast::<_, [u8; 32]>(kailua_build::KAILUA_FPVM_ID)),
         preimage_oracle.clone(),
         10 * 1024 * 1024, // default to 10MB chunks
         blob_provider,
@@ -115,10 +112,10 @@ where
         stitched_preconditions.clone(),
         stitched_boot_info.clone(),
     )
-        .await
-        .context("Failed to run kona vec witgen client.")
-        .map_err(ProvingError::OtherError)
-        .map(|(b, j, p, d, w)| (b, j, p, d, w, vec![], vec![]))?;
+    .await
+    .context("Failed to run kona vec witgen client.")
+    .map_err(ProvingError::OtherError)
+    .map(|(b, j, p, d, w)| (b, j, p, d, w, vec![], vec![]))?;
     drop(witgen_permit);
 
     // Commit derivation trace to driver file

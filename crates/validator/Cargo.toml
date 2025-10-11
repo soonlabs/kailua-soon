@@ -29,6 +29,9 @@ kailua-contracts.workspace = true
 kailua-prover.workspace = true
 kailua-sync.workspace = true
 
+#SOON
+soon-primitives.workspace = true
+
 kona-host.workspace = true
 
 opentelemetry.workspace = true

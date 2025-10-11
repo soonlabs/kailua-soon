@@ -19,18 +19,18 @@ use crate::executor::Execution;
 use crate::journal::ProofJournal;
 use crate::kona::OracleL1ChainProvider;
 use crate::precondition::Precondition;
+use alloy_eips::BlockNumberOrTag;
 use alloy_primitives::{Address, B256};
 use anyhow::Context;
+use kona_executor::L2BlockBuilder;
 use kona_preimage::CommsClient;
+use kona_proof::l2::OracleL2ChainProvider;
 use kona_proof::{BootInfo, FlushableCache};
 use risc0_zkvm::sha::Digestible;
+use soon_derive::traits::{BlobProvider, ChainProvider};
 use std::fmt::Debug;
 use std::iter::zip;
 use std::sync::Arc;
-use alloy_eips::BlockNumberOrTag;
-use kona_executor::L2BlockBuilder;
-use kona_proof::l2::OracleL2ChainProvider;
-use soon_derive::traits::{BlobProvider, ChainProvider};
 #[cfg(target_os = "zkvm")]
 use {
     alloy_primitives::map::HashSet,
@@ -114,10 +114,10 @@ pub trait StitchingClient<
 pub struct KonaStitchingClient;
 
 impl<
-    O: CommsClient + FlushableCache + Send + Sync + Debug,
-    B: BlobProvider + Send + Sync + Debug + Clone,
-    E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug,
-> StitchingClient<E, O, B> for KonaStitchingClient
+        O: CommsClient + FlushableCache + Send + Sync + Debug,
+        B: BlobProvider + Send + Sync + Debug + Clone,
+        E: L2BlockBuilder<OracleL2ChainProvider<O>, OracleL2ChainProvider<O>> + Send + Sync + Debug,
+    > StitchingClient<E, O, B> for KonaStitchingClient
 {
     fn run_stitching_client(
         self,
@@ -151,7 +151,7 @@ impl<
             derivation_cache,
             derivation_trace.then(Default::default),
         )
-            .expect("Failed to compute output hash.");
+        .expect("Failed to compute output hash.");
 
         // Verify proofs recursively for boundless composition
         #[cfg(target_os = "zkvm")]
@@ -179,7 +179,7 @@ impl<
             #[cfg(target_os = "zkvm")]
             &proven_fpvm_journals,
         ))
-            .expect("Failed to stitch boot info.")
+        .expect("Failed to stitch boot info.")
     }
 }
 
@@ -388,7 +388,7 @@ pub fn stitch_executions(
                     .number,
             },
         )
-            .encode_packed();
+        .encode_packed();
         // Require an execution-only proof for the entire batch
         verify_stitching_journal(
             fpvm_image_id,
@@ -540,7 +540,7 @@ pub async fn stitch_boot_info<O: CommsClient + FlushableCache + Send + Sync + De
                 journal.config_hash,
                 &stitched_boot,
             )
-                .encode_packed(),
+            .encode_packed(),
             #[cfg(target_os = "zkvm")]
             proven_fpvm_journals,
         );
@@ -670,10 +670,10 @@ pub mod tests {
             None,
             None,
         )
-            .context("test_derivation")?
-            .into_iter()
-            .map(|e| e.as_ref().clone())
-            .collect::<Vec<_>>();
+        .context("test_derivation")?
+        .into_iter()
+        .map(|e| e.as_ref().clone())
+        .collect::<Vec<_>>();
         let stitched_boot_info = stitched_executions
             .iter()
             .map(|e| StitchedBootInfo {
@@ -690,7 +690,7 @@ pub mod tests {
             Precondition::default().proposal(precondition_hash.unwrap_or_default()),
             stitched_boot_info.len(),
         )
-            .collect::<Vec<_>>();
+        .collect::<Vec<_>>();
         // backward stitching pass
         let ending_block_number = stitched_executions
             .last()
@@ -756,10 +756,10 @@ pub mod tests {
             None,
             None,
         )
-            .context("test_derivation")?
-            .into_iter()
-            .map(|e| e.as_ref().clone())
-            .collect::<Vec<_>>();
+        .context("test_derivation")?
+        .into_iter()
+        .map(|e| e.as_ref().clone())
+        .collect::<Vec<_>>();
         // flat pass
         test_stitching(
             boot_info.clone(),
@@ -811,10 +811,10 @@ pub mod tests {
             None,
             None,
         )
-            .context("test_derivation")?
-            .into_iter()
-            .map(|e| e.as_ref().clone())
-            .collect::<Vec<_>>();
+        .context("test_derivation")?
+        .into_iter()
+        .map(|e| e.as_ref().clone())
+        .collect::<Vec<_>>();
         // flat pass
         boot_info.l1_head = B256::ZERO;
         test_stitching(
@@ -880,7 +880,7 @@ pub mod tests {
             },
             None,
         )
-            .unwrap();
+        .unwrap();
 
         teardown();
     }
@@ -946,7 +946,7 @@ pub mod tests {
                 blob_hashes: vec![],
             }),
         )
-            .unwrap();
+        .unwrap();
 
         teardown();
     }
@@ -974,7 +974,7 @@ pub mod tests {
             vec![],
             vec![],
         )
-            .unwrap();
+        .unwrap();
 
         teardown();
     }
@@ -1005,7 +1005,7 @@ pub mod tests {
                 blob_hashes: vec![],
             }),
         )
-            .unwrap();
+        .unwrap();
 
         teardown();
     }
