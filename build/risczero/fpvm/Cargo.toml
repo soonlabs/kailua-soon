@@ -1,6 +1,6 @@
 [package]
 name = "kailua-fpvm"
-version = "1.0.0-rc.1"
+version = "1.1.0"
 edition = "2021"
 license = "Apache-2.0"
 rust-version = "1.85"
@@ -23,13 +23,14 @@ opt-level = 3
 
 [dependencies]
 blst = { version = "=0.3.14", features = ["no-threads"] }
+c-kzg = { version = "2.1.1", features = ["eip-7594"] }
 rkyv = "0.8.9"
 substrate-bn = "=0.6.0"
 
-kailua-common = { path = "../../../crates/common" }
+kailua-soon-kona = { path = "../../../crates/kona" }
 kona-executor = { git = "https://github.com/soonlabs/kona-soon", branch = "dev" }
 
-risc0-zkvm = { version = "2.3.2", features = ["std", "heap-embedded-alloc", "unstable", "getrandom"] }
+risc0-zkvm = { version = "3.0.3", features = ["std", "heap-embedded-alloc", "unstable"] }
 
 [features]
 disable-dev-mode = [
