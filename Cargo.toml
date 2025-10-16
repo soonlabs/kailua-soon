@@ -138,8 +138,8 @@ boundless-market = "1.0.0"
 risc0-steel = { git = "https://github.com/boundless-xyz/steel.git", tag = "v2.4.0" }
 
 # for testing
-solana-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
-solana-program = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
+solana-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }
+solana-program = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }
 l1-block-info = { git = "https://github.com/soonlabs/kona-soon", branch = "dev", features = [
     "no-entrypoint",
 ] }
@@ -183,16 +183,16 @@ opt-level = 3
 
 [patch.crates-io]
 # Core Solana packages that definitely exist in soonlabs/agave
-solana-program = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
-solana-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
-solana-account-decoder = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
-solana-ledger = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
+solana-program = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }
+solana-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }
+solana-account-decoder = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }
+solana-ledger = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }
 
 # Critical patch to resolve SPL package dependencies with our custom Solana version
 # This prevents duplicate versions of solana-program and solana-zk-token-sdk
-solana-zk-token-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
-solana-curve25519 = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
-solana-zk-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/risc0-zkvm" }
+solana-zk-token-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }
+solana-curve25519 = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }
+solana-zk-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }
 solana_rbpf = { git = "https://github.com/soonlabs/rbpf", branch = "feat/risc0-zkvm" }
 
 # Risc0 related dependencies
