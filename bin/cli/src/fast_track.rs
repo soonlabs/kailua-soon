@@ -82,9 +82,6 @@ pub struct FastTrackArgs {
     /// Addresses of the vanguards to set (comma-separated)
     #[clap(long, env)]
     pub vanguard_addresses: Option<String>,
-    /// Duration of the advantage given to the vanguard
-    #[clap(long, env, requires = "vanguard_address")]
-    pub vanguard_advantage: Option<u64>,
 
     /// Whether to set Kailua as the OptimismPortal's respected game type
     #[clap(long, env)]
