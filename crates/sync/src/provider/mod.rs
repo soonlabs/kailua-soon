@@ -36,16 +36,21 @@ pub struct ProviderArgs {
     /// Address of the L1 Beacon API endpoint to use.
     #[clap(long, env)]
     pub beacon_rpc_url: String,
+    /// Address of the DA proxy to use.
+    #[clap(long, env)]
+    pub da_proxy_url: Option<String>,
 }
 
 /// A collection of RPC providers for L1 and L2 data
 pub struct SyncProvider {
-    /// DA provider for blobs
+    /// blobs provider
     pub da_provider: BlobProvider,
     /// Provider for L1 chain data
     pub l1_provider: RootProvider,
     /// Provider for L2 chain data
     pub l2_provider: L2BlockFetcher,
+    /// Provider for DA proxy data
+    pub da_proxy_provider: Option<RootProvider>,
 }
 
 impl SyncProvider {
@@ -59,10 +64,17 @@ impl SyncProvider {
 
         let l2_provider = L2BlockFetcher::new_with_url(core_args.soon_node_url.as_str());
 
+        let da_proxy_provider = if let Some(da_proxy_url) = core_args.da_proxy_url.clone() {
+            Some(RootProvider::new_http(da_proxy_url.as_str().try_into()?))
+        } else {
+            None
+        };
+
         Ok(Self {
             da_provider,
             l1_provider,
             l2_provider,
+            da_proxy_provider,
         })
     }
 }

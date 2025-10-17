@@ -154,7 +154,7 @@ pub async fn handle_proof_requests(
                 l2_node_address: Some(args.sync.provider.soon_node_url.clone()),
                 l1_node_address: Some(args.sync.provider.eth_rpc_url.clone()),
                 l1_beacon_address: Some(args.sync.provider.beacon_rpc_url.clone()),
-                da_proxy_url: None,
+                da_proxy_url: args.sync.provider.da_proxy_url.clone(),
                 data_dir: Some(data_dir),
                 native: true,
                 server: false,
