@@ -1026,8 +1026,8 @@ dependencies = [
 
 [[package]]
 name = "blst"
-version = "0.3.14"
-source = "git+https://github.com/risc0/blst?tag=v0.3.14-risczero.2#ca5d6042fffe3cf599e4f10a7d9a6a63693b6d15"
+version = "0.3.15"
+source = "git+https://github.com/risc0/blst?tag=v0.3.15-risczero.1#3d1833ff0c2457cf16068758b33d03f6b624a522"
 dependencies = [
  "cc",
  "glob",
@@ -1255,7 +1255,7 @@ dependencies = [
 [[package]]
 name = "c-kzg"
 version = "2.1.1"
-source = "git+https://github.com/risc0/c-kzg-4844.git?tag=c-kzg%2Fv2.1.1-risczero.0#1a8fa5497c80eb7f1fecbd7026f9bf86cc63fee2"
+source = "git+https://github.com/risc0/c-kzg-4844?tag=c-kzg%2Fv2.1.1-risczero.2#0dabfecbf87539982c16bdafb951615c8a06ead1"
 dependencies = [
  "blst",
  "bytemuck",

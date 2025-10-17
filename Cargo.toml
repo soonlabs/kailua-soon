@@ -156,7 +156,7 @@ opt-level = 3
 [profile.release]
 codegen-units = 1
 debug = 1
-lto = "fat"
+#lto = "fat"
 overflow-checks = true
 
 [profile.release.build-override]
