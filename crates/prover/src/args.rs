@@ -41,7 +41,7 @@ pub struct ProvingArgs {
     #[clap(long, env, required = false, default_value_t = 2_684_354_560)]
     pub max_witness_size: usize,
     /// How many threads to use for fetching preflight data
-    #[clap(long, env, default_value_t = 4)]
+    #[clap(long, env, default_value_t = 1)]
     pub num_concurrent_preflights: u64,
     /// How many threads to use for computing proofs
     #[clap(long, env, default_value_t = 1)]
