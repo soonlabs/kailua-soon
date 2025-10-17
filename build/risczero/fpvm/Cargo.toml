@@ -33,7 +33,7 @@ substrate-bn = "=0.6.0"
 kailua-soon-kona = { path = "../../../crates/kona" }
 kona-executor = { git = "https://github.com/soonlabs/kona-soon", branch = "dev" }
 
-risc0-zkvm = { version = "3.0.3", features = ["std", "heap-embedded-alloc", "unstable"] }
+risc0-zkvm = { version = "3.0.3", features = ["std", "heap-embedded-alloc", "unstable", "getrandom"] }
 
 [features]
 disable-dev-mode = [
