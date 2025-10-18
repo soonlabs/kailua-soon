@@ -20,3 +20,5 @@ kailua-input
 .cursor/
 CLAUDE.md
 oracle_data
+crates/contracts/foundry/node_modules/*
+crates/contracts/foundry/types/*

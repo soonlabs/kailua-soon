@@ -60,14 +60,7 @@ async fn main() -> anyhow::Result<()> {
             }
             result.map(|_| ())
         }
-        KailuaCli::TestFault {
-            #[cfg(feature = "devnet")]
-            args,
-            ..
-        } => {
-            #[cfg(not(feature = "devnet"))]
-            unimplemented!("Intentional faults are only available on devnet environments");
-            #[cfg(feature = "devnet")]
+        KailuaCli::TestFault { args, .. } => {
             await_tel!(context, kailua_cli::fault::fault(args))
         }
         KailuaCli::Benchmark { args, cli } => {

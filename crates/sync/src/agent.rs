@@ -570,7 +570,10 @@ impl SyncAgent {
         }
 
         // Validate game instance data
-        info!("Assessing proposal correctness. proposal block number: {}", proposal.output_block_number);
+        info!(
+            "Assessing proposal correctness. proposal block number: {}",
+            proposal.output_block_number
+        );
         let is_parent_correct = if proposal.resolved_at == 0 {
             self.proposals
                 .get(&proposal.parent)
