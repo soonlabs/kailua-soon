@@ -116,7 +116,7 @@ devnet-validate fastforward="100" target="debug" verbosity="" da_proxy="http://1
       --validator-key {{validator}} \
       {{verbosity}}
 
-devnet-validate-boundless fastforward lookback target="debug" verbosity="" da_proxy="http://127.0.0.1:8080/" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/validate" validator="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
+devnet-validate-boundless fastforward target="debug" verbosity="" da_proxy="http://127.0.0.1:8080/" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/validate" validator="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
     ./target/{{target}}/kailua-cli validate \
         --fast-forward-target {{fastforward}} \
         --eth-rpc-url {{l1_rpc}} \
@@ -127,7 +127,6 @@ devnet-validate-boundless fastforward lookback target="debug" verbosity="" da_pr
         --validator-key {{validator}} \
         --boundless-rpc-url ${BOUNDLESS_RPC_URL} \
         --boundless-chain-id 8453 \
-        --boundless-look-back {{lookback}} \
         --boundless-wallet-key ${BOUNDLESS_WALLET_KEY} \
         --boundless-market-address 0xfd152dadc5183870710fe54f939eae3ab9f0fe82 \
         --boundless-verifier-router-address 0x0b144e07a0826182b6b59788c34b32bfa86fb711 \
@@ -135,6 +134,8 @@ devnet-validate-boundless fastforward lookback target="debug" verbosity="" da_pr
         --boundless-collateral-token-address 0xaa61bb7777bd01b684347961918f1e07fbbce7cf \
         --storage-provider pinata \
         --pinata-jwt ${BOUNDLESS_PINATA_JWT} \
+        --boundless-cycle-min-wei 20000 \
+        --boundless-cycle-max-wei 500000 \
         {{verbosity}}
 
 devnet-prove block_number block_count="1" target="debug" verbosity="" data=".localtestdata": (prove block_number block_count "http://localhost:8545" "http://localhost:5052" "http://localhost:9545" "http://localhost:7545" data target verbosity)

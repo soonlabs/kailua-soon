@@ -131,10 +131,10 @@ pub struct MarketProviderConfig {
     #[clap(long, env, required = false)]
     pub boundless_assume_cycle_count: Option<u64>,
     /// Starting price (wei) per cycle of the proving order
-    #[clap(long, env, required = false, default_value = "0")]
+    #[clap(long, env, required = false, default_value = "20000")]
     pub boundless_cycle_min_wei: U256,
     /// Maximum price (wei) per cycle of the proving order
-    #[clap(long, env, required = false, default_value = "200000000")]
+    #[clap(long, env, required = false, default_value = "50000")]
     pub boundless_cycle_max_wei: U256,
     /// Collateral (ZKC) per gigacycle of the proving order
     #[clap(long, env, required = false, default_value = "1000")]
