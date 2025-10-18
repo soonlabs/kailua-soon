@@ -123,12 +123,11 @@ devnet-validate-boundless fastforward lookback target="debug" verbosity="" da_pr
         --beacon-rpc-url {{l1_beacon_rpc}} \
         --soon-node-url {{l2_rpc}} \
         --da-proxy-url {{da_proxy}} \
-        --kailua-host ./target/{{target}}/kailua-host \
         --data-dir {{data_dir}} \
         --validator-key {{validator}} \
         --boundless-rpc-url ${BOUNDLESS_RPC_URL} \
-        --boundless_chain_id 8453 \
-        --boundless_look_back {{lookback}} \
+        --boundless-chain-id 8453 \
+        --boundless-look-back {{lookback}} \
         --boundless-wallet-key ${BOUNDLESS_WALLET_KEY} \
         --boundless-market-address 0xfd152dadc5183870710fe54f939eae3ab9f0fe82 \
         --boundless-verifier-router-address 0x0b144e07a0826182b6b59788c34b32bfa86fb711 \
