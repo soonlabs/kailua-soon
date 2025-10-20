@@ -1,22 +1,17 @@
-use alloy_primitives::B256;
 use async_trait::async_trait;
 use copy_dir::copy_dir;
 use kona_host::single::{SingleChainHost, SingleChainLocalInputs};
 use kona_host::{DiskKeyValueStore, KeyValueStore, OfflineHostBackend, SplitKeyValueStore};
 use kona_preimage::errors::PreimageOracleResult;
-use kona_preimage::{
-    HintWriterClient, PreimageFetcher, PreimageKey, PreimageKeyType, PreimageOracleClient,
-};
+use kona_preimage::{HintWriterClient, PreimageFetcher, PreimageKey, PreimageOracleClient};
 use kona_proof::{BootInfo, FlushableCache};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
-use tokio::task::block_in_place;
 
 use crate::oracle::WitnessOracle;
-use crate::precondition::PreconditionValidationData;
 
 /// Data access statistics
 #[derive(Debug, Clone, Default)]
@@ -263,18 +258,6 @@ impl OfflineOracle<OfflineKeyValueStore> {
         if let Some(analyzer) = &self.analyzer {
             analyzer.clear();
         }
-    }
-
-    pub fn add_precondition_data(&self, data: PreconditionValidationData) -> B256 {
-        block_in_place(move || {
-            let mut kv = self.kv.blocking_write();
-            let precondition_data_hash = data.hash();
-            let preimage_key = PreimageKey::new(precondition_data_hash.0, PreimageKeyType::Sha256);
-            kv.set(B256::from(preimage_key), data.to_vec()).unwrap();
-            // sanity check
-            assert_eq!(kv.get(B256::from(preimage_key)).unwrap(), data.to_vec());
-            precondition_data_hash
-        })
     }
 }
 

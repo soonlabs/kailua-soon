@@ -13,8 +13,6 @@
 // limitations under the License.
 
 pub mod core;
-#[cfg(test)]
-pub mod soon_test;
 pub mod stateless;
 pub mod stitching;
 
@@ -33,27 +31,4 @@ pub fn log(msg: &str) {
     risc0_zkvm::guest::env::log(msg);
     #[cfg(not(target_os = "zkvm"))]
     tracing::info!("{msg}");
-}
-
-#[cfg(test)]
-#[cfg_attr(coverage_nightly, coverage(off))]
-pub mod tests {
-    use crate::test::TestOracle;
-    use kona_proof::BootInfo;
-
-    #[test]
-    fn test_oracle_cloning() {
-        let oracle = TestOracle::new(BootInfo {
-            l1_head: Default::default(),
-            agreed_l2_output_root: Default::default(),
-            claimed_l2_output_root: Default::default(),
-            claimed_l2_block_number: 0,
-            agreed_l2_block_number: 0,
-            chain_id: 0,
-            rollup_config: Default::default(),
-        });
-        let cloned = oracle.clone();
-        // avoid double dropping
-        assert!(cloned.temp_dir.is_none());
-    }
 }

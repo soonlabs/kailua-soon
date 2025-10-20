@@ -46,7 +46,7 @@ pub const BN254_CONTROL_ID: B256 =
 /// # Examples
 /// ```
 /// use anyhow::Result;
-/// use kailua_common::config::safe_default;
+/// use kailua_soon_kona::config::safe_default;
 ///
 /// let value = safe_default(Some(42), 0);
 /// assert_eq!(value.unwrap(), 42);

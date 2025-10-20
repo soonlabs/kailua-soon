@@ -232,8 +232,7 @@ pub mod tests {
 
     #[test]
     fn test_proof_journal_constructor() {
-        let config_hash =
-            B256::from(crate::config::config_hash(&SoonRollupConfig::default()).unwrap());
+        let config_hash = B256::from(crate::config::config_hash(&SoonRollupConfig::default()));
         let proof_journals = gen_proof_journals(512, 64, config_hash);
         // Test constructor
         for journal in proof_journals {

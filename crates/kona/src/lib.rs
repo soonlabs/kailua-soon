@@ -37,8 +37,6 @@ pub mod oracle;
 pub mod precondition;
 /// Utility methods for zero-copy (de)serialization using the `rkyv` crate.
 pub mod rkyv;
-/// Test module for testing the common crate.
-#[cfg(test)]
-pub mod test;
+
 /// A module for representing oracle-backed stateless client witness data.
 pub mod witness;

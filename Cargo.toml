@@ -163,24 +163,6 @@ overflow-checks = true
 codegen-units = 1
 opt-level = 3
 
-[patch."https://github.com/soonlabs/kona-soon"]
-# Local kona dependencies for testing (uncomment to use local paths)
-# kona-cli = { path = "../kona-soon/crates/utilities/cli" }
-# kona-host = { path = "../kona-soon/bin/host" }
-# kona-driver = { path = "../kona-soon/crates/protocol/driver" }
-# kona-executor = { path = "../kona-soon/crates/proof/executor" }
-# kona-mpt = { path = "../kona-soon/crates/proof/mpt" }
-# kona-preimage = { path = "../kona-soon/crates/proof/preimage" }
-# kona-proof = { path = "../kona-soon/crates/proof/proof" }
-# kona-std-fpvm = { path = "../kona-soon/crates/proof/std-fpvm" }
-# fraud-executor = { path = "../kona-soon/crates/executor/fraud" }
-# litesvm = { path = "../kona-soon/crates/executor/svm" }
-# soon-primitives = { path = "../kona-soon/crates/primitives" }
-# soon-derive = { path = "../kona-soon/crates/derive" }
-# soon-l2-chain-provider = { path = "../kona-soon/crates/l2provider" }
-# l1-block-info = { path = "../kona-soon/crates/programs/l1-block-info-program" }
-# bridge = { path = "../kona-soon/crates/programs/bridge-program" }
-
 [patch.crates-io]
 # Core Solana packages that definitely exist in soonlabs/agave
 solana-program = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }

@@ -337,35 +337,172 @@ impl<T: CommsClient> TrieProvider for OracleL1ChainProvider<T> {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::oracle::vec::VecOracle;
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+pub mod tests {
+    use super::*;
+    use crate::oracle::vec::tests::prepare_vec_oracle;
+    use crate::oracle::WitnessOracle;
+    use alloy_consensus::{ReceiptWithBloom, SignableTransaction, TxEip1559};
+    use alloy_eips::Encodable2718;
+    use alloy_primitives::{Log, Signature, U256};
+    use kona_mpt::{Nibbles, NoopTrieProvider};
 
-//     #[tokio::test]
-//     async fn test_concurrent_access() {
-//         let oracle = Arc::new(VecOracle::new());
-//         let provider = Arc::new(
-//             OracleL1ChainProvider::new(B256::ZERO, oracle)
-//                 .await
-//                 .unwrap(),
-//         );
+    #[tokio::test(flavor = "multi_thread")]
+    pub async fn test_l1_chain_provider() {
+        // prepare data
+        let mut vec_oracle = prepare_vec_oracle(0, 0).0;
+        // prepare txn data
+        let txn = TxEnvelope::Eip1559(
+            TxEip1559 {
+                chain_id: 0,
+                nonce: 0,
+                gas_limit: 0,
+                max_fee_per_gas: 0,
+                max_priority_fee_per_gas: 0,
+                to: Default::default(),
+                value: Default::default(),
+                access_list: Default::default(),
+                input: Default::default(),
+            }
+            .into_signed(Signature::new(U256::from(1), U256::from(2), true)),
+        );
+        let txn_data = txn.encoded_2718();
+        let mut txn_root = TrieNode::Empty;
+        txn_root
+            .insert(
+                &Nibbles::unpack(alloy_rlp::encode(0u64).as_slice()),
+                txn_data.into(),
+                &NoopTrieProvider,
+            )
+            .unwrap();
+        // prepare receipts data
+        let receipt = ReceiptEnvelope::Eip1559(ReceiptWithBloom::from(Receipt::<Log>::default()))
+            .into_primitives_receipt();
+        let receipt_data = receipt.encoded_2718();
+        let mut rpt_root = TrieNode::Empty;
+        rpt_root
+            .insert(
+                &Nibbles::unpack(alloy_rlp::encode(0u64).as_slice()),
+                receipt_data.into(),
+                &NoopTrieProvider,
+            )
+            .unwrap();
+        let head = Header {
+            parent_hash: B256::ZERO,
+            state_root: TrieNode::Empty.blind(),
+            transactions_root: txn_root.blind(),
+            receipts_root: rpt_root.blind(),
+            ..Default::default()
+        };
+        let head_hash = head.hash_slow();
+        // new
+        vec_oracle.insert_preimage(
+            PreimageKey::new_keccak256(head_hash.0),
+            alloy_rlp::encode(&head),
+        );
+        // transactions by hash
+        vec_oracle.insert_preimage(
+            PreimageKey::new_keccak256(head_hash.0),
+            alloy_rlp::encode(&head),
+        );
+        vec_oracle.insert_preimage(
+            PreimageKey::new_keccak256(txn_root.blind().0),
+            alloy_rlp::encode(&txn_root),
+        );
+        // receipts by hash
+        vec_oracle.insert_preimage(
+            PreimageKey::new_keccak256(head_hash.0),
+            alloy_rlp::encode(&head),
+        );
+        vec_oracle.insert_preimage(
+            PreimageKey::new_keccak256(rpt_root.blind().0),
+            alloy_rlp::encode(&rpt_root),
+        );
 
-//         // Test concurrent read access
-//         let handles: Vec<_> = (0..10)
-//             .map(|_| {
-//                 let provider = Arc::clone(&provider);
-//                 tokio::spawn(async move {
-//                     let headers = provider.headers.read().await;
-//                     let headers_map = provider.headers_map.read().await;
-//                     assert_eq!(headers.len(), 1);
-//                     assert_eq!(headers_map.len(), 1);
-//                 })
-//             })
-//             .collect();
+        // instantiate provider
+        let provider = OracleL1ChainProvider::new(head_hash, Arc::new(vec_oracle))
+            .await
+            .unwrap();
+        // txn by hash
+        assert_eq!(
+            provider.block_info_by_hash(head_hash).await.unwrap(),
+            (BlockInfo {
+                hash: head_hash,
+                number: 0,
+                parent_hash: B256::ZERO,
+                timestamp: 0,
+            })
+        );
+        // receipts by hash
+        assert_eq!(
+            provider.receipts_by_hash(head_hash).await.unwrap(),
+            vec![receipt.as_receipt().unwrap().clone()]
+        );
+    }
 
-//         for handle in handles {
-//             handle.await.unwrap();
-//         }
-//     }
-// }
+    #[tokio::test(flavor = "multi_thread")]
+    pub async fn test_l1_chain_provider_block_info_by_number() {
+        // prepare data
+        let mut vec_oracle = prepare_vec_oracle(0, 0).0;
+        let genesis = Header {
+            state_root: TrieNode::Empty.blind(),
+            transactions_root: TrieNode::Empty.blind(),
+            receipts_root: TrieNode::Empty.blind(),
+            ..Default::default()
+        };
+        let genesis_hash = genesis.hash_slow();
+        let head = Header {
+            parent_hash: genesis_hash,
+            number: 1,
+            ..Default::default()
+        };
+        let head_hash = head.hash_slow();
+        // new with head at 1
+        vec_oracle.insert_preimage(
+            PreimageKey::new_keccak256(head_hash.0),
+            alloy_rlp::encode(&head),
+        );
+        // block_info_by_number 0
+        vec_oracle.insert_preimage(
+            PreimageKey::new_keccak256(genesis_hash.0),
+            alloy_rlp::encode(&genesis),
+        );
+
+        // instantiate provider
+        let provider = OracleL1ChainProvider::new(head_hash, Arc::new(vec_oracle))
+            .await
+            .unwrap();
+        // fail to query future block
+        assert!(provider
+            .block_info_by_number(BlockNumberOrTag::Number(2))
+            .await
+            .is_err_and(|e| matches!(e, OracleProviderError::BlockNumberPastHead(_, _))));
+        // query genesis
+        assert_eq!(
+            provider
+                .block_info_by_number(BlockNumberOrTag::Number(0))
+                .await
+                .unwrap(),
+            BlockInfo {
+                hash: genesis_hash,
+                number: 0,
+                parent_hash: B256::ZERO,
+                timestamp: 0,
+            }
+        );
+        // use cache
+        assert_eq!(
+            provider
+                .block_info_by_number(BlockNumberOrTag::Number(0))
+                .await
+                .unwrap(),
+            BlockInfo {
+                hash: genesis_hash,
+                number: 0,
+                parent_hash: B256::ZERO,
+                timestamp: 0,
+            }
+        );
+    }
+}

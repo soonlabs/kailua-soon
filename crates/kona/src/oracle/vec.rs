@@ -463,6 +463,7 @@ pub mod tests {
     use std::collections::HashSet;
 
     pub fn prepare_vec_oracle(value_count: usize, copies: usize) -> (VecOracle, Vec<Vec<u8>>) {
+        QUEUE.clear_poison();
         let mut oracle = VecOracle::default();
         assert_eq!(oracle.preimage_count(), 0);
 
@@ -765,7 +766,7 @@ pub mod tests {
 
     #[tokio::test]
     async fn test_noop() {
-        let oracle = VecOracle::default();
+        let oracle = prepare_vec_oracle(0, 0).0;
         oracle.write("noop").await.unwrap();
         oracle.flush();
         assert_eq!(oracle.preimage_count(), 0);

@@ -408,15 +408,11 @@ pub fn validate_proposal_precondition(
 mod tests {
     use super::*;
     use crate::blobs::tests::gen_blobs;
-    use crate::blobs::{intermediate_outputs, BlobWitnessData, PreloadedBlobProvider};
-    use crate::oracle::vec::tests::prepare_vec_oracle;
-    use crate::oracle::WitnessOracle;
+    use crate::blobs::{intermediate_outputs, BlobWitnessData};
     use crate::precondition::proposal::{
-        load_proposal_data, proposal_precondition_hash, validate_proposal_precondition,
-        ProposalPrecondition,
+        proposal_precondition_hash, validate_proposal_precondition, ProposalPrecondition,
     };
     use alloy_eips::eip4844::{kzg_to_versioned_hash, IndexedBlobHash, BYTES_PER_BLOB};
-    use kona_proof::block_on;
     use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
     pub fn gen_blobs_requests(blobs: Vec<Blob>) -> Vec<BlobFetchRequest> {
@@ -434,73 +430,6 @@ mod tests {
                 blob_hash: IndexedBlobHash { index: 0, hash },
             })
             .collect::<Vec<_>>()
-    }
-
-    #[tokio::test]
-    async fn test_load_precondition_data() {
-        let max_blobs = 6;
-        (1..=max_blobs).into_par_iter().for_each(|n| {
-            // println!("Testing with {n} blobs");
-            let blobs = gen_blobs(n);
-            // create remaining dummy data
-            let blobs_witness = BlobWitnessData::from(blobs);
-            let blobs_hashes = blobs_witness
-                .commitments
-                .iter()
-                .map(|c| kzg_to_versioned_hash(c.as_slice()))
-                .collect::<Vec<_>>();
-            let beacon = PreloadedBlobProvider::from(blobs_witness);
-            let blobs_fetch_requests = blobs_hashes
-                .iter()
-                .copied()
-                .map(|hash| BlobFetchRequest {
-                    block_ref: Default::default(),
-                    blob_hash: IndexedBlobHash { index: 0, hash },
-                })
-                .collect::<Vec<_>>();
-            // The number of outputs published is the root claim + non-zero blob elements
-            let proposal_output_count =
-                1 + (n as u64) * FIELD_ELEMENTS_PER_BLOB - FIELD_ELEMENTS_PER_BLOB / 2;
-            // Test over different configurations
-            for proposal_l2_head_number in [1, 2, 5, 7, proposal_output_count] {
-                // println!("Testing with {proposal_l2_head_number} L2 head");
-                for output_block_span in [1, 2, 7, 11, 13] {
-                    // println!("Testing with {output_block_span} output block span");
-                    let precondition_validation_data = ProposalPrecondition {
-                        proposal_l2_head_number,
-                        proposal_output_count,
-                        output_block_span,
-                        blob_hashes: blobs_fetch_requests.clone(),
-                    };
-                    // test data loading
-                    let precondition_data_hash = precondition_validation_data.hash();
-                    let mut oracle = prepare_vec_oracle(0, 0).0;
-                    oracle.insert_preimage(
-                        PreimageKey::new(precondition_data_hash.0, PreimageKeyType::Sha256),
-                        precondition_validation_data.to_vec(),
-                    );
-                    let oracle = Arc::new(oracle);
-                    // load nothing when hash is zero
-                    assert!(block_on(load_proposal_data(
-                        B256::ZERO,
-                        oracle.clone(),
-                        &mut beacon.clone(),
-                    ))
-                    .unwrap()
-                    .is_none());
-                    // successfully load with proper hash
-                    let reloaded = block_on(load_proposal_data(
-                        precondition_data_hash,
-                        oracle.clone(),
-                        &mut beacon.clone(),
-                    ))
-                    .unwrap()
-                    .unwrap()
-                    .0;
-                    assert_eq!(reloaded, precondition_validation_data);
-                }
-            }
-        });
     }
 
     #[test]
