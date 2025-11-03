@@ -1,0 +1,571 @@
+<!DOCTYPE HTML>
+<html lang="en" class="ayu sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Validator - The Kailua Book</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="./mdbook-admonish.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "ayu";
+            const default_dark_theme = "ayu";
+            window.path_to_searchindex_js = "searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('ayu')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Kailua Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/risc0/kailua" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/risc0/kailua/edit/main/book/src/validator.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="kailua-validator"><a class="header" href="#kailua-validator">Kailua Validator</a></h1>
+<p>The Kailua validator watches your rollup for sequencing proposals that contradict each other and generates a ZK fault
+proof to settle the dispute between them.</p>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note"></a>
+</div>
+<div>
+<p>The Kailua validator agent requires access to an archive <code>op-geth</code> rollup node to retrieve data during proof generation.
+Node software other than <code>op-geth</code> is not as reliable for the necessary <code>debug</code> namespace rpc calls.</p>
+</div>
+</div>
+<h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
+<p>Starting the Kailua validator is straightforward:</p>
+<pre><code class="language-shell">kailua-cli validate [OPTIONS] --op-node-url &lt;OP_NODE_URL&gt; --op-geth-url &lt;OP_GETH_URL&gt; --eth-rpc-url &lt;ETH_RPC_URL&gt; --beacon-rpc-url &lt;BEACON_RPC_URL&gt;
+</code></pre>
+<div id="admonition-tip" class="admonition admonish-tip" role="note" aria-labelledby="admonition-tip-title">
+<div class="admonition-title">
+<div id="admonition-tip-title">
+<p>Tip</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-tip"></a>
+</div>
+<div>
+<p>All the parameters above can be provided as environment variables.</p>
+</div>
+</div>
+<h3 id="remote-endpoints"><a class="header" href="#remote-endpoints">Remote Endpoints</a></h3>
+<p>The mandatory arguments specify the endpoints that the validator should use to resolve disputes:</p>
+<ul>
+<li><code>eth-rpc-url</code>: The parent chain (ethereum) endpoint for reading proposals.</li>
+<li><code>beacon-rpc-url</code>: The DA layer (eth-beacon chain) endpoint for retrieving rollup data.</li>
+<li><code>op-geth-url</code>: The rollup <code>op-geth</code> endpoint to read configuration data from.</li>
+<li><code>op-node-url</code>: The rollup <code>op-node</code> endpoint to read sequencing proposals from.</li>
+</ul>
+<h3 id="rpc-calls"><a class="header" href="#rpc-calls">RPC Calls</a></h3>
+<p>To fine-tune the interaction with the above endpoints, the following additional parameters can be specified:</p>
+<ul>
+<li><code>op-rpc-delay</code>: Number of L2 blocks to delay observation by (default: 0).</li>
+<li><code>rpc-poll-interval</code>: Time (in seconds) between successive RPC polls (default: 6).</li>
+<li><code>op-node-timeout</code>: Timeout (seconds) for an OP-NODE RPC request (default: 5).</li>
+<li><code>op-geth-timeout</code>: Timeout (seconds) for an OP-GETH RPC request (default: 2).</li>
+<li><code>eth-rpc-timeout</code>: Timeout (seconds) for an ETH RPC request (default: 2).</li>
+<li><code>beacon-rpc-timeout</code>: Timeout (seconds) for a BEACON RPC request (default: 20).</li>
+</ul>
+<h3 id="cache-directory"><a class="header" href="#cache-directory">Cache Directory</a></h3>
+<p>The validator saves data to disk as it tracks on-chain proposals.
+This allows it to restart quickly.</p>
+<ul>
+<li><code>data-dir</code>: Optional directory to save data to.
+<ul>
+<li>If unspecified, a tmp directory is created.</li>
+</ul>
+</li>
+</ul>
+<h3 id="kailua-deployment"><a class="header" href="#kailua-deployment">Kailua Deployment</a></h3>
+<p>These arguments manually determine the Kailua contract deployment to use and the termination condition.</p>
+<ul>
+<li><code>kailua-game-implementation</code>: The <code>KailuaGame</code> contract address.</li>
+<li><code>kailua-anchor-address</code>: Address of the first proposal to synchronize from.</li>
+<li><code>final-l2-block</code>: The last L2 block number to reach and then stop.</li>
+</ul>
+<h3 id="telemetry"><a class="header" href="#telemetry">Telemetry</a></h3>
+<p>Telemetry data can be exported to an <a href="https://opentelemetry.io/docs/collector/">OTLP Collector</a>.</p>
+<ul>
+<li><code>otlp-collector</code>: The OTLP collector endpoint.</li>
+</ul>
+<h3 id="rollup-config"><a class="header" href="#rollup-config">Rollup Config</a></h3>
+<p>These arguments tell Kailua how to read the rollup configuration.</p>
+<ul>
+<li><code>bypass-chain-registry</code>: This flag forces the rollup configuration to be fetched from <code>op-node</code> and <code>op-geth</code>.</li>
+</ul>
+<h3 id="prover"><a class="header" href="#prover">Prover</a></h3>
+<p>The validator proving behavior can be customized through the following arguments:</p>
+<ul>
+<li><code>kailua-cli</code>: The optional path of the external binary to call for custom proof generation.</li>
+<li><code>num-concurrent-provers</code>: Number of provers to run simultaneously (Default: 1).</li>
+<li><code>num-concurrent-preflights</code>: Number of threads per prover to use for fetching preflight data (Default: 4).</li>
+<li><code>num-concurrent-proofs</code>: Number of threads per prover to use for computing sub-proofs (Default: 1).</li>
+<li><code>num-concurrent-witgens</code>: How many threads to use for witness generation per prover.</li>
+<li><code>num-concurrent-r0vm</code>: How many threads to use for zkvm executors per prover.</li>
+<li><code>segment-limit</code>: ZKVM Proving Segment Limit (Default 21).</li>
+<li><code>max-witness-size</code>: Maximum input data byte size per single proof (Default 2.5 GB).</li>
+<li><code>max-proof-stitches</code>: Maximum number of derivation proofs to aggregate per stitching proof.</li>
+<li><code>max-block-derivations</code>: Maximum number of blocks to derive per single proof.</li>
+<li><code>max-block-executions</code>: Maximum number of blocks to execute per single proof.</li>
+<li><code>num-tail-blocks</code>: Rate of growth of tail proofs in L1 blocks (Default 10).</li>
+<li><code>enable-experimental-witness-endpoint</code>: Enables the use of <code>debug_executePayload</code> to collect the execution witness from the execution layer.</li>
+<li><code>max-fault-proving-delay</code>: The maximum amount of seconds to wait before starting to compute a fault proof (Default 86400).</li>
+<li><code>max-validity-proving-delay</code>: The maximum amount of seconds to wait before starting to compute a validity proof (Default 0).</li>
+<li><code>clear-cache-data</code>: Whether to clear cache data after successful completion (Default false).</li>
+</ul>
+<h3 id="alt-da"><a class="header" href="#alt-da">Alt DA</a></h3>
+<p>The following additional parameters are required if an alternative DA method is used:</p>
+<ul>
+<li><code>eigenda-proxy-address</code>: URL of the EigenDA RPC endpoint.</li>
+<li><code>celestia-connection</code>: Connection to celestia network.</li>
+<li><code>celestia-auth-token</code>: Token for the Celestia node connection.</li>
+<li><code>celestia-namespace</code>: Celestia Namespace to fetch data from.</li>
+</ul>
+<h3 id="wallet"><a class="header" href="#wallet">Wallet</a></h3>
+<p>The validator requires a funded wallet to be able to publish fault proofs on chain, and an (optional) alternative address
+to direct fault proof submission payouts towards.
+This wallet can be specified directly as a private key or as an external AWS/GCP signer.</p>
+<ul>
+<li><code>validator-key</code>: The private key for the validator wallet.</li>
+<li><code>payout-recipient-address</code>: The ethereum address to use as the recipient of fault proof payouts.</li>
+<li><code>validator-aws-key-id</code>: AWS KMS Key ID</li>
+<li><code>validator-google-project-id</code>: GCP KMS Project ID</li>
+<li><code>validator-google-location</code>: GCP KMS Location</li>
+<li><code>validator-google-keyring</code>: GCP KMS Keyring Name</li>
+<li><code>validator-google-key-name</code>: GCP KMS Key name</li>
+</ul>
+<div id="admonition-tip-1" class="admonition admonish-tip" role="note" aria-labelledby="admonition-tip-1-title">
+<div class="admonition-title">
+<div id="admonition-tip-1-title">
+<p>Tip</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-tip-1"></a>
+</div>
+<div>
+<p><code>validator-key</code> can be replaced with the corresponding AWS/GCP parameters as described <a href="upgrade.html#kms-support">here</a>.</p>
+</div>
+</div>
+<div id="admonition-warning" class="admonition admonish-warning" role="note" aria-labelledby="admonition-warning-title">
+<div class="admonition-title">
+<div id="admonition-warning-title">
+<p>Warning</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-warning"></a>
+</div>
+<div>
+<p>You must keep your validator's wallet well funded to guarantee the liveness of your rollup and prevent faulty proposals
+from delaying the finality of honest sequencing proposals.</p>
+</div>
+</div>
+<div id="admonition-success" class="admonition admonish-success" role="note" aria-labelledby="admonition-success-title">
+<div class="admonition-title">
+<div id="admonition-success-title">
+<p>Success</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-success"></a>
+</div>
+<div>
+<p>Running <code>kailua-cli validate</code> should monitor your rollup for any disputes and generate the required proofs!</p>
+</div>
+</div>
+<h3 id="transactions"><a class="header" href="#transactions">Transactions</a></h3>
+<p>You can control transaction publication through the two following parameters:</p>
+<ul>
+<li><code>txn-timeout</code>: A timeout in seconds for transaction broadcast (default 120)</li>
+<li><code>exec-gas-premium</code>: An added premium percentage to estimated execution gas fees (Default 25)</li>
+</ul>
+<p>The premium parameter increases the internally estimated fees by the specified percentage.</p>
+<h3 id="upgrades"><a class="header" href="#upgrades">Upgrades</a></h3>
+<p>If you re-deploy the KailuaTreasury/KailuaGame contracts to upgrade your fault proof system, you will need to restart
+your validator (and proposer).
+By default, the validator (and proposer) will use the latest contract deployment available upon start up, and ignore any
+proposals not made using them.
+If you wish to start a validator for a past deployment, you can explicitly specify the deployed KailuaGame contract
+address using the optional <code>kailua-game-implementation</code> parameter.</p>
+<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
+<div class="admonition-title">
+<div id="admonition-note-1-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note-1"></a>
+</div>
+<div>
+<p>The validator will not generate any proofs for proposals made using a different deployment than the one used at start up.</p>
+</div>
+</div>
+<h2 id="validity-proof-generation"><a class="header" href="#validity-proof-generation">Validity Proof Generation</a></h2>
+<p>Instead of only generating fault proofs, the validator can be instructed to generate a validity proof for every correct
+canonical proposal it encounters to fast-forward finality until a specified block height.
+This is configured using the below parameters:</p>
+<ul>
+<li><code>fast-forward-target</code>: The L2 block height until which validity proofs should be computed.</li>
+<li><code>fast-forward-start</code>: Block height to start fast-forwarding finality.</li>
+</ul>
+<div id="admonition-note-2" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-2-title">
+<div class="admonition-title">
+<div id="admonition-note-2-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note-2"></a>
+</div>
+<div>
+<p>To indefinitely power a validity-proof only rollup, this value can be specified to the maximum 64-bit value of
+<code>18446744073709551615</code>.</p>
+</div>
+</div>
+<div id="admonition-success-1" class="admonition admonish-success" role="note" aria-labelledby="admonition-success-1-title">
+<div class="admonition-title">
+<div id="admonition-success-1-title">
+<p>Success</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-success-1"></a>
+</div>
+<div>
+<p>Running <code>kailua-cli validate</code> with the above parameter should generate a validity proof as soon as a correct proposal
+is made by an honest proposer!</p>
+</div>
+</div>
+<h2 id="delegated-proof-generation"><a class="header" href="#delegated-proof-generation">Delegated Proof Generation</a></h2>
+<p>Extra parameters and environment variables can be specified to determine exactly where the RISC Zero proof
+generation takes place.
+Running using only the parameters above will generate proofs using the local RISC Zero prover available to the validator.
+Alternatively, proof generation can be delegated to an external service such as <a href="https://risczero.com/bonsai">Bonsai</a>,
+or to the decentralized <a href="https://docs.beboundless.xyz/">Boundless proving network</a>.</p>
+<div id="admonition-note-3" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-3-title">
+<div class="admonition-title">
+<div id="admonition-note-3-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note-3"></a>
+</div>
+<div>
+<p>All data required to generate the proof can be publicly derived from the public chain data available for your rollup,
+making this process safe to delegate.</p>
+</div>
+</div>
+<h3 id="bonsai"><a class="header" href="#bonsai">Bonsai</a></h3>
+<p>Enabling proving using <a href="https://risczero.com/bonsai">Bonsai</a> requires you to set the following two environment variables before running the validator:</p>
+<ul>
+<li><code>BONSAI_API_KEY</code>: Your Bonsai API key.</li>
+<li><code>BONSAI_API_URL</code>: Your Bonsai API url.</li>
+</ul>
+<div id="admonition-success-2" class="admonition admonish-success" role="note" aria-labelledby="admonition-success-2-title">
+<div class="admonition-title">
+<div id="admonition-success-2-title">
+<p>Success</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-success-2"></a>
+</div>
+<div>
+<p>Running <code>kailua-cli validate</code> with these two environment variables should now delegate all validator proving to <a href="https://risczero.com/bonsai">Bonsai</a>!</p>
+</div>
+</div>
+<h3 id="boundless"><a class="header" href="#boundless">Boundless</a></h3>
+<p>When delegating generation of Kailua Fault proofs to the decentralized <a href="https://docs.beboundless.xyz/">Boundless proving network</a>,
+for every fault proof, a proof request is submitted to the network, where it goes through the standard
+<a href="https://docs.beboundless.xyz/provers/proof-lifecycle">proof life-cycle</a> on boundless, before being published by
+your validator to settle a dispute.</p>
+<p>This functionality requires some additional parameters when starting the validator.
+These parameters can be passed in as CLI arguments or set as environment variables</p>
+<h4 id="proof-requests"><a class="header" href="#proof-requests">Proof Requests</a></h4>
+<p>The following first set of parameters determine where/how requests are made:</p>
+<ul>
+<li><code>boundless-rpc-url</code>: The rpc endpoint of the L1 chain where the Boundless network is deployed.</li>
+<li><code>boundless-wallet-key</code>: The wallet private key to use to send proof request transactions.</li>
+<li><code>boundless-order-stream-url</code>: (Optional) The URL to use for off-chain order submission.</li>
+<li><code>boundless-chain-id</code>: EIP-155 chain ID of the network hosting Boundless.</li>
+<li><code>boundless-verifier-router-address</code>: Address of the RiscZeroVerifierRouter contract.</li>
+<li><code>boundless-set-verifier-address</code>: The address of the RISC Zero verifier supporting aggregated proofs for order validation.</li>
+<li><code>boundless-market-address</code>: The address of the Boundless market contract.</li>
+<li><code>boundless-collateral-token-address</code>: Address of the stake collateral ERC-20 contract.</li>
+<li><code>boundless-lookback</code>: (Defaults to <code>5</code>) The number of previous proof requests to inspect for duplicates before making a new proof request.</li>
+<li><code>boundless-assume-cycle-count</code>: Whether to skip preflighting execution and assume the given cycle count.</li>
+<li><code>boundless-cycle-min-wei</code>: (Defaults to <code>0</code>) Starting price (wei) per cycle of proving.</li>
+<li><code>boundless-cycle-max-wei</code>: (Defaults to <code>200000000</code>) Maximum price (wei) per cycle of proving.</li>
+<li><code>boundless-mega-cycle-collateral</code>: Collateral (ZKC) per megacycle of the proving order (Default 1000).</li>
+<li><code>boundless-order-bid-delay-factor</code>: Multiplier for delay before order price starts ramping up (Default 0.1)</li>
+<li><code>boundless-order-ramp-up-factor</code>: (Defaults to <code>0.25</code>) Multiplier for order price to ramp up to maximum.</li>
+<li><code>boundless-order-lock-timeout-factor</code>: (Defaults to <code>3</code>) Multiplier for order fulfillment timeout after locking.</li>
+<li><code>boundless-order-expiry-factor</code>: (Defaults to <code>10</code>) Multiplier for order expiry timeout after creation.</li>
+<li><code>boundless-order-check-interval</code>: (Defaults to <code>12</code>) Time in seconds between attempts to check order status.</li>
+<li><code>boundless-enable-upload-caching</code>: Whether to enable image/input upload caching.</li>
+<li><code>boundless-order-submission-cooldown</code>: Time in seconds between attempts to submit new orders (Default 12).</li>
+</ul>
+<div id="admonition-note-4" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-4-title">
+<div class="admonition-title">
+<div id="admonition-note-4-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note-4"></a>
+</div>
+<div>
+<p>Order timeouts are set by default to the number of megacycles in a proof request.
+The multipliers allow you to scale these timeouts according to your expected proving speeds.
+The default scale values give a 1 MHz prover 3x the amount of time it needs to fulfill a request once it's locked, and
+10x its expected proving time as overall timeout.</p>
+</div>
+</div>
+<h4 id="storage-provider"><a class="header" href="#storage-provider">Storage Provider</a></h4>
+<p>The below second set of parameters determine where the proven executable and its input are stored:</p>
+<ul>
+<li><code>storage-provider</code>: One of <code>s3</code>, <code>pinata</code>, or <code>file</code>.</li>
+<li><code>s3-access-key</code>: The <code>s3</code> access key.</li>
+<li><code>s3-secret-key</code>: The <code>s3</code> secret key.</li>
+<li><code>s3-bucket</code>: The <code>s3</code> bucket.</li>
+<li><code>s3-url</code>: The <code>s3</code> url.</li>
+<li><code>s3-use-presigned</code>: Use presigned URLs for S3.</li>
+<li><code>aws-region</code>: The <code>s3</code> region.</li>
+<li><code>pinata-jwt</code>: The private <code>pinata</code> jwt.</li>
+<li><code>pinata-api-url</code>: The <code>pinata</code> api URL.</li>
+<li><code>ipfs-gateway-url</code>: The <code>pinata</code> gateway URL.</li>
+<li><code>file-path</code>: The file storage provider path.</li>
+<li><code>r2-domain</code>: Custom domain for file retrieval. Currently used to upload with a custom prefix and replace the download URL with this domain.</li>
+</ul>
+<div id="admonition-success-3" class="admonition admonish-success" role="note" aria-labelledby="admonition-success-3-title">
+<div class="admonition-title">
+<div id="admonition-success-3-title">
+<p>Success</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-success-3"></a>
+</div>
+<div>
+<p>Running <code>kailua-cli validate</code> with the above extra arguments should now delegate all validator proving to the <a href="https://docs.beboundless.xyz/">Boundless proving network</a>!</p>
+</div>
+</div>
+<h2 id="advanced-settings"><a class="header" href="#advanced-settings">Advanced Settings</a></h2>
+<div id="admonition-warning-1" class="admonition admonish-warning" role="note" aria-labelledby="admonition-warning-1-title">
+<div class="admonition-title">
+<div id="admonition-warning-1-title">
+<p>Warning</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-warning-1"></a>
+</div>
+<div>
+<p>The below settings should not be normally used in production.</p>
+</div>
+</div>
+<p>When manually computing individual proofs, the following parameters (or equiv. env. vars) take effect:</p>
+<ul>
+<li><code>SKIP_AWAIT_PROOF</code>: Skips waiting for the proving process to complete on Bonsai/Boundless.</li>
+<li><code>SKIP_DERIVATION_PROOF</code>: Skips provably deriving L2 transactions using L1 data.</li>
+<li><code>L1_HEAD_JUMP_BACK</code>: The number of l1 heads to jump back when initially proving.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="proposer.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="rpc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="proposer.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="rpc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="mermaid.min.js"></script>
+        <script src="mermaid-init.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

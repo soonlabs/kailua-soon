@@ -1,0 +1,415 @@
+<!DOCTYPE HTML>
+<html lang="en" class="ayu sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Dispute Resolution - The Kailua Book</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="./mdbook-admonish.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "ayu";
+            const default_dark_theme = "ayu";
+            window.path_to_searchindex_js = "searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('ayu')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Kailua Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/risc0/kailua" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/risc0/kailua/edit/main/book/src/dispute.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="on-chain-dispute-resolution"><a class="header" href="#on-chain-dispute-resolution">On-chain Dispute Resolution</a></h1>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note"></a>
+</div>
+<div>
+<p>If you've successfully performed fast-track migration, you do not need to follow the steps on this page.</p>
+</div>
+</div>
+<p>Kailua's on-chain dispute mechanism is powered by its own custom contracts that define a novel ZK dispute game.
+Each rollup has to deploy its own pair of dispute resolution contracts, and this section will guide you through that
+process.</p>
+<p>The commands below will be using Foundry's <code>forge</code> and <code>cast</code> utilities, which you should have installed as part of the
+foundry <a href="quickstart.html#prerequisites">prerequisite</a>.</p>
+<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
+<div class="admonition-title">
+<div id="admonition-note-1-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note-1"></a>
+</div>
+<div>
+<p>The below foundry commands expect both a parameter that determines the wallet to use and the rpc endpoint of the parent
+chain.
+You will have to add these two parameters manually to every command below.
+For more information, refer to <code>forge create --help</code>, <code>cast call --help</code>, and <code>cast send --help</code></p>
+</div>
+</div>
+<p>First, change your working directory to <code>crates/contracts/foundry</code> for <code>forge</code> to work:</p>
+<pre><code class="language-shell">cd crates/contracts/foundry
+</code></pre>
+<div id="admonition-warning" class="admonition admonish-warning" role="note" aria-labelledby="admonition-warning-title">
+<div class="admonition-title">
+<div id="admonition-warning-title">
+<p>Warning</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-warning"></a>
+</div>
+<div>
+<p>The parameters used to deploy the contracts below are immutable.
+Any changes will require redeployment of both the <code>KailuaGame</code> and <code>KailuaTreasury</code> contracts, along with a repetition of
+the steps in the latter sections.
+The same <code>KailuaTreasury</code> deployment <strong>should NOT</strong> be reused with multiple <code>KailuaGame</code> deployments, unless they were
+<strong>never</strong> used to publish a proposal (except for the last <code>KailuaGame</code> deployment used).</p>
+</div>
+</div>
+<h2 id="kailuatreasury"><a class="header" href="#kailuatreasury">KailuaTreasury</a></h2>
+<pre><code class="language-solidity">constructor(
+  IRiscZeroVerifier _verifierContract,
+  bytes32 _imageId,
+  bytes32 _configHash,
+  uint256 _proposalOutputCount,
+  uint256 _outputBlockSpan,
+  GameType _gameType,
+  OptimismPortal2 _optimismPortal,
+  Claim _rootClaim,
+  uint64 _l2BlockNumber
+)
+</code></pre>
+<p>This contract stores the collateral bonds required for sequencers to publish their proposal, and also stores the first
+sequencing proposal for Kailua as a fault dispute game in your rollup.</p>
+<div id="admonition-note-2" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-2-title">
+<div class="admonition-title">
+<div id="admonition-note-2-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note-2"></a>
+</div>
+<div>
+<p>Each published proposal on the L1 will cover <code>proposalOutputCount × outputBlockSpan</code> L2 blocks, and require
+publication of <code>proposalOutputCount</code> 32-byte commitments on the DA layer.</p>
+</div>
+</div>
+<h2 id="anchor-point"><a class="header" href="#anchor-point">Anchor Point</a></h2>
+<p>First, you will need to choose the rollup block number from which Kailua sequencing should start.
+Then, you need to query your <code>op-node</code> for the <code>outputRoot</code> at that block number as follows:</p>
+<pre><code class="language-shell">cast rpc --rpc-url [YOUR_OP_NODE_ADDRESS] \
+  "optimism_outputAtBlock" \
+  $(cast 2h [YOUR_STARTING_L2_BLOCK_NUMBER])
+</code></pre>
+<div id="admonition-tip" class="admonition admonish-tip" role="note" aria-labelledby="admonition-tip-title">
+<div class="admonition-title">
+<div id="admonition-tip-title">
+<p>Tip</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-tip"></a>
+</div>
+<div>
+<p>You can quickly filter through the response for <code>outputRoot</code> by piping it to <code>jq -r .outputRoot</code></p>
+</div>
+</div>
+<h3 id="deployment"><a class="header" href="#deployment">Deployment</a></h3>
+<p>Deployment of this contract is via the command below:</p>
+<pre><code class="language-shell">forge create KailuaTreasury --constructor-args \
+  [YOUR_RISC_ZERO_VERIFIER] \
+  [YOUR_FPVM_IMAGE_ID] \
+  [YOUR_ROLLUP_CONFIG_HASH] \
+  [YOUR_PROPOSAL_OUTPUT_COUNT] \
+  [YOUR_OUTPUT_BLOCK_SPAN] \
+  [YOUR_KAILUA_GAME_TYPE] \
+  [YOUR_OPTIMISM_PORTAL] \
+  [YOUR_OUTPUT_ROOT_CLAIM] \
+  [YOUR_L2_BLOCK_NUMBER]
+</code></pre>
+<p>Deploying the contract successfully should yield similar output to the following:</p>
+<pre><code>Deployer: [YOUR_DEPLOYER_WALLET_ADDRESS]
+Deployed to: [YOUR_DEPLOYED_TREASURY_CONTRACT]
+Transaction hash: [YOUR_DEPLOYMENT_TRANSACTION_HASH]
+</code></pre>
+<p>Take note of the contract address since we'll need it later.</p>
+<div id="admonition-tip-1" class="admonition admonish-tip" role="note" aria-labelledby="admonition-tip-1-title">
+<div class="admonition-title">
+<div id="admonition-tip-1-title">
+<p>Tip</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-tip-1"></a>
+</div>
+<div>
+<p>If your rollup <code>owner</code> account is controlled by a <code>Safe</code> contract, or some other multi-sig contract, you can use
+<code>cast calldata</code> to get the necessary input that your wallet contract should forward.</p>
+<ul>
+<li>You can use the <a href="https://github.com/safe-global/safe-cli">safe cli</a> to issue the necessary <code>send-custom</code> commands.</li>
+<li>You can use the <a href="https://app.safe.global/home">safe gui</a> web app to create the necessary transactions.</li>
+</ul>
+</div>
+</div>
+<h2 id="kailuagame"><a class="header" href="#kailuagame">KailuaGame</a></h2>
+<pre><code class="language-solidity">constructor(
+  IKailuaTreasury _kailuaTreasury,
+  IRiscZeroVerifier _verifierContract,
+  uint256 _genesisTimeStamp,
+  uint256 _l2BlockTime,
+  Duration _maxClockDuration
+)
+</code></pre>
+<p>This contract is used by the optimism <code>DisputeGameFactory</code> to instantiate every Kailua sequencing proposal after the
+initial one in the <code>KailuaTreasury</code>.
+Deployment is fairly similar to the treasury via the command below:</p>
+<pre><code class="language-shell">forge create KailuaGame --evm-version cancun --constructor-args \
+  [YOUR_DEPLOYED_TREASURY_CONTRACT] \
+  [YOUR_GENESIS_TIMESTAMP] \
+  [YOUR_BLOCK_TIME] \
+  [YOUR_MAX_CLOCK_DURATION]
+</code></pre>
+<div id="admonition-note-3" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-3-title">
+<div class="admonition-title">
+<div id="admonition-note-3-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note-3"></a>
+</div>
+<div>
+<p>The above forge command requires the <code>--evm-version cancun</code> argument.</p>
+</div>
+</div>
+<p>Deploying the contract successfully should yield similar output to the following:</p>
+<pre><code>Deployer: [YOUR_DEPLOYER_WALLET_ADDRESS]
+Deployed to: [YOUR_DEPLOYED_GAME_CONTRACT]
+Transaction hash: [YOUR_DEPLOYMENT_TRANSACTION_HASH]
+</code></pre>
+<p>Note down this contract's address, we'll use it later.
+There is no configuration needed for this contract.</p>
+<div id="admonition-success" class="admonition admonish-success" role="note" aria-labelledby="admonition-success-title">
+<div class="admonition-title">
+<div id="admonition-success-title">
+<p>Success</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-success"></a>
+</div>
+<div>
+<p>You now have two Kailua dispute resolution contracts tailored to your rollup and ZK verifier!</p>
+</div>
+</div>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="verifier.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="treasury.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="verifier.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="treasury.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="mermaid.min.js"></script>
+        <script src="mermaid-init.js"></script>
+
+
+
+    </div>
+    </body>
+</html>
