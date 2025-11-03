@@ -168,19 +168,19 @@ opt-level = 3
 solana-program = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }
 solana-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }
 solana-account-decoder = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }
-solana-ledger = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }
+#solana-ledger = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }
 
 # Critical patch to resolve SPL package dependencies with our custom Solana version
 # This prevents duplicate versions of solana-program and solana-zk-token-sdk
 solana-zk-token-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }
 solana-curve25519 = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }
-solana-zk-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }
+#solana-zk-sdk = { git = "https://github.com/soonlabs/agave", branch = "feat/upgrade_for_kailua_v1.1.0" }
 solana_rbpf = { git = "https://github.com/soonlabs/rbpf", branch = "feat/risc0-zkvm" }
 
 # Risc0 related dependencies
 curve25519-dalek = { git = "https://github.com/risc0/curve25519-dalek.git", tag = "curve25519-4.1.2-risczero.0" }
 ed25519-dalek = { git = "https://github.com/risc0/curve25519-dalek.git", tag = "curve25519-4.1.2-risczero.0" }
-sha2 = { git = "https://github.com/risc0/RustCrypto-hashes", tag = "sha2-v0.10.8-risczero.0" }
+#sha2 = { git = "https://github.com/risc0/RustCrypto-hashes", tag = "sha2-v0.10.8-risczero.0" }
 k256 = { git = "https://github.com/risc0/RustCrypto-elliptic-curves", tag = "k256/v0.13.4-risczero.1" }
 tiny-keccak = { git = "https://github.com/risc0/tiny-keccak", tag = "tiny-keccak/v2.0.2-risczero.0" }
 crypto-bigint = { git = "https://github.com/risc0/RustCrypto-crypto-bigint", tag = "v0.5.5-risczero.0" }
