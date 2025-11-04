@@ -237,7 +237,7 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
     if !owed_collateral.is_zero() {
         transaction = transaction.value(owed_collateral);
     }
-    if !sidecar.blobs.is_empty() {
+    if proposal_output_count > 1 && !sidecar.blobs.is_empty() {
         transaction = transaction.sidecar(sidecar);
     }
     match transaction
