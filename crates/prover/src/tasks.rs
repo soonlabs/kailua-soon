@@ -861,7 +861,7 @@ pub fn create_cached_execution_task(
         Precondition::default().execution(exec_precondition_hash(executed_blocks.as_slice()));
 
     // Force the proving attempt regardless of witness size if we prove just one block
-    let force_attempt = num_blocks == 1;
+    let force_attempt = num_blocks == 50;
     let executed_blocks = executed_blocks
         .iter()
         .map(|a| a.as_ref().clone())

@@ -201,7 +201,7 @@ pub async fn prove(mut args: ProveArgs) -> anyhow::Result<bool> {
                 );
             }
             // Force the proving attempt regardless of witness size if we prove just one block
-            let force_attempt = num_blocks == 1 || job_args.kona.is_offline();
+            let force_attempt = num_blocks == 50 || job_args.kona.is_offline();
 
             // spawn an async task that computes the proof using one of the instantiated handlers and sends back the result to result_channel
             let rollup_config = rollup_config.clone();
