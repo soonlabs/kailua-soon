@@ -25,6 +25,7 @@ use kailua_soon_kona::config::config_hash;
 use kailua_sync::proposal::Proposal;
 use kailua_sync::provider::optimism::fetch_rollup_config;
 use kailua_sync::stall::Stall;
+use kailua_sync::transact::provider::KailuaProvider;
 use kailua_sync::transact::Transact;
 use kailua_sync::{await_tel, await_tel_res, retry_res_ctx_timeout, KAILUA_GAME_TYPE};
 use opentelemetry::global::tracer;
@@ -93,21 +94,23 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
             .wallet(Some(config.l1_chain_id))
     )?;
     let tester_address = tester_wallet.default_signer().address();
-    let tester_provider = args
-        .propose_args
-        .txn_args
-        .premium_provider::<Ethereum>()
-        .wallet(tester_wallet)
-        .connect_http(
-            args.propose_args
-                .sync
-                .provider
-                .eth_rpc_url
-                .as_str()
-                .try_into()?,
-        );
+    let proposer_provider = KailuaProvider::new(
+        args.propose_args
+            .txn_args
+            .premium_provider::<Ethereum>()
+            .wallet(&tester_wallet)
+            .connect_http(
+                args.propose_args
+                    .sync
+                    .provider
+                    .eth_rpc_url
+                    .as_str()
+                    .try_into()?,
+            ),
+        true,
+    );
 
-    let dispute_game_factory = IDisputeGameFactory::new(dgf_address, &tester_provider);
+    let dispute_game_factory = IDisputeGameFactory::new(dgf_address, &proposer_provider);
     let kailua_game_implementation = KailuaGame::new(
         dispute_game_factory
             .gameImpls(KAILUA_GAME_TYPE)
@@ -117,7 +120,7 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
                 args.propose_args.sync.provider.timeouts.eth_rpc_timeout,
             )
             .await,
-        &tester_provider,
+        &proposer_provider,
     );
     let kailua_treasury_address = kailua_game_implementation
         .KAILUA_TREASURY()
@@ -127,7 +130,7 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
             args.propose_args.sync.provider.timeouts.eth_rpc_timeout,
         )
         .await;
-    let kailua_treasury_instance = KailuaTreasury::new(kailua_treasury_address, &tester_provider);
+    let kailua_treasury_instance = KailuaTreasury::new(kailua_treasury_address, &proposer_provider);
 
     // load constants
     let proposal_output_count = kailua_game_implementation
@@ -166,7 +169,7 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
         )
         .await
         .proxy_;
-    let parent_game_contract = KailuaGame::new(parent_game_address, &tester_provider);
+    let parent_game_contract = KailuaGame::new(parent_game_address, &proposer_provider);
     let parent_block_number: u64 = parent_game_contract
         .l2BlockNumber()
         .stall_with_context(
