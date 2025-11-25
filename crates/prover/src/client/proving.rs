@@ -81,7 +81,7 @@ where
         execution_cache.len(),
         stitched_executions.len()
     );
-    let preimage_oracle = Arc::new(CachingOracle::new(
+    let preimage_oracle: Arc<CachingOracle<P, H>> = Arc::new(CachingOracle::new(
         ORACLE_LRU_SIZE,
         oracle_client,
         hint_client,

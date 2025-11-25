@@ -65,7 +65,7 @@ pub async fn run_native_client(
     seek_proof: bool,
 ) -> Result<(), ProvingError> {
     // Instantiate data channels
-    let hint = BidirectionalChannel::new().map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
+    let hint: BidirectionalChannel = BidirectionalChannel::new().map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
     let preimage = BidirectionalChannel::new().map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
     // Create the server and start it.
     let disk_kv_store = match disk_kv_store {

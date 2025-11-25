@@ -130,6 +130,7 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
             args.propose_args.sync.provider.timeouts.eth_rpc_timeout,
         )
         .await;
+    info!("KailuaTreasury({:?})", kailua_treasury_address);
     let kailua_treasury_instance = KailuaTreasury::new(kailua_treasury_address, &proposer_provider);
 
     // load constants
@@ -169,6 +170,7 @@ pub async fn fault(args: FaultArgs) -> anyhow::Result<()> {
         )
         .await
         .proxy_;
+    info!("Parent game address: {:?}", parent_game_address);
     let parent_game_contract = KailuaGame::new(parent_game_address, &proposer_provider);
     let parent_block_number: u64 = parent_game_contract
         .l2BlockNumber()
