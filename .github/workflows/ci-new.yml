@@ -10,7 +10,7 @@ on:
 jobs:
   docker:
     name: Build Docker Image
-    runs-on: soon-runtime-spot
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
