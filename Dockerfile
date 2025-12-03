@@ -45,10 +45,10 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=shared \
     && mkdir out \
     #&& mv target/release/kailua-host out/ \
     && mv target/release/kailua-cli out/ \
-    && mv target/release/kailua-client out/ \
+    #&& mv target/release/kailua-client out/ \
     #&& strip out/kailua-host \
     && strip out/kailua-cli \
-    && strip out/kailua-client;
+    #&& strip out/kailua-client;
 
 FROM rust:1.85 as kailua
 
