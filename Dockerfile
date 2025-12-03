@@ -43,10 +43,10 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=shared \
     cd ../../../ && \
     cargo build --jobs ${CARGO_BUILD_JOBS} --release -F disable-dev-mode \
     && mkdir out \
-    && mv target/release/kailua-host out/ \
+    #&& mv target/release/kailua-host out/ \
     && mv target/release/kailua-cli out/ \
     && mv target/release/kailua-client out/ \
-    && strip out/kailua-host \
+    #&& strip out/kailua-host \
     && strip out/kailua-cli \
     && strip out/kailua-client;
 
@@ -56,7 +56,7 @@ FROM rust:1.85 as kailua
 RUN apt-get update && apt-get install -y bash && rm -rf /var/lib/apt/lists/*
 
 # Copy binaries from build stage
-COPY --from=build-environment /kailua/out/kailua-host /usr/local/bin/kailua-host
+#COPY --from=build-environment /kailua/out/kailua-host /usr/local/bin/kailua-host
 COPY --from=build-environment /kailua/out/kailua-cli /usr/local/bin/kailua-cli
 COPY --from=build-environment /kailua/out/kailua-client /usr/local/bin/kailua-client
 
