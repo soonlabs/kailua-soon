@@ -1,0 +1,157 @@
+// Copyright 2024, 2025 RISC Zero, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use crate::args::ProveArgs;
+use crate::kv::{create_disk_kv_store, create_split_kv_store, RWLKeyValueStore};
+use crate::ProvingError;
+use alloy_primitives::B256;
+use anyhow::anyhow;
+use async_channel::Sender;
+use kailua_soon_kona::boot::StitchedBootInfo;
+use kailua_soon_kona::driver::CachedDriver;
+use kailua_soon_kona::executor::Execution;
+use kailua_soon_kona::precondition::Precondition;
+use kailua_sync::retry_res_ctx_timeout;
+use kona_host::{
+    HintHandler, OfflineHostBackend, OnlineHostBackend, OnlineHostBackendCfg, PreimageServer,
+    PreimageServerError, SharedKeyValueStore,
+};
+use kona_preimage::{
+    BidirectionalChannel, Channel, HintReader, HintWriter, OracleReader, OracleServer,
+};
+use opentelemetry::trace::{TraceContextExt, Tracer};
+use risc0_zkvm::Receipt;
+use std::sync::Arc;
+use tokio::task;
+use tokio::task::JoinHandle;
+use tracing::info;
+
+/// Starts the [PreimageServer] and the client program in separate threads. The client program is
+/// ran natively in this mode.
+///
+/// ## Takes
+/// - `cfg`: The host configuration.
+///
+/// ## Returns
+/// - `Ok(exit_code)` if the client program exits successfully.
+/// - `Err(_)` if the client program failed to execute, was killed by a signal, or the host program
+///   exited first.
+#[allow(clippy::too_many_arguments)]
+pub async fn run_native_client(
+    args: ProveArgs,
+    disk_kv_store: Option<RWLKeyValueStore>,
+    precondition: Precondition,
+    proposal_data_hash: B256,
+    stitched_executions: Vec<Vec<Execution>>,
+    derivation_cache: Option<CachedDriver>,
+    trace_derivation: bool,
+    derivation_trace: Option<Sender<CachedDriver>>,
+    stitched_preconditions: Vec<Precondition>,
+    stitched_boot_info: Vec<StitchedBootInfo>,
+    stitched_proofs: Vec<Receipt>,
+    prove_snark: bool,
+    force_attempt: bool,
+    seek_proof: bool,
+) -> Result<(), ProvingError> {
+    // Instantiate data channels
+    let hint: BidirectionalChannel = BidirectionalChannel::new().map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
+    let preimage = BidirectionalChannel::new().map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
+    // Create the server and start it.
+    let disk_kv_store = match disk_kv_store {
+        None => create_disk_kv_store(&args.kona),
+        v => v,
+    };
+
+    let server_task = start_server(
+        args.kona.clone(),
+        create_split_kv_store(&args.kona, disk_kv_store)
+            .map_err(|e| ProvingError::OtherError(anyhow!(e)))?,
+        hint.host,
+        preimage.host,
+        kona_host::single::SingleChainHintHandler,
+        retry_res_ctx_timeout!(args.timeouts.max(), args.create_providers().await).await,
+        args.kona.is_offline(),
+    )
+    .await
+    .map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
+
+    // Start the client program in a separate thread
+    let client_task = tokio::spawn(crate::client::proving::run_proving_client(
+        args.proving,
+        args.boundless,
+        OracleReader::new(preimage.client),
+        HintWriter::new(hint.client),
+        precondition,
+        proposal_data_hash,
+        stitched_executions,
+        derivation_cache,
+        trace_derivation,
+        derivation_trace,
+        stitched_preconditions,
+        stitched_boot_info,
+        stitched_proofs,
+        prove_snark,
+        force_attempt,
+        seek_proof,
+    ));
+    // Wait for both tasks to complete.
+    info!("Starting preimage server and client program.");
+    let (_, client_result) = tokio::try_join!(server_task, client_task,)
+        .map_err(|e| ProvingError::OtherError(anyhow!(e)))?;
+    info!(target: "kona_host", "Preimage server and client program have joined.");
+    // Return execution result
+    client_result
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn start_server<
+    C,
+    B: OnlineHostBackendCfg + Send + Sync + 'static,
+    H: HintHandler<Cfg = B> + Send + Sync + 'static,
+>(
+    backend: B,
+    kv_store: SharedKeyValueStore,
+    hint: C,
+    preimage: C,
+    handler: H,
+    providers: B::Providers,
+    is_offline: bool,
+) -> anyhow::Result<JoinHandle<Result<(), PreimageServerError>>>
+where
+    C: Channel + Send + Sync + 'static,
+{
+    let task_handle = if is_offline {
+        task::spawn(
+            PreimageServer::new(
+                OracleServer::new(preimage),
+                HintReader::new(hint),
+                Arc::new(OfflineHostBackend::new(kv_store)),
+            )
+            .start(),
+        )
+    } else {
+        let backend = OnlineHostBackend::new(backend, kv_store.clone(), providers, handler);
+
+        task::spawn(
+            PreimageServer::new(
+                OracleServer::new(preimage),
+                HintReader::new(hint),
+                Arc::new(backend),
+            )
+            .start(),
+        )
+    };
+
+    Ok(task_handle)
+}

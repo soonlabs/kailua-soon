@@ -12,27 +12,12 @@ categories.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-async-channel.workspace = true
-async-trait.workspace = true
-aws-config.workspace = true
-aws-sdk-kms.workspace = true
 bincode.workspace = true
 bytemuck.workspace = true
-c-kzg.workspace = true
 clap.workspace = true
-futures.workspace = true
-gcloud-sdk.workspace = true
 hex.workspace = true
-itertools.workspace = true
-paste.workspace = true
-rayon.workspace = true
-reqwest.workspace = true
-rocksdb.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-sha2.workspace = true
+human_bytes.workspace = true
 tempfile.workspace = true
-threadpool.workspace = true
 tokio.workspace = true
 tokio-retry.workspace = true
 tracing-subscriber.workspace = true
@@ -41,46 +26,56 @@ tracing.workspace = true
 opentelemetry.workspace = true
 
 alloy = { workspace = true, features = ["full", "kzg", "signer-aws", "signer-gcp"] }
-alloy-provider.workspace = true
-alloy-rpc-types-beacon.workspace = true
 
 kailua-build.workspace = true
-kailua-client.workspace = true
-kailua-common.workspace = true
+kailua-soon-kona.workspace = true
 kailua-contracts.workspace = true
-kailua-host.workspace = true
-
-kona-cli.workspace = true
-kona-host.workspace = true
-kona-proof.workspace = true
+kailua-proposer.workspace = true
+kailua-prover.workspace = true
+kailua-rpc.workspace = true
+kailua-sync.workspace = true
+kailua-validator.workspace = true
 
 bonsai-sdk.workspace = true
+
+boundless-market.workspace = true
+
+kona-cli.workspace = true
+
+risc0-circuit-recursion.workspace = true
 risc0-zkvm.workspace = true
 
-#SOON
-soon-derive.workspace = true
-soon-primitives.workspace = true
 soon-l2-chain-provider.workspace = true
 
-jsonrpsee.workspace = true
-
 [dev-dependencies]
-assert_cmd = "2.0.16"
+kona-host.workspace = true
+lazy_static.workspace = true
 
 [features]
-devnet = []
+devnet = [
+    "kailua-proposer/devnet",
+    "kailua-sync/devnet",
+]
 prove = [
-    "risc0-zkvm/prove"
+    "kailua-prover/prove",
+    "risc0-zkvm/prove",
 ]
 cuda = [
+    "kailua-prover/cuda",
     "risc0-zkvm/cuda"
 ]
 metal = [
+    "kailua-prover/metal",
     "risc0-zkvm/metal"
 ]
 disable-dev-mode = [
+    "kailua-build/disable-dev-mode",
+    "kailua-prover/disable-dev-mode",
     "risc0-zkvm/disable-dev-mode"
 ]
 rebuild-fpvm = [
-    "kailua-build/rebuild-fpvm"
+    "kailua-build/rebuild-fpvm",
+    "kailua-proposer/rebuild-fpvm",
+    "kailua-prover/rebuild-fpvm",
+    "kailua-sync/rebuild-fpvm",
 ]

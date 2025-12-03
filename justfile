@@ -7,7 +7,7 @@ default:
 build +ARGS=" -F prove -F disable-dev-mode --locked":
   cargo build {{ARGS}}
 
-build-fpvm +ARGS=" -F prove -F disable-dev-mode -F rebuild-fpvm --locked":
+build-fpvm +ARGS="--release -F prove -F disable-dev-mode -F rebuild-fpvm --locked":
   cargo build {{ARGS}}
 
 fmt:
@@ -86,22 +86,20 @@ devnet-upgrade timeout="3600" advantage="60" target="debug" verbosity="" l1_rpc=
 
 devnet-reset: devnet-down devnet-clean devnet-up
 
-devnet-propose target="debug" verbosity="-vvv" da_proxy="http://127.0.0.1:8080/" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/propose" proposer="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
+devnet-propose target="debug" verbosity="-vvv" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/propose" proposer="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
   ./target/{{target}}/kailua-cli propose \
       --eth-rpc-url {{l1_rpc}} \
       --beacon-rpc-url {{l1_beacon_rpc}} \
       --soon-node-url {{l2_rpc}} \
-      --da-proxy-url {{da_proxy}} \
       --data-dir {{data_dir}} \
       --proposer-key {{proposer}} \
       {{verbosity}}
 
-devnet-fault offset parent target="debug" proposer="0x5a2ca727946070dd1e37b79197681ee861a6b4e31b3a86d54396ead0b0bb03ac" verbosity="" da_proxy="http://127.0.0.1:8080/" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899":
+devnet-fault offset parent target="debug" proposer="0x5a2ca727946070dd1e37b79197681ee861a6b4e31b3a86d54396ead0b0bb03ac" verbosity="" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899":
   ./target/{{target}}/kailua-cli test-fault \
       --eth-rpc-url {{l1_rpc}} \
       --beacon-rpc-url {{l1_beacon_rpc}} \
       --soon-node-url {{l2_rpc}} \
-      --da-proxy-url {{da_proxy}} \
       --proposer-key {{proposer}} \
       --fault-offset {{offset}} \
       --fault-parent {{parent}} \
@@ -114,29 +112,30 @@ devnet-validate fastforward="100" target="debug" verbosity="" da_proxy="http://1
       --beacon-rpc-url {{l1_beacon_rpc}} \
       --soon-node-url {{l2_rpc}} \
       --da-proxy-url {{da_proxy}} \
-      --kailua-host ./target/{{target}}/kailua-host \
       --data-dir {{data_dir}} \
       --validator-key {{validator}} \
       {{verbosity}}
 
-devnet-validate-boundless fastforward="0" target="debug" verbosity="" da_proxy="http://127.0.0.1:8080/" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/validate" validator="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
+devnet-validate-boundless fastforward target="debug" verbosity="" da_proxy="http://127.0.0.1:8080/" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/validate" validator="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
     ./target/{{target}}/kailua-cli validate \
         --fast-forward-target {{fastforward}} \
         --eth-rpc-url {{l1_rpc}} \
         --beacon-rpc-url {{l1_beacon_rpc}} \
         --soon-node-url {{l2_rpc}} \
         --da-proxy-url {{da_proxy}} \
-        --kailua-host ./target/{{target}}/kailua-host \
         --data-dir {{data_dir}} \
         --validator-key {{validator}} \
         --boundless-rpc-url ${BOUNDLESS_RPC_URL} \
+        --boundless-chain-id 8453 \
         --boundless-wallet-key ${BOUNDLESS_WALLET_KEY} \
-        --boundless-market-address 0x26759dbB201aFbA361Bec78E097Aa3942B0b4AB8 \
+        --boundless-market-address 0xfd152dadc5183870710fe54f939eae3ab9f0fe82 \
         --boundless-verifier-router-address 0x0b144e07a0826182b6b59788c34b32bfa86fb711 \
         --boundless-set-verifier-address 0x1Ab08498CfF17b9723ED67143A050c8E8c2e3104 \
-        --boundless-stake-token-address 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 \
+        --boundless-collateral-token-address 0xaa61bb7777bd01b684347961918f1e07fbbce7cf \
         --storage-provider pinata \
         --pinata-jwt ${BOUNDLESS_PINATA_JWT} \
+        --boundless-cycle-min-wei 20000 \
+        --boundless-cycle-max-wei 500000 \
         {{verbosity}}
 
 devnet-prove block_number block_count="1" target="debug" verbosity="" data=".localtestdata": (prove block_number block_count "http://localhost:8545" "http://localhost:5052" "http://localhost:9545" "http://localhost:7545" data target verbosity)

@@ -1,0 +1,309 @@
+// Copyright 2024, 2025 RISC Zero, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use crate::risczero::boundless::BoundlessArgs;
+use alloy_primitives::{Address, B256};
+use clap::Parser;
+use futures::FutureExt;
+use kailua_sync::args::{parse_address, parse_b256};
+use kailua_sync::provider::ProviderTimeoutArgs;
+use kailua_sync::telemetry::TelemetryArgs;
+use kona_host::single::{SingleChainHostError, SingleChainProviders};
+use std::cmp::Ordering;
+use std::panic::AssertUnwindSafe;
+use tracing::error;
+
+#[derive(Parser, Clone, Debug)]
+pub struct ProvingArgs {
+    /// Address of the recipient account to use for bond payouts
+    #[clap(long, env, value_parser = parse_address)]
+    pub payout_recipient_address: Option<Address>,
+    /// ZKVM Proving Segment Limit
+    #[clap(long, env, required = false, default_value_t = 21)]
+    pub segment_limit: u32,
+    /// Maximum number of blocks to derive per proof
+    #[clap(long, env, required = false, default_value_t = usize::MAX)]
+    pub max_block_derivations: usize,
+    /// Maximum number of blocks to execute per proof
+    #[clap(long, env, required = false, default_value_t = usize::MAX)]
+    pub max_block_executions: usize,
+    /// Maximum number of proofs to stitch per proof
+    #[clap(long, env, required = false, default_value_t = usize::MAX)]
+    pub max_proof_stitches: usize,
+    /// Maximum input data size per proof
+    #[clap(long, env, required = false, default_value_t = 10_354_560)]
+    pub max_witness_size: usize,
+    /// Rate of growth of tail proofs in L1 blocks
+    #[clap(long, env, required = false, default_value_t = 10)]
+    pub num_tail_blocks: u64,
+    /// How many threads to use for fetching preflight data
+    #[clap(long, env, default_value_t = 1)]
+    pub num_concurrent_preflights: u64,
+    /// How many threads to use for computing proofs
+    #[clap(long, env, default_value_t = 1)]
+    pub num_concurrent_proofs: u64,
+    /// How many threads to use for witness generation
+    #[clap(long, env)]
+    pub num_concurrent_witgens: Option<usize>,
+    /// How many threads to use for zkvm executors
+    #[clap(long, env)]
+    pub num_concurrent_r0vm: Option<usize>,
+    /// Whether to bypass loading rollup chain configurations from the kona registry
+    #[clap(long, env, default_value_t = false)]
+    pub bypass_chain_registry: bool,
+    /// Whether to only prove L2 block execution without referring to the L1
+    #[clap(long, env, default_value_t = false)]
+    pub skip_derivation_proof: bool,
+    /// Whether to skip waiting for the proof generation process to complete
+    #[clap(long, env, default_value_t = false)]
+    pub skip_await_proof: bool,
+    /// Whether to keep cache data after successful completion
+    #[clap(long, env, default_value_t = false)]
+    pub clear_cache_data: bool,
+}
+
+impl ProvingArgs {
+    pub fn to_arg_vec(&self) -> Vec<String> {
+        // Core args
+        let mut proving_args = vec![
+            String::from("--segment-limit"),
+            self.segment_limit.to_string(),
+            String::from("--max-witness-size"),
+            self.max_witness_size.to_string(),
+            String::from("--num-concurrent-preflights"),
+            self.num_concurrent_preflights.to_string(),
+            String::from("--num-concurrent-proofs"),
+            self.num_concurrent_proofs.to_string(),
+        ];
+        // Core flags
+        proving_args.extend(
+            [
+                self.bypass_chain_registry
+                    .then(|| String::from("--bypass-chain-registry")),
+                self.skip_derivation_proof
+                    .then(|| String::from("--skip-derivation-proof")),
+                self.skip_await_proof
+                    .then(|| String::from("--skip-await-proof")),
+            ]
+            .into_iter()
+            .flatten(),
+        );
+        if let Some(payout_recipient_address) = &self.payout_recipient_address {
+            proving_args.extend(vec![
+                // wallet address for payouts
+                String::from("--payout-recipient-address"),
+                payout_recipient_address.to_string(),
+            ]);
+        }
+
+        // Return
+        proving_args
+    }
+
+    pub fn skip_stitching(&self) -> bool {
+        self.skip_derivation_proof || self.skip_await_proof || self.max_proof_stitches <= 1
+    }
+
+    pub fn image_id(&self) -> [u32; 8] {
+        kailua_build::KAILUA_FPVM_ID
+    }
+
+    pub fn elf(&self) -> &'static [u8] {
+        kailua_build::KAILUA_FPVM_ELF
+    }
+
+    pub fn image(&self) -> ([u32; 8], &'static [u8]) {
+        (self.image_id(), self.elf())
+    }
+}
+
+/// Run the prover to generate an execution/fault/validity proof
+#[derive(Parser, Clone, Debug)]
+pub struct ProveArgs {
+    #[clap(flatten)]
+    pub kona: kona_host::single::SingleChainHost,
+
+    /// Address of SOON-NODE endpoint to use
+    #[clap(long, env)]
+    pub soon_node_address: Option<String>,
+
+    #[clap(flatten)]
+    pub proving: ProvingArgs,
+    #[clap(flatten)]
+    pub boundless: BoundlessArgs,
+
+    #[clap(long, env, value_delimiter = ',')]
+    pub precondition_params: Vec<u64>,
+    #[clap(long, env, value_parser = parse_b256, value_delimiter = ',')]
+    pub precondition_block_hashes: Vec<B256>,
+    #[clap(long, env, value_parser = parse_b256, value_delimiter = ',')]
+    pub precondition_blob_hashes: Vec<B256>,
+
+    #[clap(flatten)]
+    pub telemetry: TelemetryArgs,
+    #[clap(flatten)]
+    pub timeouts: ProviderTimeoutArgs,
+}
+
+impl ProveArgs {
+    pub async fn create_providers(&self) -> Result<SingleChainProviders, SingleChainHostError> {
+        AssertUnwindSafe(self.kona.clone().create_providers())
+            .catch_unwind()
+            .await
+            .unwrap_or_else(|err| {
+                error!("kona::create_providers panicked: {err:?}");
+                Err(SingleChainHostError::Other("create_providers panicked"))
+            })
+    }
+
+    pub fn to_arg_vec(&self) -> Vec<String> {
+        // Prepare prover parameters
+        let mut prove_args = vec![
+            // Invoke the CLI prove command
+            String::from("prove"),
+        ];
+
+        // kona args
+        prove_args.extend(vec![
+            // l1 head from on-chain proposal
+            String::from("--l1-head"),
+            self.kona.l1_head.to_string(),
+            // l2 starting block hash from on-chain proposal
+            String::from("--agreed-l2-block-number"),
+            self.kona.agreed_l2_block_number.to_string(),
+            // l2 starting output root
+            String::from("--agreed-l2-output-root"),
+            self.kona.agreed_l2_output_root.to_string(),
+            // proposed output root
+            String::from("--claimed-l2-output-root"),
+            self.kona.claimed_l2_output_root.to_string(),
+            // proposed block number
+            String::from("--claimed-l2-block-number"),
+            self.kona.claimed_l2_block_number.to_string(),
+        ]);
+        if let Some(l2_chain_id) = self.kona.l2_chain_id {
+            prove_args.extend(vec![
+                // rollup chain id
+                String::from("--l2-chain-id"),
+                l2_chain_id.to_string(),
+            ]);
+        }
+        if let Some(l1_node_address) = &self.kona.l1_node_address {
+            prove_args.extend(vec![
+                // l1 el node
+                String::from("--l1-node-address"),
+                l1_node_address.clone(),
+            ]);
+        }
+        if let Some(l1_beacon_address) = &self.kona.l1_beacon_address {
+            prove_args.extend(vec![
+                // l1 cl node
+                String::from("--l1-beacon-address"),
+                l1_beacon_address.clone(),
+            ]);
+        }
+        if let Some(l2_node_address) = &self.kona.l2_node_address {
+            prove_args.extend(vec![
+                // l2 el node
+                String::from("--l2-node-address"),
+                l2_node_address.clone(),
+            ]);
+        }
+        if let Some(data_dir) = &self.kona.data_dir {
+            prove_args.extend(vec![
+                // path to cache
+                String::from("--data-dir"),
+                data_dir.to_str().unwrap().to_string(),
+            ]);
+        }
+
+        // op-node
+        if let Some(soon_node_address) = &self.soon_node_address {
+            prove_args.extend(vec![
+                // l2 el node
+                String::from("--soon-node-address"),
+                soon_node_address.to_string(),
+            ])
+        }
+
+        // proving args
+        prove_args.extend(self.proving.to_arg_vec());
+
+        // boundless args
+        if let Some(market) = &self.boundless.market {
+            prove_args.extend(market.to_arg_vec(&self.boundless.storage));
+        }
+
+        // precondition data
+        if !self.precondition_params.is_empty() {
+            prove_args.extend(vec![
+                String::from("--precondition-params"),
+                self.precondition_params
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<String>>()
+                    .join(","),
+            ]);
+        }
+        if !self.precondition_block_hashes.is_empty() {
+            prove_args.extend(vec![
+                String::from("--precondition-block-hashes"),
+                self.precondition_block_hashes
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<String>>()
+                    .join(","),
+            ]);
+        }
+        if !self.precondition_blob_hashes.is_empty() {
+            prove_args.extend(vec![
+                String::from("--precondition-blob-hashes"),
+                self.precondition_blob_hashes
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<String>>()
+                    .join(","),
+            ]);
+        }
+
+        // telemetry
+        prove_args.extend(self.telemetry.to_arg_vec());
+
+        prove_args
+    }
+}
+
+impl PartialEq<Self> for ProveArgs {
+    fn eq(&self, other: &Self) -> bool {
+        self.kona
+            .claimed_l2_block_number
+            .eq(&other.kona.claimed_l2_block_number)
+    }
+}
+
+impl Eq for ProveArgs {}
+
+impl PartialOrd<Self> for ProveArgs {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for ProveArgs {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.kona
+            .claimed_l2_block_number
+            .cmp(&other.kona.claimed_l2_block_number)
+    }
+}

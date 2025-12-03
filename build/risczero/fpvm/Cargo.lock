@@ -65,6 +65,17 @@ dependencies = [
 
 [[package]]
 name = "ahash"
+version = "0.7.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "891477e0c6a8957309ee5c45a6368af3ae14bb510732d2684ffa19af310920f9"
+dependencies = [
+ "getrandom 0.2.16",
+ "once_cell",
+ "version_check",
+]
+
+[[package]]
+name = "ahash"
 version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a15f179cd60c4584b8a8c596927aadc462e27f2ca70c04e0071964a73ba7a75"
@@ -113,14 +124,14 @@ checksum = "ef8ff73a143281cb77c32006b04af9c047a6b8fe5860e85a88ad325328965355"
 dependencies = [
  "alloy-primitives",
  "num_enum",
- "strum 0.27.2",
+ "strum",
 ]
 
 [[package]]
 name = "alloy-consensus"
-version = "0.15.11"
+version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32c3f3bc4f2a6b725970cd354e78e9738ea1e8961a91898f57bf6317970b1915"
+checksum = "ad451f9a70c341d951bca4e811d74dbe1e193897acd17e9dbac1353698cc430b"
 dependencies = [
  "alloy-eips",
  "alloy-primitives",
@@ -178,9 +189,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-eips"
-version = "0.15.11"
+version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f7b2f7010581f29bcace81776cf2f0e022008d05a7d326884763f16f3044620"
+checksum = "3056872f6da48046913e76edb5ddced272861f6032f09461aea1a2497be5ae5d"
 dependencies = [
  "alloy-eip2124",
  "alloy-eip2930",
@@ -198,9 +209,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-evm"
-version = "0.6.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb232f8e0e6bac6e28da4e4813331be06b7519949c043ba6c58b9228bab89983"
+checksum = "394b09cf3a32773eedf11828987f9c72dfa74545040be0422e3f5f09a2a3fab9"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -230,9 +241,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-op-evm"
-version = "0.6.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b65600baa6f3638a8ca71460ef008a8dae45d941e93ec17ce9c33b469ab38fc"
+checksum = "9f32538cc243ec5d4603da9845cc2f5254c6a3a78e82475beb1a2a1de6c0d36c"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -268,13 +279,14 @@ dependencies = [
  "const-hex",
  "derive_more",
  "hashbrown 0.15.5",
- "indexmap",
+ "indexmap 2.11.0",
  "itoa",
  "k256",
  "paste",
  "rand 0.9.2",
  "ruint",
  "serde",
+ "sha3",
  "tiny-keccak",
 ]
 
@@ -302,9 +314,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-rpc-types-beacon"
-version = "0.15.11"
+version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df7b4a021b4daff504208b3b43a25270d0a5a27490d6535655052f32c419ba0a"
+checksum = "241aba7808bddc3ad1c6228e296a831f326f89118b1017012090709782a13334"
 dependencies = [
  "alloy-eips",
  "alloy-primitives",
@@ -316,9 +328,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-rpc-types-engine"
-version = "0.15.11"
+version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "246c225f878dbcb8ad405949a30c403b3bb43bdf974f7f0331b276f835790a5e"
+checksum = "cab52691970553d84879d777419fa7b6a2e92e9fe8641f9324cc071008c2f656"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -328,14 +340,14 @@ dependencies = [
  "derive_more",
  "rand 0.8.5",
  "serde",
- "strum 0.27.2",
+ "strum",
 ]
 
 [[package]]
 name = "alloy-serde"
-version = "0.15.11"
+version = "1.0.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d05ace2ef3da874544c3ffacfd73261cdb1405d8631765deb991436a53ec6069"
+checksum = "f1b3b1078b8775077525bc9fe9f6577e815ceaecd6c412a4f3b4d8aa2836e8f6"
 dependencies = [
  "alloy-primitives",
  "serde",
@@ -365,7 +377,7 @@ dependencies = [
  "alloy-sol-macro-input",
  "const-hex",
  "heck 0.5.0",
- "indexmap",
+ "indexmap 2.11.0",
  "proc-macro-error2",
  "proc-macro2",
  "quote",
@@ -478,7 +490,7 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e0c292754729c8a190e50414fd1a37093c786c709899f29c9f7daccecfa855e"
 dependencies = [
- "ahash",
+ "ahash 0.8.12",
  "ark-crypto-primitives-macros",
  "ark-ec 0.5.0",
  "ark-ff 0.5.0",
@@ -528,7 +540,7 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "43d68f2d516162846c1238e755a7c4d131b892b70cc70c471a8e3ca3ed818fce"
 dependencies = [
- "ahash",
+ "ahash 0.8.12",
  "ark-ff 0.5.0",
  "ark-poly 0.5.0",
  "ark-serialize 0.5.0",
@@ -663,7 +675,7 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "579305839da207f02b89cd1679e50e67b4331e2f9294a57693e5051b7703fe27"
 dependencies = [
- "ahash",
+ "ahash 0.8.12",
  "ark-ff 0.5.0",
  "ark-serialize 0.5.0",
  "ark-std 0.5.0",
@@ -1025,8 +1037,8 @@ dependencies = [
 
 [[package]]
 name = "blst"
-version = "0.3.14"
-source = "git+https://github.com/risc0/blst?tag=v0.3.14-risczero.2#ca5d6042fffe3cf599e4f10a7d9a6a63693b6d15"
+version = "0.3.15"
+source = "git+https://github.com/risc0/blst?tag=v0.3.15-risczero.1#3d1833ff0c2457cf16068758b33d03f6b624a522"
 dependencies = [
  "cc",
  "glob",
@@ -1055,7 +1067,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "115e54d64eb62cdebad391c19efc9dce4981c690c85a33a12199d99bb9546fee"
 dependencies = [
  "borsh-derive 0.10.4",
- "hashbrown 0.13.2",
+ "hashbrown 0.12.3",
 ]
 
 [[package]]
@@ -1119,7 +1131,7 @@ dependencies = [
 [[package]]
 name = "bridge"
 version = "1.0.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#3706713b93ce10534ef79b695a120dde71a2a4c4"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
 dependencies = [
  "arrayref",
  "ethabi",
@@ -1254,7 +1266,7 @@ dependencies = [
 [[package]]
 name = "c-kzg"
 version = "2.1.1"
-source = "git+https://github.com/risc0/c-kzg-4844.git?tag=c-kzg%2Fv2.1.1-risczero.0#1a8fa5497c80eb7f1fecbd7026f9bf86cc63fee2"
+source = "git+https://github.com/risc0/c-kzg-4844?tag=c-kzg%2Fv2.1.1-risczero.2#0dabfecbf87539982c16bdafb951615c8a06ead1"
 dependencies = [
  "blst",
  "bytemuck",
@@ -1667,6 +1679,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7c1832837b905bbfb5101e07cc24c8deddf52f93225eee6ead5f4d63d53ddcb"
 dependencies = [
  "const-oid",
+ "pem-rfc7468",
  "zeroize",
 ]
 
@@ -1677,6 +1690,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d630bccd429a5bb5a64b5e94f693bfc48c9f8566418fda4c494cc94f911f87cc"
 dependencies = [
  "powerfmt",
+ "serde",
 ]
 
 [[package]]
@@ -1774,23 +1788,23 @@ dependencies = [
 
 [[package]]
 name = "dirs"
-version = "5.0.1"
+version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44c45a9d03d6676652bcb5e724c7e988de1acad23a711b5217ab9cbecbec2225"
+checksum = "c3e8aa94d75141228480295a7d0e7feb620b1a5ad9f12bc40be62411e38cce4e"
 dependencies = [
  "dirs-sys",
 ]
 
 [[package]]
 name = "dirs-sys"
-version = "0.4.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "520f05a5cbd335fae5a99ff7a6ab8627577660ee5cfd6a94a6a929b52ff0321c"
+checksum = "e01a3366d27ee9890022452ee61b2b63a67e6f13f58900b651ff5665f0bb1fab"
 dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.48.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -2017,17 +2031,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "enumn"
-version = "0.1.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f9ed6b3789237c8a0c1c505af1c7eb2c560df6186f01b098c3a1064ea532f38"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.106",
-]
-
-[[package]]
 name = "equivalent"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2236,7 +2239,7 @@ dependencies = [
 [[package]]
 name = "fraud-executor"
 version = "0.1.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#3706713b93ce10534ef79b695a120dde71a2a4c4"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
 dependencies = [
  "alloy-eips",
  "alloy-primitives",
@@ -2430,7 +2433,7 @@ dependencies = [
  "futures-sink",
  "futures-util",
  "http 0.2.12",
- "indexmap",
+ "indexmap 2.11.0",
  "slab",
  "tokio",
  "tokio-util",
@@ -2464,20 +2467,20 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.13.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43a3c133739dddd0d2990f9a4bdf8eb4b21ef50e4851ca85ab661199821d510e"
+checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
 dependencies = [
- "ahash",
+ "ahash 0.7.8",
 ]
 
 [[package]]
 name = "hashbrown"
-version = "0.14.5"
+version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
+checksum = "43a3c133739dddd0d2990f9a4bdf8eb4b21ef50e4851ca85ab661199821d510e"
 dependencies = [
- "ahash",
+ "ahash 0.8.12",
 ]
 
 [[package]]
@@ -2494,11 +2497,11 @@ dependencies = [
 
 [[package]]
 name = "hashlink"
-version = "0.9.1"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ba4ff7128dee98c7dc9794b6a411377e1404dba1c97deb8d1a55297bd25d8af"
+checksum = "7382cf6263419f2d8df38c55d7da83da5c18aef87fc7a7fc1fb1e344edfe14c1"
 dependencies = [
- "hashbrown 0.14.5",
+ "hashbrown 0.15.5",
 ]
 
 [[package]]
@@ -2918,6 +2921,17 @@ checksum = "4ee796ad498c8d9a1d68e477df8f754ed784ef875de1414ebdaf169f70a6a784"
 
 [[package]]
 name = "indexmap"
+version = "1.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd070e393353796e801d209ad339e89596eb4c8d430d18ede6a1cced8fafbd99"
+dependencies = [
+ "autocfg",
+ "hashbrown 0.12.3",
+ "serde",
+]
+
+[[package]]
+name = "indexmap"
 version = "2.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2481980430f9f78649238835720ddccc57e52df14ffce1c6f37391d61b563e9"
@@ -3041,8 +3055,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "kailua-common"
-version = "1.0.0-rc.1"
+name = "kailua-fpvm"
+version = "1.1.0"
+dependencies = [
+ "blst",
+ "c-kzg",
+ "kailua-soon-kona",
+ "kona-executor",
+ "risc0-zkvm",
+ "rkyv",
+ "substrate-bn",
+]
+
+[[package]]
+name = "kailua-soon-kona"
+version = "1.1.0"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -3084,18 +3111,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "kailua-fpvm"
-version = "1.0.0-rc.1"
-dependencies = [
- "blst",
- "kailua-common",
- "kona-executor",
- "risc0-zkvm",
- "rkyv",
- "substrate-bn",
-]
-
-[[package]]
 name = "keccak"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3117,7 +3132,7 @@ dependencies = [
 [[package]]
 name = "kona-driver"
 version = "0.3.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#3706713b93ce10534ef79b695a120dde71a2a4c4"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
 dependencies = [
  "alloy-consensus",
  "alloy-evm",
@@ -3137,7 +3152,7 @@ dependencies = [
 [[package]]
 name = "kona-executor"
 version = "0.3.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#3706713b93ce10534ef79b695a120dde71a2a4c4"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -3165,7 +3180,7 @@ dependencies = [
 [[package]]
 name = "kona-mpt"
 version = "0.2.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#3706713b93ce10534ef79b695a120dde71a2a4c4"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
 dependencies = [
  "alloy-primitives",
  "alloy-rlp",
@@ -3180,7 +3195,7 @@ dependencies = [
 [[package]]
 name = "kona-preimage"
 version = "0.3.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#3706713b93ce10534ef79b695a120dde71a2a4c4"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
 dependencies = [
  "alloy-primitives",
  "async-channel",
@@ -3194,7 +3209,7 @@ dependencies = [
 [[package]]
 name = "kona-proof"
 version = "0.3.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#3706713b93ce10534ef79b695a120dde71a2a4c4"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -3232,7 +3247,7 @@ dependencies = [
 [[package]]
 name = "l1-block-info"
 version = "1.0.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#3706713b93ce10534ef79b695a120dde71a2a4c4"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
 dependencies = [
  "arrayref",
  "num-derive 0.4.2",
@@ -3334,12 +3349,12 @@ checksum = "241eaef5fd12c88705a01fc1066c48c4b36e0dd4377dcdc7ec3942cea7a69956"
 [[package]]
 name = "litesvm"
 version = "0.1.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#3706713b93ce10534ef79b695a120dde71a2a4c4"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
 dependencies = [
  "bincode",
  "fast-math",
  "hex",
- "indexmap",
+ "indexmap 2.11.0",
  "itertools 0.12.1",
  "serde",
  "solana-address-lookup-table-program",
@@ -3593,6 +3608,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "num-bigint-dig"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc84195820f291c7697304f3cbdadd1cb7199c0efc917ff5eafd71225c136151"
+dependencies = [
+ "byteorder",
+ "lazy_static",
+ "libm",
+ "num-integer",
+ "num-iter",
+ "num-traits",
+ "rand 0.8.5",
+ "smallvec",
+ "zeroize",
+]
+
+[[package]]
 name = "num-complex"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3761,9 +3793,9 @@ checksum = "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d"
 
 [[package]]
 name = "op-alloy-consensus"
-version = "0.15.4"
+version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "375b501fad264f16781b608252b1b14c627359cc90cc09e80f6cbdac03fd8f07"
+checksum = "b2423a125ef2daa0d15dacc361805a0b6f76d6acfc6e24a1ff6473582087fe75"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -3777,9 +3809,9 @@ dependencies = [
 
 [[package]]
 name = "op-alloy-rpc-types-engine"
-version = "0.15.4"
+version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b9767e25626d237857803577081a27082b2fd367934953e1144af433b1f4e07"
+checksum = "47aea08d8ad3f533df0c5082d3e93428a4c57898b7ade1be928fa03918f22e71"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -3795,9 +3827,9 @@ dependencies = [
 
 [[package]]
 name = "op-revm"
-version = "3.0.2"
+version = "5.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12f8646cb935063087579f44da58fe1dea329c280c3b35898d6fd01a928de91f"
+checksum = "c0e8a3830a2be82166fbe9ead34361149ff4320743ed7ee5502ab779de221361"
 dependencies = [
  "auto_impl",
  "once_cell",
@@ -3901,6 +3933,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pem-rfc7468"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "88b39c9bfcfc231068454382784bb460aae594343fb030d46e9f50a645418412"
+dependencies = [
+ "base64ct",
+]
+
+[[package]]
 name = "percent-encoding"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3922,7 +3963,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4c5cc86750666a3ed20bdaf5ca2a0344f9c67674cae0515bec2da16fbaa47db"
 dependencies = [
  "fixedbitset",
- "indexmap",
+ "indexmap 2.11.0",
 ]
 
 [[package]]
@@ -3936,6 +3977,17 @@ name = "pin-utils"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
+
+[[package]]
+name = "pkcs1"
+version = "0.7.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8ffb9f10fa047879315e6625af03c164b16962a5368d724ed16323b68ace47f"
+dependencies = [
+ "der",
+ "pkcs8",
+ "spki",
+]
 
 [[package]]
 name = "pkcs8"
@@ -4425,13 +4477,33 @@ dependencies = [
 
 [[package]]
 name = "redox_users"
-version = "0.4.6"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba009ff324d1fc1b900bd1fdb31564febe58a8ccc8a6fdbb93b543d33b13ca43"
+checksum = "a4e608c6638b9c18977b00b475ac1f28d14e84b27d8d42f70e0bf1e3dec127ac"
 dependencies = [
  "getrandom 0.2.16",
  "libredox",
- "thiserror 1.0.69",
+ "thiserror 2.0.16",
+]
+
+[[package]]
+name = "ref-cast"
+version = "1.0.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f354300ae66f76f1c85c5f84693f0ce81d747e2c3f21a45fef496d89c960bf7d"
+dependencies = [
+ "ref-cast-impl",
+]
+
+[[package]]
+name = "ref-cast-impl"
+version = "1.0.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7186006dcb21920990093f30e3dea63b7d6e977bf1256be20c3563a5db070da"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -4559,9 +4631,9 @@ dependencies = [
 
 [[package]]
 name = "revm"
-version = "22.0.1"
+version = "24.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5378e95ffe5c8377002dafeb6f7d370a55517cef7d6d6c16fc552253af3b123"
+checksum = "01d277408ff8d6f747665ad9e52150ab4caf8d5eaf0d787614cf84633c8337b4"
 dependencies = [
  "revm-bytecode",
  "revm-context",
@@ -4578,19 +4650,20 @@ dependencies = [
 
 [[package]]
 name = "revm-bytecode"
-version = "3.0.0"
+version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e63e138d520c5c5bc25ecc82506e9e4e6e85a811809fc5251c594378dccabfc6"
+checksum = "942fe4724cf552fd28db6b0a2ca5b79e884d40dd8288a4027ed1e9090e0c6f49"
 dependencies = [
  "bitvec",
+ "once_cell",
  "revm-primitives",
 ]
 
 [[package]]
 name = "revm-context"
-version = "3.0.1"
+version = "5.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9765628dfea4f3686aa8f2a72471c52801e6b38b601939ac16965f49bac66580"
+checksum = "b01aad49e1233f94cebda48a4e5cef022f7c7ed29b4edf0d202b081af23435ef"
 dependencies = [
  "cfg-if",
  "derive-where",
@@ -4603,13 +4676,14 @@ dependencies = [
 
 [[package]]
 name = "revm-context-interface"
-version = "3.0.0"
+version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82d74335aa1f14222cc4d3be1f62a029cc7dc03819cc8d080ff17b7e1d76375f"
+checksum = "1b844f48a411e62c7dde0f757bf5cce49c85b86d6fc1d3b2722c07f2bec4c3ce"
 dependencies = [
  "alloy-eip2930",
  "alloy-eip7702",
  "auto_impl",
+ "either",
  "revm-database-interface",
  "revm-primitives",
  "revm-state",
@@ -4617,9 +4691,9 @@ dependencies = [
 
 [[package]]
 name = "revm-database"
-version = "3.0.0"
+version = "4.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e5c80c5a2fd605f2119ee32a63fb3be941fb6a81ced8cdb3397abca28317224"
+checksum = "ad3fbe34f6bb00a9c3155723b3718b9cb9f17066ba38f9eb101b678cd3626775"
 dependencies = [
  "revm-bytecode",
  "revm-database-interface",
@@ -4629,9 +4703,9 @@ dependencies = [
 
 [[package]]
 name = "revm-database-interface"
-version = "3.0.0"
+version = "4.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0e4dfbc734b1ea67b5e8f8b3c7dc4283e2210d978cdaf6c7a45e97be5ea53b3"
+checksum = "7b8acd36784a6d95d5b9e1b7be3ce014f1e759abb59df1fa08396b30f71adc2a"
 dependencies = [
  "auto_impl",
  "revm-primitives",
@@ -4640,9 +4714,9 @@ dependencies = [
 
 [[package]]
 name = "revm-handler"
-version = "3.0.1"
+version = "5.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8676379521c7bf179c31b685c5126ce7800eab5844122aef3231b97026d41a10"
+checksum = "481e8c3290ff4fa1c066592fdfeb2b172edfd14d12e6cade6f6f5588cad9359a"
 dependencies = [
  "auto_impl",
  "revm-bytecode",
@@ -4657,9 +4731,9 @@ dependencies = [
 
 [[package]]
 name = "revm-inspector"
-version = "3.0.1"
+version = "5.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfed4ecf999a3f6ae776ae2d160478c5dca986a8c2d02168e04066b1e34c789e"
+checksum = "fdc1167ef8937d8867888e63581d8ece729a72073d322119ef4627d813d99ecb"
 dependencies = [
  "auto_impl",
  "revm-context",
@@ -4672,9 +4746,9 @@ dependencies = [
 
 [[package]]
 name = "revm-interpreter"
-version = "18.0.0"
+version = "20.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "feb20260342003cfb791536e678ef5bbea1bfd1f8178b170e8885ff821985473"
+checksum = "b5ee65e57375c6639b0f50555e92a4f1b2434349dd32f52e2176f5c711171697"
 dependencies = [
  "revm-bytecode",
  "revm-context-interface",
@@ -4683,9 +4757,9 @@ dependencies = [
 
 [[package]]
 name = "revm-precompile"
-version = "19.0.0"
+version = "21.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "418e95eba68c9806c74f3e36cd5d2259170b61e90ac608b17ff8c435038ddace"
+checksum = "0f9311e735123d8d53a02af2aa81877bba185be7c141be7f931bb3d2f3af449c"
 dependencies = [
  "ark-bls12-381",
  "ark-bn254 0.5.0",
@@ -4704,19 +4778,19 @@ dependencies = [
 
 [[package]]
 name = "revm-primitives"
-version = "18.0.0"
+version = "19.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fc2283ff87358ec7501956c5dd8724a6c2be959c619c4861395ae5e0054575f"
+checksum = "1c1588093530ec4442461163be49c433c07a3235d1ca6f6799fef338dacc50d3"
 dependencies = [
  "alloy-primitives",
- "enumn",
+ "num_enum",
 ]
 
 [[package]]
 name = "revm-state"
-version = "3.0.0"
+version = "4.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09dd121f6e66d75ab111fb51b4712f129511569bc3e41e6067ae760861418bd8"
+checksum = "0040c61c30319254b34507383ba33d85f92949933adf6525a2cede05d165e1fa"
 dependencies = [
  "bitflags 2.9.4",
  "revm-bytecode",
@@ -4768,18 +4842,21 @@ dependencies = [
 
 [[package]]
 name = "risc0-binfmt"
-version = "2.0.3"
+version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f84c73972691d73955126d3d889c47e7f20900a69c74d775c9eab7c25d10b3d9"
+checksum = "1c8f97f81bcdead4101bca06469ecef481a2695cd04e7e877b49dea56a7f6f2a"
 dependencies = [
  "anyhow",
  "borsh 1.5.7",
+ "bytemuck",
  "derive_more",
  "elf",
  "lazy_static",
  "postcard",
+ "rand 0.9.2",
  "risc0-zkp",
  "risc0-zkvm-platform",
+ "ruint",
  "semver",
  "serde",
  "tracing",
@@ -4787,9 +4864,9 @@ dependencies = [
 
 [[package]]
 name = "risc0-build"
-version = "2.3.2"
+version = "3.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4079b9f8d1e20704071374ec8aa58eddc8adcd6586d109436a39a852e1ddf16"
+checksum = "1bbb512d728e011d03ce0958ca7954624ee13a215bcafd859623b3c63b2a3f60"
 dependencies = [
  "anyhow",
  "cargo_metadata",
@@ -4811,9 +4888,9 @@ dependencies = [
 
 [[package]]
 name = "risc0-circuit-keccak"
-version = "3.0.1"
+version = "4.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dea46e2318b068d7937f52db38736f315c051914f295021a537ee40e2cadaa36"
+checksum = "5f195f865ac1afdc21a172d7756fdcc21be18e13eb01d78d3d7f2b128fa881ba"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -4827,9 +4904,9 @@ dependencies = [
 
 [[package]]
 name = "risc0-circuit-recursion"
-version = "3.0.1"
+version = "4.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed32703f8da8131eaeae0a5249220fe1ecf242dd5808334d3a7b4533c5e8b0a1"
+checksum = "dca8f15c8abc0fd8c097aa7459879110334d191c63dd51d4c28881c4a497279e"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -4842,9 +4919,9 @@ dependencies = [
 
 [[package]]
 name = "risc0-circuit-rv32im"
-version = "3.0.1"
+version = "4.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c814ffb4f44d1ce7674e00b9afb99e639168028b544f70df3acc38c07f2bb10"
+checksum = "ae1b0689f4a270a2f247b04397ebb431b8f64fe5170e98ee4f9d71bd04825205"
 dependencies = [
  "anyhow",
  "bit-vec",
@@ -4860,24 +4937,24 @@ dependencies = [
 
 [[package]]
 name = "risc0-core"
-version = "2.0.0"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "317bbf70a8750b64d4fd7a2bdc9d7d5f30d8bb305cae486962c797ef35c8d08e"
+checksum = "80f2723fedace48c6c5a505bd8f97ac4e1712bc4cb769083e10536d862b66987"
 dependencies = [
  "bytemuck",
- "bytemuck_derive",
- "rand_core 0.6.4",
+ "rand_core 0.9.3",
 ]
 
 [[package]]
 name = "risc0-groth16"
-version = "2.0.3"
+version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bd680a5d563facc0572ecbc9f934a5fcc3a258d2c067ae37460496e6c618fac"
+checksum = "724285dc79604abfb2d40feaefe3e335420a6b293511661f77d6af62f1f5fae9"
 dependencies = [
  "anyhow",
  "ark-bn254 0.5.0",
  "ark-ec 0.5.0",
+ "ark-ff 0.5.0",
  "ark-groth16",
  "ark-serialize 0.5.0",
  "bytemuck",
@@ -4887,7 +4964,6 @@ dependencies = [
  "risc0-binfmt",
  "risc0-zkp",
  "serde",
- "stability",
 ]
 
 [[package]]
@@ -4903,9 +4979,9 @@ dependencies = [
 
 [[package]]
 name = "risc0-zkp"
-version = "2.0.3"
+version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "355de69bdd62c99a48497fbf67501665a2eb9c4ed205549e7af3cdb83b40ef12"
+checksum = "ffb6bf356f469bb8744f72a07a37134c5812c1d55d6271bba80e87bdb7a58c8e"
 dependencies = [
  "anyhow",
  "blake2",
@@ -4917,7 +4993,7 @@ dependencies = [
  "hex-literal",
  "metal",
  "paste",
- "rand_core 0.6.4",
+ "rand_core 0.9.3",
  "risc0-core",
  "risc0-zkvm-platform",
  "serde",
@@ -4928,9 +5004,9 @@ dependencies = [
 
 [[package]]
 name = "risc0-zkvm"
-version = "2.3.2"
+version = "3.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f11546479f0e247b4683609f7d6ef2036af3112a4c81cac74c2dc5524382833"
+checksum = "3fcce11648a9ff60b8e7af2f0ce7fbf8d25275ab6d414cc91b9da69ee75bc978"
 dependencies = [
  "anyhow",
  "bincode",
@@ -4939,7 +5015,6 @@ dependencies = [
  "bytemuck",
  "bytes",
  "derive_more",
- "getrandom 0.2.16",
  "hex",
  "lazy-regex",
  "prost 0.13.5",
@@ -4990,7 +5065,7 @@ dependencies = [
  "bytecheck",
  "bytes",
  "hashbrown 0.15.5",
- "indexmap",
+ "indexmap 2.11.0",
  "munge",
  "ptr_meta",
  "rancor",
@@ -5044,12 +5119,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "rsa"
+version = "0.9.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78928ac1ed176a5ca1d17e578a1825f3d81ca54cf41053a592584b020cfd691b"
+dependencies = [
+ "const-oid",
+ "digest",
+ "num-bigint-dig",
+ "num-integer",
+ "num-traits",
+ "pkcs1",
+ "pkcs8",
+ "rand_core 0.6.4",
+ "signature",
+ "spki",
+ "subtle",
+ "zeroize",
+]
+
+[[package]]
 name = "ruint"
 version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ecb38f82477f20c5c3d62ef52d7c4e536e38ea9b73fb570a20c5cae0e14bcf6"
 dependencies = [
  "alloy-rlp",
+ "borsh 1.5.7",
  "proptest",
  "rand 0.8.5",
  "rand 0.9.2",
@@ -5198,17 +5294,45 @@ checksum = "28d3b2b1366ec20994f1fd18c3c594f05c5dd4bc44d8bb0c1c632c8d6829481f"
 
 [[package]]
 name = "rzup"
-version = "0.4.1"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "400558bf12d4292a7804093b60a437ba8b0219ea7d53716b2c010a0d31e5f4a8"
+checksum = "5d2aed296f203fa64bcb4b52069356dd86d6ec578593985b919b6995bee1f0ae"
 dependencies = [
+ "hex",
+ "rsa",
  "semver",
  "serde",
- "strum 0.26.3",
+ "serde_with 3.14.0",
+ "sha2",
+ "strum",
  "tempfile",
  "thiserror 2.0.16",
  "toml 0.8.23",
  "yaml-rust2",
+]
+
+[[package]]
+name = "schemars"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4cd191f9397d57d581cddd31014772520aa448f65ef991055d7f61582c65165f"
+dependencies = [
+ "dyn-clone",
+ "ref-cast",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "schemars"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "82d20c4491bc164fa2f6c5d44565947a52ad80b9505d8e36f8d54c27c739fcd0"
+dependencies = [
+ "dyn-clone",
+ "ref-cast",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -5373,6 +5497,10 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "hex",
+ "indexmap 1.9.3",
+ "indexmap 2.11.0",
+ "schemars 0.9.0",
+ "schemars 1.0.4",
  "serde",
  "serde_derive",
  "serde_json",
@@ -5500,7 +5628,7 @@ dependencies = [
 [[package]]
 name = "solana-account-decoder"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "Inflector",
  "base64 0.22.1",
@@ -5524,7 +5652,7 @@ dependencies = [
 [[package]]
 name = "solana-address-lookup-table-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "bincode",
  "bytemuck",
@@ -5541,7 +5669,7 @@ dependencies = [
 [[package]]
 name = "solana-bpf-loader-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "bincode",
  "byteorder",
@@ -5562,7 +5690,7 @@ dependencies = [
 [[package]]
 name = "solana-compute-budget"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "rustc_version",
  "solana-sdk",
@@ -5571,7 +5699,7 @@ dependencies = [
 [[package]]
 name = "solana-compute-budget-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "solana-program-runtime",
  "solana-sdk",
@@ -5580,7 +5708,7 @@ dependencies = [
 [[package]]
 name = "solana-config-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "bincode",
  "chrono",
@@ -5593,7 +5721,7 @@ dependencies = [
 [[package]]
 name = "solana-curve25519"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "bytemuck",
  "bytemuck_derive",
@@ -5605,7 +5733,7 @@ dependencies = [
 [[package]]
 name = "solana-loader-v4-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "log",
  "solana-compute-budget",
@@ -5619,7 +5747,7 @@ dependencies = [
 [[package]]
 name = "solana-measure"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "log",
  "solana-sdk",
@@ -5628,7 +5756,7 @@ dependencies = [
 [[package]]
 name = "solana-metrics"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "crossbeam-channel",
  "gethostname",
@@ -5642,7 +5770,7 @@ dependencies = [
 [[package]]
 name = "solana-poseidon"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "ark-bn254 0.4.0",
  "light-poseidon",
@@ -5652,7 +5780,7 @@ dependencies = [
 [[package]]
 name = "solana-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "ark-bn254 0.4.0",
  "ark-ec 0.4.2",
@@ -5697,7 +5825,7 @@ dependencies = [
 [[package]]
 name = "solana-program-runtime"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "base64 0.22.1",
  "bincode",
@@ -5725,7 +5853,7 @@ dependencies = [
 [[package]]
 name = "solana-sdk"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "bincode",
  "bitflags 2.9.4",
@@ -5773,7 +5901,7 @@ dependencies = [
 [[package]]
 name = "solana-sdk-macro"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "bs58 0.5.1",
  "proc-macro2",
@@ -5791,7 +5919,7 @@ checksum = "468aa43b7edb1f9b7b7b686d5c3aeb6630dc1708e86e31343499dd5c4d775183"
 [[package]]
 name = "solana-stake-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "bincode",
  "log",
@@ -5806,7 +5934,7 @@ dependencies = [
 [[package]]
 name = "solana-svm"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "itertools 0.12.1",
  "log",
@@ -5831,7 +5959,7 @@ dependencies = [
 [[package]]
 name = "solana-system-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "bincode",
  "log",
@@ -5845,7 +5973,7 @@ dependencies = [
 [[package]]
 name = "solana-transaction-status"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "Inflector",
  "base64 0.22.1",
@@ -5871,7 +5999,7 @@ dependencies = [
 [[package]]
 name = "solana-type-overrides"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "lazy_static",
  "rand 0.8.5",
@@ -5880,7 +6008,7 @@ dependencies = [
 [[package]]
 name = "solana-vote"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "itertools 0.12.1",
  "log",
@@ -5894,7 +6022,7 @@ dependencies = [
 [[package]]
 name = "solana-vote-program"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "bincode",
  "log",
@@ -5913,7 +6041,7 @@ dependencies = [
 [[package]]
 name = "solana-zk-token-sdk"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"
 dependencies = [
  "aes-gcm-siv",
  "base64 0.22.1",
@@ -5961,7 +6089,7 @@ dependencies = [
 [[package]]
 name = "soon-derive"
 version = "0.1.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#3706713b93ce10534ef79b695a120dde71a2a4c4"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
 dependencies = [
  "alloc-no-stdlib",
  "alloy-consensus",
@@ -5985,7 +6113,7 @@ dependencies = [
 [[package]]
 name = "soon-miniz-oxide"
 version = "0.1.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#3706713b93ce10534ef79b695a120dde71a2a4c4"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
 dependencies = [
  "adler2",
 ]
@@ -5993,7 +6121,7 @@ dependencies = [
 [[package]]
 name = "soon-primitives"
 version = "0.1.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#3706713b93ce10534ef79b695a120dde71a2a4c4"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -6283,33 +6411,11 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "strum"
-version = "0.26.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
-dependencies = [
- "strum_macros 0.26.4",
-]
-
-[[package]]
-name = "strum"
 version = "0.27.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af23d6f6c1a224baef9d3f61e287d2761385a5b88fdab4eb4c6f11aeb54c4bcf"
 dependencies = [
- "strum_macros 0.27.2",
-]
-
-[[package]]
-name = "strum_macros"
-version = "0.26.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be"
-dependencies = [
- "heck 0.5.0",
- "proc-macro2",
- "quote",
- "rustversion",
- "syn 2.0.106",
+ "strum_macros",
 ]
 
 [[package]]
@@ -6536,6 +6642,7 @@ dependencies = [
  "powerfmt",
  "serde",
  "time-core",
+ "time-macros",
 ]
 
 [[package]]
@@ -6543,6 +6650,16 @@ name = "time-core"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40868e7c1d2f0b8d73e4a8c7f0ff63af4f6d19be117e90bd73eb1d62cf831c6b"
+
+[[package]]
+name = "time-macros"
+version = "0.2.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30cfb0125f12d9c277f35663a0a33f8c30190f4e4574868a330595412d34ebf3"
+dependencies = [
+ "num-conv",
+ "time-core",
+]
 
 [[package]]
 name = "tiny-keccak"
@@ -6663,7 +6780,7 @@ version = "0.22.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "41fe8c660ae4257887cf66394862d21dbca4a6ddd26f04a3560410406a2f819a"
 dependencies = [
- "indexmap",
+ "indexmap 2.11.0",
  "serde",
  "serde_spanned",
  "toml_datetime",
@@ -7421,9 +7538,9 @@ dependencies = [
 
 [[package]]
 name = "yaml-rust2"
-version = "0.9.0"
+version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a1a1c0bc9823338a3bdf8c61f994f23ac004c6fa32c08cd152984499b445e8d"
+checksum = "2462ea039c445496d8793d052e13787f2b90e750b833afee748e601c17621ed9"
 dependencies = [
  "arraydeque",
  "encoding_rs",
@@ -7591,4 +7708,4 @@ source = "git+https://github.com/risc0/RustCrypto-elliptic-curves?tag=k256%2Fv0.
 [[patch.unused]]
 name = "solana-zk-sdk"
 version = "2.0.14"
-source = "git+https://github.com/soonlabs/agave?branch=feat%2Frisc0-zkvm#a97ae69320127ad40e1e6d11612c8d407cd11b49"
+source = "git+https://github.com/soonlabs/agave?branch=feat%2Fupgrade_for_kailua_v1.1.0#774dd5e629f36c1a2b86fd3088b0a9bf6527e379"

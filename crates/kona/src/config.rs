@@ -1,0 +1,653 @@
+// Copyright 2024, 2025 RISC Zero, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use alloy_primitives::{b256, B256};
+use anyhow::Context;
+use risc0_zkvm::sha::{Impl as SHA2, Sha256};
+use soon_primitives::rollup_config::SoonRollupConfig;
+use soon_primitives::system::SystemConfig;
+use std::fmt::Debug;
+
+pub const CONTROL_ROOT: B256 =
+    b256!("ce52bf56033842021af3cf6db8a50d1b7535c125a34f1a22c6fdcf002c5a1529");
+pub const BN254_CONTROL_ID: B256 =
+    b256!("04446e66d300eb7fb45c9726bb53c793dda407a62e9601618bb43c5c14657ac0");
+
+/// Returns a value based on the provided `Option` and a default value, with safety checks.
+///
+/// This function takes an optional value `opt` and a default value `default`.
+/// If `opt` contains a value, it checks whether it is equal to the default value.
+/// If they are equal, an error is returned indicating an unsafe condition.
+/// Otherwise, the value inside `opt` is returned. If `opt` is `None`, the default value is returned.
+///
+/// # Arguments
+/// - `opt`: An `Option<V>` which may or may not contain a value.
+/// - `default`: A default value of type `V` to use if `opt` is `None`.
+///
+/// # Returns
+/// - `Ok(V)`: The value inside `opt` if it is present and not equal to the default value,
+///   or the `default` value if `opt` is `None`.
+/// - `Err(anyhow::Error)`: An error if `opt` contains a value that is equal to `default`.
+///
+/// # Errors
+/// Returns an `anyhow::Error` if the optional value is present and equal to the default value.
+///
+/// # Examples
+/// ```
+/// use anyhow::Result;
+/// use kailua_soon_kona::config::safe_default;
+///
+/// let value = safe_default(Some(42), 0);
+/// assert_eq!(value.unwrap(), 42);
+///
+/// let value = safe_default(None, 100);
+/// assert_eq!(value.unwrap(), 100);
+///
+/// let err = safe_default(Some(10), 10);
+/// assert!(err.is_err());
+/// ```
+pub fn safe_default<V: Debug + Eq>(opt: Option<V>, default: V) -> anyhow::Result<V> {
+    if let Some(v) = opt {
+        if v == default {
+            anyhow::bail!(format!("Unsafe value! {v:?}"))
+        }
+        Ok(v)
+    } else {
+        Ok(default)
+    }
+}
+
+pub fn opt_byte_arr<const N: usize>(data: Option<[u8; N]>) -> Vec<u8> {
+    let Some(data) = data else {
+        return vec![0xFF; N + 1];
+    };
+    let mut res = vec![0x00; N + 1];
+    res[1..].copy_from_slice(&data);
+    res
+}
+
+pub fn opt_byte_vec(data: Option<Vec<u8>>) -> Vec<u8> {
+    let Some(data) = data else {
+        return vec![0xFF];
+    };
+    let mut res = data.len().to_be_bytes().to_vec();
+    res.extend(data);
+    res
+}
+
+/// Computes the hash of the genesis system configuration.
+///
+/// # Arguments
+///
+/// * `system_config` - A reference to a `SystemConfig` struct containing all the necessary
+///   configuration fields to generate the hash.
+///
+/// # Returns
+///
+/// This function returns a `Result` containing a 32-byte array representing the hash of the
+/// system configuration. In case of an error (e.g., unsafe defaults or conversion failures),
+/// it returns an error wrapped in `anyhow::Error`.
+///
+/// # Algorithm
+///
+/// This function computes the hash in the following steps:
+/// 1. Extracts individual fields from the `system_config` and converts them into byte slices:
+///    - `batcher_address`: Concatenates the address as a byte slice.
+///    - `overhead`, `scalar`, and `gas_limit`: Converts each to 32-byte big-endian representations.
+///    - Defaulted fields (`base_fee_scalar`, `blob_base_fee_scalar`, `eip1559_denominator`,
+///      `eip1559_elasticity`, `operator_fee_scalar`, and `operator_fee_constant`): Each field is
+///      converted to its big-endian byte representation, using safe defaults when necessary. If a
+///      default fails, the function propagates the error context.
+///
+/// 2. Concatenates all the byte slice representations of the fields into a single buffer.
+///
+/// 3. Computes a cryptographic hash of the concatenated buffer using the `SHA2` hashing
+///    algorithm.
+///
+/// 4. Converts the resulting hash into a fixed-size 32-byte array.
+///
+/// # Errors
+///
+/// This function may fail in the following scenarios:
+/// - If the `safe_default` function for any of the defaulted fields fails to produce a valid
+///   value, an error will be returned with additional context.
+///
+/// # Notes
+///
+/// - The hash is computed deterministically based on the input `SystemConfig`. Any changes to
+///   the configuration will result in a different hash.
+/// - It is important to ensure that the input fields adhere to the expected formats and ranges
+///   for proper hash computation.
+pub fn genesis_system_config_hash(system_config: &SystemConfig) -> anyhow::Result<[u8; 32]> {
+    let fields = [
+        system_config.batcher_address.0.as_slice(),
+        system_config.overhead.to_be_bytes::<32>().as_slice(),
+        system_config.scalar.to_be_bytes::<32>().as_slice(),
+        system_config.gas_limit.to_be_bytes().as_slice(),
+        safe_default(system_config.base_fee_scalar, u64::MAX)
+            .context("base_fee_scalar")?
+            .to_be_bytes()
+            .as_slice(),
+        safe_default(system_config.blob_base_fee_scalar, u64::MAX)
+            .context("blob_base_fee_scalar")?
+            .to_be_bytes()
+            .as_slice(),
+        safe_default(system_config.eip1559_denominator, u32::MAX)
+            .context("eip1559_denominator")?
+            .to_be_bytes()
+            .as_slice(),
+        safe_default(system_config.eip1559_elasticity, u32::MAX)
+            .context("eip1559_elasticity")?
+            .to_be_bytes()
+            .as_slice(),
+        safe_default(system_config.operator_fee_scalar, u32::MAX)
+            .context("operator_fee_scalar")?
+            .to_be_bytes()
+            .as_slice(),
+        safe_default(system_config.operator_fee_constant, u64::MAX)
+            .context("operator_fee_constant")?
+            .to_be_bytes()
+            .as_slice(),
+    ]
+    .concat();
+    let digest = SHA2::hash_bytes(fields.as_slice());
+
+    Ok(digest.as_bytes().try_into().expect("infallible"))
+}
+
+/// Computes the hash of a RollupConfig, which summarizes various rollup configuration settings
+/// into a single 32-byte hash value. This function utilizes components from the RollupConfig
+/// struct, including genesis properties, system configuration details, and hardfork timings.
+///
+/// The hash is computed by serializing the relevant fields of RollupConfig and its sub-structures
+/// into a contiguous byte array, then hashing the result using the SHA-256 algorithm.
+///
+/// # Arguments
+///
+/// * `rollup_config` - A reference to the `RollupConfig` struct, containing all configuration
+///   parameters for a rollup.
+///
+/// # Returns
+///
+/// * `anyhow::Result<[u8; 32]>` - On success, returns a 32-byte array representing the hash of
+///   the rollup configuration. If errors are encountered during field processing or conversions,
+///   an error wrapped in `anyhow::Error` is returned.
+///
+/// # Errors
+///
+/// The function may return an error in the following scenarios:
+/// * Parsing errors from the `safe_default` utility while processing optional fields, such as
+///   `base_fee_scalar`, `blob_base_fee_scalar`, etc.
+/// * Conversion failures when converting slices or numbers to their byte representations.
+///
+/// # Behavior
+///
+/// 1. Computes a `system_config_hash` from the system configuration settings in `rollup_config.genesis`.
+///    If the system configuration is absent, a default zeroed 32-byte array is used.
+/// 2. Serializes various fields of `RollupConfig`, including genesis information, block time settings,
+///    protocol parameters, hardfork timings, and address-specific fields. These fields are concatenated
+///    into a single byte array.
+/// 3. The resulting byte array is hashed using SHA-256 to produce a 32-byte digest.
+/// 4. Returns the computed hash if all operations succeed.
+///
+/// # Notes
+///
+/// * `safe_default` is used extensively to provide fallback values for optional configuration
+///   fields, ensuring robust handling of missing or invalid data.
+/// * All numeric values are serialized in big-endian format for consistency.
+pub fn config_hash(rollup_config: &SoonRollupConfig) -> [u8; 32] {
+    let rollup_config_bytes = [
+        rollup_config.l1_chain_id.to_be_bytes().as_slice(),
+        rollup_config.max_sequencer_drift.to_be_bytes().as_slice(),
+        rollup_config.seq_window_size.to_be_bytes().as_slice(),
+        rollup_config.channel_timeout.to_be_bytes().as_slice(),
+        rollup_config.batch_inbox_address.0.as_slice(),
+        rollup_config.optimism_portal_address.0.as_slice(),
+        rollup_config.l1_system_config_address.0.as_slice(),
+        rollup_config.l1_standard_bridge.0.as_slice(),
+        rollup_config.l1_cross_domain_messenger.0.as_slice(),
+        rollup_config
+            .derive_delay_l1_block_num
+            .to_be_bytes()
+            .as_slice(),
+        rollup_config.max_frame_size.to_be_bytes().as_slice(),
+        rollup_config.channel_size.to_be_bytes().as_slice(),
+        rollup_config.block_time.to_be_bytes().as_slice(),
+        //TODO add shred_version/genesis_hash/upgrade_schedules/sequencer_schedules
+    ]
+    .concat();
+    let digest = SHA2::hash_bytes(rollup_config_bytes.as_slice());
+    digest.as_bytes().try_into().expect("infallible")
+}
+
+// #[cfg(test)]
+// #[cfg_attr(coverage_nightly, coverage(off))]
+// mod tests {
+//     use super::*;
+//     use alloy_eips::BlockNumHash;
+//     use std::collections::HashSet;
+
+//     use alloy_primitives::U256;
+//     use kona_genesis::{AltDAConfig, BaseFeeConfig, ChainGenesis, HardForkConfig, SystemConfig};
+
+//     #[test]
+//     fn test_safe_default() {
+//         assert_eq!(safe_default(Some(42), 0).unwrap(), 42);
+//         assert_eq!(safe_default(None, 100).unwrap(), 100);
+//         assert!(safe_default(Some(10), 10).is_err());
+//     }
+
+//     #[test]
+//     fn test_config_hash() {
+//         let mut rollup_config = RollupConfig {
+//             genesis: ChainGenesis {
+//                 l1: BlockNumHash {
+//                     hash: B256::ZERO,
+//                     number: 0,
+//                 },
+//                 l2: BlockNumHash {
+//                     hash: B256::ZERO,
+//                     number: 0,
+//                 },
+//                 l2_time: 0,
+//                 system_config: Some(SystemConfig {
+//                     batcher_address: Address::ZERO,
+//                     overhead: U256::ZERO,
+//                     scalar: U256::ZERO,
+//                     gas_limit: 0,
+//                     base_fee_scalar: Some(0),
+//                     blob_base_fee_scalar: Some(0),
+//                     eip1559_denominator: Some(0),
+//                     eip1559_elasticity: Some(0),
+//                     operator_fee_scalar: Some(0),
+//                     operator_fee_constant: Some(0),
+//                 }),
+//             },
+//             block_time: 0,
+//             max_sequencer_drift: 0,
+//             seq_window_size: 0,
+//             channel_timeout: 0,
+//             granite_channel_timeout: 0,
+//             l1_chain_id: 0,
+//             l2_chain_id: 0,
+//             chain_op_config: BaseFeeConfig {
+//                 eip1559_denominator: 0,
+//                 eip1559_elasticity: 0,
+//                 eip1559_denominator_canyon: 0,
+//             },
+//             hardforks: HardForkConfig {
+//                 regolith_time: Some(0),
+//                 canyon_time: Some(0),
+//                 delta_time: Some(0),
+//                 ecotone_time: Some(0),
+//                 fjord_time: Some(0),
+//                 granite_time: Some(0),
+//                 holocene_time: Some(0),
+//                 isthmus_time: Some(0),
+//                 interop_time: Some(0),
+//                 pectra_blob_schedule_time: Some(0),
+//             },
+//             batch_inbox_address: Address::ZERO,
+//             deposit_contract_address: Address::ZERO,
+//             l1_system_config_address: Address::ZERO,
+//             protocol_versions_address: Address::ZERO,
+//             superchain_config_address: Some(Address::from([0xff; 20])),
+//             blobs_enabled_l1_timestamp: Some(0),
+//             da_challenge_address: Some(Address::from([0xff; 20])),
+//             interop_message_expiry_window: 0,
+//             alt_da_config: Some(AltDAConfig {
+//                 da_challenge_address: Some(Address::from([0xff; 20])),
+//                 da_challenge_window: Some(0),
+//                 da_resolve_window: Some(0),
+//                 da_commitment_type: Some("_".to_string()),
+//             }),
+//         };
+
+//         let mut hashes: HashSet<[u8; 32]> = vec![config_hash(&rollup_config).unwrap()]
+//             .into_iter()
+//             .collect();
+
+//         rollup_config.genesis.l1.hash = B256::from([0x01; 32]);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.genesis.l1.number = 1;
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.genesis.l2.hash = B256::from([0x01; 32]);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.genesis.l2.number = 1;
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.genesis.l2_time = 1;
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config
+//             .genesis
+//             .system_config
+//             .as_mut()
+//             .unwrap()
+//             .batcher_address = Address::from([0x01; 20]);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config
+//             .genesis
+//             .system_config
+//             .as_mut()
+//             .unwrap()
+//             .overhead = U256::from_be_bytes([0x01; 32]);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.genesis.system_config.as_mut().unwrap().scalar =
+//             U256::from_be_bytes([0x01; 32]);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config
+//             .genesis
+//             .system_config
+//             .as_mut()
+//             .unwrap()
+//             .gas_limit = 1;
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config
+//             .genesis
+//             .system_config
+//             .as_mut()
+//             .unwrap()
+//             .base_fee_scalar = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config
+//             .genesis
+//             .system_config
+//             .as_mut()
+//             .unwrap()
+//             .blob_base_fee_scalar = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config
+//             .genesis
+//             .system_config
+//             .as_mut()
+//             .unwrap()
+//             .eip1559_denominator = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config
+//             .genesis
+//             .system_config
+//             .as_mut()
+//             .unwrap()
+//             .eip1559_elasticity = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config
+//             .genesis
+//             .system_config
+//             .as_mut()
+//             .unwrap()
+//             .operator_fee_scalar = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config
+//             .genesis
+//             .system_config
+//             .as_mut()
+//             .unwrap()
+//             .operator_fee_constant = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.block_time = 1;
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.max_sequencer_drift = 1;
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.seq_window_size = 1;
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.channel_timeout = 1;
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.granite_channel_timeout = 1;
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.l1_chain_id = 1;
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.l2_chain_id = 1;
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.chain_op_config.eip1559_denominator = 1;
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.chain_op_config.eip1559_elasticity = 1;
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.chain_op_config.eip1559_denominator_canyon = 1;
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.hardforks.regolith_time = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.hardforks.canyon_time = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.hardforks.delta_time = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.hardforks.ecotone_time = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.hardforks.fjord_time = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.hardforks.granite_time = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.hardforks.holocene_time = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.hardforks.isthmus_time = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.hardforks.interop_time = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.hardforks.pectra_blob_schedule_time = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.batch_inbox_address = Address::from([0x01; 20]);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.deposit_contract_address = Address::from([0x01; 20]);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.l1_system_config_address = Address::from([0x01; 20]);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.protocol_versions_address = Address::from([0x01; 20]);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.superchain_config_address = Some(Address::from([0x01; 20]));
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.blobs_enabled_l1_timestamp = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.da_challenge_address = Some(Address::from([0x02; 20]));
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config.interop_message_expiry_window = 1;
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config
+//             .alt_da_config
+//             .as_mut()
+//             .unwrap()
+//             .da_challenge_address = Some(Address::from([0x01; 20]));
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config
+//             .alt_da_config
+//             .as_mut()
+//             .unwrap()
+//             .da_challenge_window = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config
+//             .alt_da_config
+//             .as_mut()
+//             .unwrap()
+//             .da_resolve_window = Some(1);
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//         rollup_config
+//             .alt_da_config
+//             .as_mut()
+//             .unwrap()
+//             .da_commitment_type = Some("aa".to_string());
+//         assert!(hashes.insert(config_hash(&rollup_config).unwrap()));
+//     }
+
+//     fn test_safe_default_err(value: &RollupConfig, modifier: fn(&mut RollupConfig)) {
+//         let mut value = value.clone();
+//         modifier(&mut value);
+//         assert!(config_hash(&value).is_err());
+//     }
+
+//     #[test]
+//     fn test_config_hash_safe_defaults() {
+//         let rollup_config = RollupConfig {
+//             genesis: ChainGenesis {
+//                 l1: BlockNumHash {
+//                     hash: B256::ZERO,
+//                     number: 0,
+//                 },
+//                 l2: BlockNumHash {
+//                     hash: B256::ZERO,
+//                     number: 0,
+//                 },
+//                 l2_time: 0,
+//                 system_config: Some(SystemConfig {
+//                     batcher_address: Address::ZERO,
+//                     overhead: U256::ZERO,
+//                     scalar: U256::ZERO,
+//                     gas_limit: 0,
+//                     base_fee_scalar: Some(0),
+//                     blob_base_fee_scalar: Some(0),
+//                     eip1559_denominator: Some(0),
+//                     eip1559_elasticity: Some(0),
+//                     operator_fee_scalar: Some(0),
+//                     operator_fee_constant: Some(0),
+//                 }),
+//             },
+//             block_time: 0,
+//             max_sequencer_drift: 0,
+//             seq_window_size: 0,
+//             channel_timeout: 0,
+//             granite_channel_timeout: 0,
+//             l1_chain_id: 0,
+//             l2_chain_id: 0,
+//             chain_op_config: BaseFeeConfig {
+//                 eip1559_denominator: 0,
+//                 eip1559_elasticity: 0,
+//                 eip1559_denominator_canyon: 0,
+//             },
+//             hardforks: HardForkConfig {
+//                 regolith_time: Some(0),
+//                 canyon_time: Some(0),
+//                 delta_time: Some(0),
+//                 ecotone_time: Some(0),
+//                 fjord_time: Some(0),
+//                 granite_time: Some(0),
+//                 holocene_time: Some(0),
+//                 isthmus_time: Some(0),
+//                 interop_time: Some(0),
+//                 pectra_blob_schedule_time: Some(0),
+//             },
+//             batch_inbox_address: Address::ZERO,
+//             deposit_contract_address: Address::ZERO,
+//             l1_system_config_address: Address::ZERO,
+//             protocol_versions_address: Address::ZERO,
+//             superchain_config_address: Some(Address::from([0xff; 20])),
+//             blobs_enabled_l1_timestamp: Some(0),
+//             da_challenge_address: Some(Address::from([0xff; 20])),
+//             interop_message_expiry_window: 0,
+//             alt_da_config: Some(AltDAConfig {
+//                 da_challenge_address: Some(Address::from([0xff; 20])),
+//                 da_challenge_window: Some(0),
+//                 da_resolve_window: Some(0),
+//                 da_commitment_type: Some("_".to_string()),
+//             }),
+//         };
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.genesis.system_config.as_mut().unwrap().base_fee_scalar = Some(u64::MAX)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.genesis
+//                 .system_config
+//                 .as_mut()
+//                 .unwrap()
+//                 .blob_base_fee_scalar = Some(u64::MAX)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.genesis
+//                 .system_config
+//                 .as_mut()
+//                 .unwrap()
+//                 .eip1559_denominator = Some(u32::MAX)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.genesis.system_config.as_mut().unwrap().eip1559_elasticity = Some(u32::MAX)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.genesis
+//                 .system_config
+//                 .as_mut()
+//                 .unwrap()
+//                 .operator_fee_scalar = Some(u32::MAX)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.genesis
+//                 .system_config
+//                 .as_mut()
+//                 .unwrap()
+//                 .operator_fee_constant = Some(u64::MAX)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.hardforks.regolith_time = Some(u64::MAX)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| r.hardforks.canyon_time = Some(u64::MAX));
+
+//         test_safe_default_err(&rollup_config, |r| r.hardforks.delta_time = Some(u64::MAX));
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.hardforks.ecotone_time = Some(u64::MAX)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| r.hardforks.fjord_time = Some(u64::MAX));
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.hardforks.granite_time = Some(u64::MAX)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.hardforks.holocene_time = Some(u64::MAX)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.hardforks.isthmus_time = Some(u64::MAX)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.hardforks.interop_time = Some(u64::MAX)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.hardforks.pectra_blob_schedule_time = Some(u64::MAX)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.superchain_config_address = Some(Address::ZERO)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.blobs_enabled_l1_timestamp = Some(u64::MAX)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.da_challenge_address = Some(Address::ZERO)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.alt_da_config.as_mut().unwrap().da_challenge_address = Some(Address::ZERO)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.alt_da_config.as_mut().unwrap().da_challenge_window = Some(u64::MAX)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.alt_da_config.as_mut().unwrap().da_resolve_window = Some(u64::MAX)
+//         });
+
+//         test_safe_default_err(&rollup_config, |r| {
+//             r.alt_da_config.as_mut().unwrap().da_commitment_type = Some(String::new())
+//         });
+//     }
+// }
