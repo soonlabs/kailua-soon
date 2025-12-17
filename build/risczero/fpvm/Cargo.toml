@@ -17,12 +17,13 @@ lto = false
 
 [profile.release]
 codegen-units = 1
-debug = 1
+debug = false
 lto = false
+opt-level = "z"
 
 [profile.release.build-override]
 codegen-units = 1
-opt-level = 3
+opt-level = "z"
 
 [dependencies]
 blst = { version = "=0.3.15", features = ["no-threads"] }
