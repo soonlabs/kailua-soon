@@ -32,7 +32,7 @@ rkyv = "0.8.9"
 substrate-bn = "=0.6.0"
 
 kailua-soon-kona = { path = "../../../crates/kona" }
-kona-executor = { path = "../../../../kona-soon/crates/proof/executor" }
+kona-executor = { git = "https://github.com/soonlabs/kona-soon", branch = "dev" }
 
 # Explicitly declare alloy dependencies with exact versions to match workspace
 # This ensures HashMap hasher types are consistent across the dependency tree
