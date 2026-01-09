@@ -78,8 +78,100 @@ fn main() {
         std::fs::write(&target_code_path, &methods).unwrap();
     }
 
+    // Build recover_signer_test guest program
+    if cfg!(feature = "rebuild-recover-signer-test") {
+        let build_opts = {
+            #[cfg(not(any(feature = "debug-guest-build", debug_assertions)))]
+            let root_dir = {
+                let cwd = std::env::current_dir().unwrap();
+                cwd.parent()
+                    .unwrap()
+                    .parent()
+                    .map(|d| d.to_path_buf())
+                    .unwrap()
+            };
+            std::collections::HashMap::from([("kailua-recover-signer-test", {
+                let opts = risc0_build::GuestOptions::default();
+                #[cfg(any(
+                    feature = "disable-dev-mode",
+                    not(any(feature = "debug-guest-build", debug_assertions))
+                ))]
+                let opts = {
+                    let mut opts = opts;
+                    opts.features.push(String::from("disable-dev-mode"));
+                    opts
+                };
+                opts
+            })])
+        };
+
+        risc0_build::embed_methods_with_options(build_opts);
+
+        let src_bin_path = get_source_bin_dir_recover_signer(false);
+        let target_dir = get_target_dir();
+        let target_bin_path = target_dir.join("kailua-recover-signer-test.bin");
+        let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+        let target_code_path = out_dir.join("recover_signer_test_methods.rs");
+        
+        // Check if source binary exists before copying
+        if src_bin_path.exists() {
+            // copy bin to target_dir (same as fpvm does)
+            std::fs::copy(&src_bin_path, &target_bin_path).unwrap();
+            // compute image id
+            let bin = std::fs::read(&target_bin_path).unwrap();
+            let image_id = risc0_zkvm::compute_image_id(&bin).unwrap();
+            // Write methods.rs file in OUT_DIR, pointing to target_dir binary
+            let mut methods = String::new();
+            // Use absolute path or relative path from OUT_DIR to target_dir
+            let bin_relative_path = target_bin_path
+                .strip_prefix(&out_dir)
+                .unwrap_or(&target_bin_path)
+                .to_string_lossy()
+                .replace('\\', "/");
+            writeln!(
+                &mut methods,
+                "pub const KAILUA_RECOVER_SIGNER_TEST_ELF: &[u8] = include_bytes!(r#\"{}\"#);",
+                target_bin_path.to_string_lossy()
+            )
+            .unwrap();
+            writeln!(
+                &mut methods,
+                "pub const KAILUA_RECOVER_SIGNER_TEST_PATH: &str = r#\"{}\"#;",
+                target_bin_path.to_string_lossy()
+            )
+            .unwrap();
+            writeln!(
+                &mut methods,
+                "pub const KAILUA_RECOVER_SIGNER_TEST_ID: [u32; 8] = {:?};",
+                image_id.as_words()
+            )
+            .unwrap();
+            std::fs::write(&target_code_path, &methods).unwrap();
+        } else {
+            // If binary doesn't exist yet, create a placeholder methods file
+            let mut methods = String::new();
+            writeln!(
+                &mut methods,
+                "pub const KAILUA_RECOVER_SIGNER_TEST_ELF: &[u8] = &[];"
+            )
+            .unwrap();
+            writeln!(
+                &mut methods,
+                "pub const KAILUA_RECOVER_SIGNER_TEST_PATH: &str = \"\";"
+            )
+            .unwrap();
+            writeln!(
+                &mut methods,
+                "pub const KAILUA_RECOVER_SIGNER_TEST_ID: [u32; 8] = [0, 0, 0, 0, 0, 0, 0, 0];"
+            )
+            .unwrap();
+            std::fs::write(&target_code_path, &methods).unwrap();
+        }
+    }
+
     println!("cargo:rerun-if-changed=src");
     println!("cargo:rerun-if-changed=fpvm/src");
+    println!("cargo:rerun-if-changed=recover_signer_test/src");
 }
 
 fn get_source_bin_dir(is_docker: bool) -> PathBuf {
@@ -91,6 +183,17 @@ fn get_source_bin_dir(is_docker: bool) -> PathBuf {
         .join("riscv32im-risc0-zkvm-elf")
         .join(profile)
         .join("kailua-fpvm.bin")
+}
+
+fn get_source_bin_dir_recover_signer(is_docker: bool) -> PathBuf {
+    let profile = get_profile(is_docker);
+    let pkg = risc0_build::get_package(env::var("CARGO_MANIFEST_DIR").unwrap());
+    get_out_dir()
+        .join(pkg.name)
+        .join("kailua-recover-signer-test")
+        .join("riscv32im-risc0-zkvm-elf")
+        .join(profile)
+        .join("kailua-recover-signer-test.bin")
 }
 
 fn get_target_dir() -> PathBuf {

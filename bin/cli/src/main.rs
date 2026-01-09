@@ -82,6 +82,9 @@ async fn main() -> anyhow::Result<()> {
         KailuaCli::Export { .. } => {
             await_tel!(context, kailua_cli::export::export(data_dir))
         }
+        KailuaCli::RecoverSignerTest { .. } => {
+            kailua_cli::recover_signer_test::run_recover_signer_test()
+        }
     };
 
     let span = context.span();

@@ -15,9 +15,10 @@ risc0-build.workspace = true
 risc0-zkvm.workspace = true
 
 [package.metadata.risc0]
-methods = ["fpvm"]
+methods = ["fpvm", "recover_signer_test"]
 
 [features]
 debug-guest-build = []
 disable-dev-mode = []
 rebuild-fpvm = []
+rebuild-recover-signer-test = []

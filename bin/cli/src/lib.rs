@@ -24,6 +24,7 @@ pub mod demo;
 pub mod export;
 pub mod fast_track;
 pub mod fault;
+pub mod recover_signer_test;
 
 /// The Kailua all-in-one CLI utility suite for securing rollups
 #[derive(clap::Parser, Debug, Clone)]
@@ -104,6 +105,10 @@ pub enum KailuaCli {
         #[clap(flatten)]
         cli: CliArgs,
     },
+    RecoverSignerTest {
+        #[clap(flatten)]
+        cli: CliArgs,
+    },
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -127,6 +132,7 @@ impl KailuaCli {
             KailuaCli::Bonsai { cli, .. } => cli.v,
             KailuaCli::Boundless { cli, .. } => cli.v,
             KailuaCli::Export { cli, .. } => cli.v,
+            KailuaCli::RecoverSignerTest { cli, .. } => cli.v,
         }
     }
 
@@ -156,6 +162,10 @@ impl KailuaCli {
             KailuaCli::Bonsai { args, .. } => &args.telemetry,
             KailuaCli::Boundless { args, .. } => &args.telemetry,
             KailuaCli::Export { args, .. } => &args.telemetry,
+            KailuaCli::RecoverSignerTest { .. } => {
+                static DEFAULT: std::sync::OnceLock<TelemetryArgs> = std::sync::OnceLock::new();
+                DEFAULT.get_or_init(TelemetryArgs::default)
+            }
         }
     }
 }

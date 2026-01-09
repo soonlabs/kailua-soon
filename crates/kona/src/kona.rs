@@ -295,15 +295,48 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
                     },
                     TxEnvelope::Eip7702(tx) => (Some(tx.tx().to), &tx.tx().input),
                 };
+                let tx_hash = *tx.hash();
+                let from = match tx.recover_signer() {
+                    Ok(addr) => addr,
+                    Err(e) => {
+                        let error_msg = match tx {
+                            TxEnvelope::Legacy(tx) => {
+                                let tx_inner = tx.tx();
+                                let sig = tx.signature();
+                                format!(
+                                    "Failed to recover signer from Legacy transaction. Hash: {:?}, Error: {:?}, Details: nonce={}, gas_limit={}, gas_price={}, value={}, chain_id={:?}, signature(r={:?}, s={:?}, signature={:?}), to={:?}, input_len={}, input_hex={:?}",
+                                    tx_hash,
+                                    e,
+                                    tx_inner.nonce,
+                                    tx_inner.gas_limit,
+                                    tx_inner.gas_price,
+                                    tx_inner.value,
+                                    tx_inner.chain_id,
+                                    sig.r(),
+                                    sig.s(),
+                                    sig,
+                                    tx_inner.to,
+                                    tx_inner.input.len(),
+                                    alloy_primitives::hex::encode(&tx_inner.input)
+                                )
+                            }
+                            _ => {
+                                format!("Failed to recover signer from transaction hash: {:?}, Error: {:?}", tx_hash, e)
+                            }
+                        };
+                        return Err(OracleProviderError::Rlp(alloy_rlp::Error::Custom(
+                            Box::leak(error_msg.into_boxed_str())
+                        )));
+                    }
+                };
                 Ok(L1Transaction {
                     hash: *tx.hash(),
-                    from: tx.recover_signer_unchecked().unwrap(),
+                    from,
                     to,
                     input: data.to_vec(),
                 })
             })
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(OracleProviderError::Rlp)?;
+            .collect::<Result<Vec<_>, OracleProviderError>>()?;
 
         Ok(l1_transactions)
     }
@@ -343,9 +376,9 @@ pub mod tests {
     use super::*;
     use crate::oracle::vec::tests::prepare_vec_oracle;
     use crate::oracle::WitnessOracle;
-    use alloy_consensus::{ReceiptWithBloom, SignableTransaction, TxEip1559};
+    use alloy_consensus::{ReceiptWithBloom, SignableTransaction, TxEip1559, TxLegacy};
     use alloy_eips::Encodable2718;
-    use alloy_primitives::{Log, Signature, U256};
+    use alloy_primitives::{Address, Log, Signature, U256};
     use kona_mpt::{Nibbles, NoopTrieProvider};
 
     #[tokio::test(flavor = "multi_thread")]
@@ -504,5 +537,98 @@ pub mod tests {
                 timestamp: 0,
             }
         );
+    }
+
+    #[test]
+    fn test_legacy_transaction_recover_signer() {
+        // Build Legacy transaction with provided data
+        let nonce = 242u64;
+        let gas_limit = 21000u64;
+        let gas_price = 20900000000u128;
+        let value = 32370000000000000u128;
+        let chain_id = Some(11155111u64);
+        let to = "0x359a68f67966247a34e07694493e0d00c99a1756"
+            .parse::<Address>()
+            .unwrap();
+        let input = Vec::<u8>::new();
+
+        // Create signature from provided data
+        // r = 111197453629367114907912549862485227720359187220219358471218136821626017544888
+        // s = 16069675716490115033286433543232569847835186933082730357946014073768762936666
+        // y_parity = false
+        let r = U256::from_str_radix(
+            "111197453629367114907912549862485227720359187220219358471218136821626017544888",
+            10,
+        )
+        .unwrap();
+        let s = U256::from_str_radix(
+            "16069675716490115033286433543232569847835186933082730357946014073768762936666",
+            10,
+        )
+        .unwrap();
+        let y_parity = false;
+
+        let signature = Signature::new(r, s, y_parity);
+
+        // Create TxLegacy transaction
+        let tx_legacy = TxLegacy {
+            chain_id,
+            nonce,
+            gas_price,
+            gas_limit,
+            to: to.into(),
+            value: U256::from(value),
+            input: input.into(),
+        };
+
+        // Sign the transaction
+        let signed_tx = tx_legacy.into_signed(signature);
+
+        // Create TxEnvelope::Legacy
+        let tx_envelope = TxEnvelope::Legacy(signed_tx);
+
+        // Verify transaction properties match the input data
+        match &tx_envelope {
+            TxEnvelope::Legacy(signed_tx) => {
+                let tx_inner = signed_tx.tx();
+                assert_eq!(tx_inner.nonce, nonce, "Nonce should match");
+                assert_eq!(tx_inner.gas_limit, gas_limit, "Gas limit should match");
+                assert_eq!(tx_inner.gas_price, gas_price, "Gas price should match");
+                assert_eq!(tx_inner.value, U256::from(value), "Value should match");
+                assert_eq!(tx_inner.chain_id, chain_id, "Chain ID should match");
+                assert_eq!(
+                    tx_inner.to.into_to(),
+                    Some(to),
+                    "To address should match"
+                );
+                assert_eq!(tx_inner.input.len(), 0, "Input should be empty");
+                assert_eq!(
+                    tx_inner.input.as_ref(),
+                    &[] as &[u8],
+                    "Input data should be empty"
+                );
+
+                // Verify signature matches
+                let sig = signed_tx.signature();
+                assert_eq!(sig.r(), r, "Signature r should match");
+                assert_eq!(sig.s(), s, "Signature s should match");
+                // Note: y_parity is a private field, but we can verify it through the signature creation
+                // The signature was created with y_parity=false, so we verify the signature is correct
+            }
+            _ => panic!("Expected TxEnvelope::Legacy"),
+        }
+
+        // Recover signer address
+        let recovered_address = tx_envelope
+            .recover_signer()
+            .expect("Failed to recover signer from Legacy transaction");
+
+        // Verify that we successfully recovered an address
+        // The address should not be zero
+        assert_ne!(recovered_address, Address::ZERO, "Recovered address should not be zero");
+
+        // Print the recovered address for verification
+        println!("Recovered signer address: {:?}", recovered_address);
+        println!("Transaction hash: {:?}", tx_envelope.hash());
     }
 }
