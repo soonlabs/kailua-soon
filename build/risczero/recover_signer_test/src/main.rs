@@ -24,12 +24,14 @@ fn main() {
     let tx_data = env::read::<TransactionData>();
     
     risc0_zkvm::guest::env::log(&format!(
-        "Testing recover_signer with: nonce={}, gas_limit={}, gas_price={}, value={}, chain_id={:?}",
+        "Testing recover_signer with: nonce={}, gas_limit={}, gas_price={}, value={}, chain_id={:?}, to={:?}, input={:?}",
         tx_data.nonce,
         tx_data.gas_limit,
         tx_data.gas_price,
         tx_data.value,
-        tx_data.chain_id
+        tx_data.chain_id,
+        tx_data.to_address,
+        tx_data.input
     ));
     
     risc0_zkvm::guest::env::log(&format!(
