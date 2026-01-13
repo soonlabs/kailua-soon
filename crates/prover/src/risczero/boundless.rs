@@ -123,7 +123,7 @@ pub struct MarketProviderConfig {
     pub boundless_order_stream_url: Option<Cow<'static, str>>,
 
     /// Number of transactions to lookback at
-    #[clap(long, env, required = false, default_value_t = true)]
+    #[clap(long, env, required = false, default_value_t = false)]
     pub boundless_look_back: bool,
 
     /// Whether to skip preflighting execution and assume a fixed cycle count.
@@ -151,10 +151,10 @@ pub struct MarketProviderConfig {
     #[clap(long, env, required = false, default_value_t = 2.0)]
     pub boundless_order_expiry_factor: f64,
     /// Time in seconds between attempts to check order status
-    #[clap(long, env, required = false, default_value_t = 12)]
+    #[clap(long, env, required = false, default_value_t = 30)]
     pub boundless_order_check_interval: u64,
     /// Whether to enable upload caching
-    #[clap(long, env, required = false, default_value_t = true)]
+    #[clap(long, env, required = false, default_value_t = false)]
     pub boundless_enable_upload_caching: bool,
 
     /// Time in seconds between attempts to submit new orders
