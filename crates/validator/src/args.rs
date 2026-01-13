@@ -42,7 +42,7 @@ pub struct ValidateArgs {
     #[arg(long, env, default_value_t = false)]
     pub enable_experimental_witness_endpoint: bool,
     /// The maximum amount of seconds to wait before starting to compute a fault proof. (Default 86400)
-    #[clap(long, env, default_value_t = 86400)]
+    #[clap(long, env, default_value_t = 30)]
     pub max_fault_proving_delay: u64,
     /// The maximum amount of seconds to wait before starting to compute a validity proof. (Default 0)
     #[clap(long, env, default_value_t = 0)]

@@ -4,7 +4,7 @@ set fallback := true
 default:
   @just --list
 
-build +ARGS=" -F prove -F disable-dev-mode --locked":
+build +ARGS="--release -F prove -F disable-dev-mode --locked":
   cargo build {{ARGS}}
 
 build-fpvm +ARGS="--release -F prove -F disable-dev-mode -F rebuild-fpvm --locked":
@@ -68,12 +68,12 @@ devnet-config target="debug" verbosity="" l1_rpc="http://127.0.0.1:8545" l2_rpc=
       --soon-node-url {{l2_rpc}} \
       --otlp-collector
 
-devnet-upgrade timeout="3600" advantage="60" target="debug" verbosity="" l1_rpc="http://127.0.0.1:8545" l2_rpc="http://127.0.0.1:8899" vanguard="0x055A514d608c28F9F90eD2A6977f76e9DB08aFaD,0xc43608EfC12A961879e2F9F159f3667351284b3E" deployer="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d" owner="0xc49af0e1e397697bd6a917a076d5cf4be42b91dfe307f7f3a07a07f9d50a3b89" guardian="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
+devnet-upgrade timeout="3600" advantage="60" target="release" verbosity="" l1_rpc="http://127.0.0.1:8545" l2_rpc="http://127.0.0.1:8899" vanguard="0x055A514d608c28F9F90eD2A6977f76e9DB08aFaD,0xc43608EfC12A961879e2F9F159f3667351284b3E" deployer="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d" owner="0xc49af0e1e397697bd6a917a076d5cf4be42b91dfe307f7f3a07a07f9d50a3b89" guardian="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
   RISC0_DEV_MODE=1 ./target/{{target}}/kailua-cli fast-track \
       --eth-rpc-url {{l1_rpc}} \
       --soon-node-url {{l2_rpc}} \
       --starting-block-number 0 \
-      --proposal-output-count 1 \
+      --proposal-output-count 2 \
       --output-block-span 50 \
       --challenge-timeout {{timeout}} \
       --collateral-amount 1 \
@@ -86,7 +86,7 @@ devnet-upgrade timeout="3600" advantage="60" target="debug" verbosity="" l1_rpc=
 
 devnet-reset: devnet-down devnet-clean devnet-up
 
-devnet-propose target="debug" verbosity="-vvv" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/propose" proposer="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
+devnet-propose target="release" verbosity="-vvv" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/propose" proposer="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
   ./target/{{target}}/kailua-cli propose \
       --eth-rpc-url {{l1_rpc}} \
       --beacon-rpc-url {{l1_beacon_rpc}} \
@@ -95,7 +95,7 @@ devnet-propose target="debug" verbosity="-vvv" l1_rpc="http://127.0.0.1:8545" l1
       --proposer-key {{proposer}} \
       {{verbosity}}
 
-devnet-fault offset parent target="debug" proposer="0x5a2ca727946070dd1e37b79197681ee861a6b4e31b3a86d54396ead0b0bb03ac" verbosity="" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899":
+devnet-fault offset parent target="release" proposer="0x5a2ca727946070dd1e37b79197681ee861a6b4e31b3a86d54396ead0b0bb03ac" verbosity="" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899":
   ./target/{{target}}/kailua-cli test-fault \
       --eth-rpc-url {{l1_rpc}} \
       --beacon-rpc-url {{l1_beacon_rpc}} \
@@ -105,7 +105,7 @@ devnet-fault offset parent target="debug" proposer="0x5a2ca727946070dd1e37b79197
       --fault-parent {{parent}} \
       {{verbosity}}
 
-devnet-validate fastforward="100" target="debug" verbosity="" da_proxy="http://127.0.0.1:8080/" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/validate" validator="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
+devnet-validate fastforward="100" target="release" verbosity="" da_proxy="http://127.0.0.1:8080/" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/validate" validator="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
   ./target/{{target}}/kailua-cli validate \
       --fast-forward-target {{fastforward}} \
       --eth-rpc-url {{l1_rpc}} \
@@ -116,7 +116,7 @@ devnet-validate fastforward="100" target="debug" verbosity="" da_proxy="http://1
       --validator-key {{validator}} \
       {{verbosity}}
 
-devnet-validate-boundless fastforward target="debug" verbosity="" da_proxy="http://127.0.0.1:8080/" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/validate" validator="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
+devnet-validate-boundless fastforward target="release" verbosity="" da_proxy="http://127.0.0.1:8080/" l1_rpc="http://127.0.0.1:8545" l1_beacon_rpc="http://127.0.0.1:5052" l2_rpc="http://127.0.0.1:8899" data_dir=".localtestdata/validate" validator="0xe3cda83c742308a19c97c69089d33f848a1dc01467a912f514dd134953fd702d":
     ./target/{{target}}/kailua-cli validate \
         --fast-forward-target {{fastforward}} \
         --eth-rpc-url {{l1_rpc}} \
@@ -132,10 +132,15 @@ devnet-validate-boundless fastforward target="debug" verbosity="" da_proxy="http
         --boundless-verifier-router-address 0x0b144e07a0826182b6b59788c34b32bfa86fb711 \
         --boundless-set-verifier-address 0x1Ab08498CfF17b9723ED67143A050c8E8c2e3104 \
         --boundless-collateral-token-address 0xaa61bb7777bd01b684347961918f1e07fbbce7cf \
-        --storage-provider pinata \
-        --pinata-jwt ${BOUNDLESS_PINATA_JWT} \
+        --storage-provider s3 \
+        --s3-access-key ${BOUNDLESS_S3_ACCESS_KEY} \
+        --s3-secret-key ${BOUNDLESS_S3_SECRET_KEY} \
+        --s3-bucket ${BOUNDLESS_S3_BUCKET} \
+        --aws-region ${BOUNDLESS_S3_REGION} \
+        --s3-url ${BOUNDLESS_S3_URL} \
         --boundless-cycle-min-wei 20000 \
         --boundless-cycle-max-wei 500000 \
+        --boundless-mega-cycle-collateral 1000000 \
         {{verbosity}}
 
 devnet-prove block_number block_count="1" target="debug" verbosity="" data=".localtestdata": (prove block_number block_count "http://localhost:8545" "http://localhost:5052" "http://localhost:9545" "http://localhost:7545" data target verbosity)

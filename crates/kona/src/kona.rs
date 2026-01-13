@@ -17,7 +17,7 @@ use alloy_consensus::TxEip4844Variant::{TxEip4844, TxEip4844WithSidecar};
 use alloy_consensus::{Header, Receipt, ReceiptEnvelope, TxEnvelope};
 use alloy_eips::{BlockNumberOrTag, Decodable2718};
 use alloy_primitives::map::B256Map;
-use alloy_primitives::{Sealed, B256};
+use alloy_primitives::{B256, Sealed};
 use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use kona_mpt::{OrderedListWalker, TrieNode, TrieProvider};
@@ -295,9 +295,23 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
                     },
                     TxEnvelope::Eip7702(tx) => (Some(tx.tx().to), &tx.tx().input),
                 };
+                let from = match tx.recover_signer() {
+                    Ok(recovered_address) => {
+                        Some(recovered_address)
+                    }
+                    Err(e) => {
+                        let error_msg = format!(
+                            "Failed to recover signer from transaction. Error: {:?}, Hash: {:?}",
+                            e,
+                            tx.hash()
+                        );
+                        risc0_zkvm::guest::env::log(&error_msg);
+                        None
+                    }
+                };
                 Ok(L1Transaction {
                     hash: *tx.hash(),
-                    from: tx.recover_signer_unchecked().unwrap(),
+                    from: from.unwrap(),
                     to,
                     input: data.to_vec(),
                 })

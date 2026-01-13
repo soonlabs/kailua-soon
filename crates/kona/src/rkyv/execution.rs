@@ -26,8 +26,8 @@ use soon_primitives::blocks::L2BlockInfo;
 pub struct BlockBuildingOutcomeRkyv;
 
 impl ArchiveWith<BlockBuildingOutcome> for BlockBuildingOutcomeRkyv {
-    type Archived = Archived<(Vec<u8>, Vec<u8>, Vec<u8>)>;
-    type Resolver = Resolver<(Vec<u8>, Vec<u8>, Vec<u8>)>;
+    type Archived = Archived<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, u64)>;
+    type Resolver = Resolver<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, u64)>;
 
     fn resolve_with(
         field: &BlockBuildingOutcome,
@@ -36,9 +36,11 @@ impl ArchiveWith<BlockBuildingOutcome> for BlockBuildingOutcomeRkyv {
     ) {
         let block_header = bincode::serialize(&field.block_info).unwrap();
         let state_root = bincode::serialize(&field.state_root).unwrap();
+        let withdraw_root = bincode::serialize(&field.withdraw_root).unwrap();
         let execution_result = bincode::serialize(&field.execution_result).unwrap();
-        let field = (block_header, state_root, execution_result);
-        <(Vec<u8>, Vec<u8>, Vec<u8>) as Archive>::resolve(&field, resolver, out);
+        let signature_count = field.signature_count;
+        let field = (block_header, state_root, withdraw_root, execution_result, signature_count);
+        <(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, u64) as Archive>::resolve(&field, resolver, out);
     }
 }
 
@@ -53,34 +55,38 @@ where
     ) -> Result<Self::Resolver, S::Error> {
         let header = bincode::serialize(&field.block_info).unwrap();
         let state_root = bincode::serialize(&field.state_root).unwrap();
+        let withdraw_root = bincode::serialize(&field.withdraw_root).unwrap();
         let execution_result = bincode::serialize(&field.execution_result).unwrap();
-        let field = (header, state_root, execution_result);
-        <(Vec<u8>, Vec<u8>, Vec<u8>) as rkyv::Serialize<S>>::serialize(&field, serializer)
+        let signature_count = field.signature_count;
+        let field = (header, state_root, withdraw_root, execution_result, signature_count);
+        <(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, u64) as rkyv::Serialize<S>>::serialize(&field, serializer)
     }
 }
 
-impl<D: Fallible> DeserializeWith<Archived<(Vec<u8>, Vec<u8>, Vec<u8>)>, BlockBuildingOutcome, D>
+impl<D: Fallible> DeserializeWith<Archived<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, u64)>, BlockBuildingOutcome, D>
     for BlockBuildingOutcomeRkyv
 where
     D: Fallible + ?Sized,
     <D as Fallible>::Error: rkyv::rancor::Source,
 {
     fn deserialize_with(
-        field: &Archived<(Vec<u8>, Vec<u8>, Vec<u8>)>,
+        field: &Archived<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, u64)>,
         deserializer: &mut D,
     ) -> Result<BlockBuildingOutcome, D::Error> {
-        let field: (Vec<u8>, Vec<u8>, Vec<u8>) =
+        let field: (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, u64) =
             rkyv::Deserialize::deserialize(field, deserializer)?;
         let block_info: L2BlockInfo = bincode::deserialize(field.0.as_slice()).unwrap();
         let state_root: B256 = bincode::deserialize(field.1.as_slice()).unwrap();
-        let execution_result = bincode::deserialize(field.2.as_slice()).unwrap();
+        let withdraw_root: B256 = bincode::deserialize(field.2.as_slice()).unwrap();
+        let execution_result = bincode::deserialize(field.3.as_slice()).unwrap();
+        let signature_count = field.4;
         Ok(BlockBuildingOutcome {
             block_info,
             state_root,
-            withdraw_root: B256::ZERO,
+            withdraw_root,
             execution_result,
             fee_rate_governor: FeeRateGovernor::default(),
-            signature_count: 0,
+            signature_count,
         })
     }
 }
