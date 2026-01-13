@@ -772,6 +772,14 @@ pub async fn request_proof<A: NoUninit + Into<Digest>>(
             if let Err(err) = save_to_bincoded_file(&cached_data, &req_file_name).await {
                 warn!("Failed to cache cycle count data: {err:?}");
             }
+            // Verify that session_info.journal matches the journal passed to request_proof
+            if session_info.journal != journal {
+                return Err(ProvingError::OtherError(anyhow!(
+                    "Journal mismatch: expected journal {} but found {}",
+                    hex::encode(&journal),
+                    hex::encode(&session_info.journal)
+                )));
+            }
             cycle_count
         }
     };
