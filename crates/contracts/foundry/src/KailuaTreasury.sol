@@ -334,6 +334,38 @@ contract KailuaTreasury is KailuaTournament, IKailuaTreasury {
         emit VanguardAdded(_vanguard);
     }
 
+    /// @notice Sovereign interface to mark a KailuaGame as fault without submitting a proof
+    /// @dev This function allows the factory owner to mark a game as fault when proof cannot be
+    ///      generated in time, preventing state from being stuck. The game's parent will have its
+    ///      proofStatus updated to FAULT for this game's signature.
+    /// @param _game The address of the KailuaGame contract to mark as fault
+    function markGameAsFault(address _game) external onlyFactoryOwner {
+        // INVARIANT: Only known proposals may be marked as fault
+        address proposer = proposerOf[_game];
+        if (proposer == address(0x0)) {
+            revert NotProposed();
+        }
+
+        KailuaTournament game = KailuaTournament(_game);
+        
+        // INVARIANT: Cannot mark resolved games as fault
+        if (game.status() != GameStatus.IN_PROGRESS) {
+            revert GameNotInProgress();
+        }
+
+        // Get the parent game
+        KailuaTournament parentGame_ = game.parentGame();
+        
+        // Get the game's signature
+        bytes32 gameSignature = game.signature();
+        
+        // Call the parent game's markChildAsFault function
+        parentGame_.markChildAsFault(gameSignature);
+        
+        // Emit event
+        emit GameMarkedAsFault(_game, gameSignature);
+    }
+
     /// @notice Checks the proposer's bonded amount and creates a new proposal through the factory
     function propose(Claim _rootClaim, bytes calldata _extraData)
         external

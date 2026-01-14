@@ -233,6 +233,38 @@ abstract contract KailuaTournament is Clone, IDisputeGame {
         provenAt[childSignature] = Timestamp.wrap(uint64(block.timestamp));
     }
 
+    /// @notice Sovereign interface to mark a child game as fault without submitting a proof
+    /// @dev This function allows the treasury to mark a child game as fault when proof cannot be
+    ///      generated in time. Only callable by the treasury.
+    /// @param childSignature The signature of the child game to mark as fault
+    function markChildAsFault(bytes32 childSignature) external {
+        // INVARIANT: Only the treasury can call this function
+        if (msg.sender != address(KAILUA_TREASURY)) {
+            revert Blacklisted(msg.sender, address(KAILUA_TREASURY));
+        }
+
+        // INVARIANT: Cannot mark as fault if already proven as VALIDITY
+        if (proofStatus[childSignature] == ProofStatus.VALIDITY) {
+            revert AlreadyProven();
+        }
+
+        // Update proof status to FAULT (allow override if already FAULT)
+        proofStatus[childSignature] = ProofStatus.FAULT;
+
+        // Announce proof status
+        emit Proven(childSignature, ProofStatus.FAULT);
+
+        // Set the prover address to address(0) for sovereign marking
+        if (prover[childSignature] == address(0x0)) {
+            prover[childSignature] = address(0x0);
+        }
+
+        // Set the proving timestamp
+        if (provenAt[childSignature].raw() == 0) {
+            provenAt[childSignature] = Timestamp.wrap(uint64(block.timestamp));
+        }
+    }
+
     // ------------------------------
     // IDisputeGame implementation
     // ------------------------------
