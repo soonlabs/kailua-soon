@@ -25,4 +25,4 @@ pub mod stall;
 pub mod telemetry;
 pub mod transact;
 
-pub const KAILUA_GAME_TYPE: u32 = 2013;
+pub const KAILUA_GAME_TYPE: u32 = 2014;
