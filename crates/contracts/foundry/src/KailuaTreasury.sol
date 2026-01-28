@@ -187,11 +187,6 @@ contract KailuaTreasury is KailuaTournament, IKailuaTreasury {
             revert NotProposed();
         }
 
-        // INVARIANT: Cannot double-eliminate players
-        if (eliminationRound[eliminated] > 0) {
-            revert AlreadyEliminated();
-        }
-
         // Record elimination round
         eliminationRound[eliminated] = child.gameIndex();
 
@@ -373,10 +368,6 @@ contract KailuaTreasury is KailuaTournament, IKailuaTreasury {
         onlyVanguard
         returns (KailuaTournament tournament)
     {
-        // Check proposer honesty
-        if (eliminationRound[msg.sender] > 0) {
-            revert BadAuth();
-        }
         // Update proposer bond
         if (msg.value > 0) {
             paidBonds[msg.sender] += msg.value;
