@@ -105,6 +105,11 @@ event VanguardAdded(address indexed vanguard);
 /// @param vanguard The address of the removed vanguard
 event VanguardRemoved(address indexed vanguard);
 
+/// @notice Emitted when a game is marked as fault by the sovereign
+/// @param game The address of the game marked as fault
+/// @param signature The signature of the game
+event GameMarkedAsFault(address indexed game, bytes32 indexed signature);
+
 interface IKailuaTreasury {
     /// @notice Returns the game index at which proposer was proven faulty
     function eliminationRound(address proposer) external view returns (uint256);
