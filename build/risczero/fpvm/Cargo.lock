@@ -1120,7 +1120,7 @@ dependencies = [
 [[package]]
 name = "bridge"
 version = "1.0.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#021fde97513129be0295b9105f2766d4d634bc1b"
 dependencies = [
  "arrayref",
  "ethabi",
@@ -2228,7 +2228,7 @@ dependencies = [
 [[package]]
 name = "fraud-executor"
 version = "0.1.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#021fde97513129be0295b9105f2766d4d634bc1b"
 dependencies = [
  "alloy-eips",
  "alloy-primitives",
@@ -3119,7 +3119,7 @@ dependencies = [
 [[package]]
 name = "kona-driver"
 version = "0.3.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#021fde97513129be0295b9105f2766d4d634bc1b"
 dependencies = [
  "alloy-consensus",
  "alloy-evm",
@@ -3139,7 +3139,7 @@ dependencies = [
 [[package]]
 name = "kona-executor"
 version = "0.3.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#021fde97513129be0295b9105f2766d4d634bc1b"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -3167,7 +3167,7 @@ dependencies = [
 [[package]]
 name = "kona-mpt"
 version = "0.2.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#021fde97513129be0295b9105f2766d4d634bc1b"
 dependencies = [
  "alloy-primitives",
  "alloy-rlp",
@@ -3182,7 +3182,7 @@ dependencies = [
 [[package]]
 name = "kona-preimage"
 version = "0.3.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#021fde97513129be0295b9105f2766d4d634bc1b"
 dependencies = [
  "alloy-primitives",
  "async-channel",
@@ -3196,7 +3196,7 @@ dependencies = [
 [[package]]
 name = "kona-proof"
 version = "0.3.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#021fde97513129be0295b9105f2766d4d634bc1b"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -3234,7 +3234,7 @@ dependencies = [
 [[package]]
 name = "l1-block-info"
 version = "1.0.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#021fde97513129be0295b9105f2766d4d634bc1b"
 dependencies = [
  "arrayref",
  "num-derive 0.4.2",
@@ -3336,7 +3336,7 @@ checksum = "241eaef5fd12c88705a01fc1066c48c4b36e0dd4377dcdc7ec3942cea7a69956"
 [[package]]
 name = "litesvm"
 version = "0.1.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#021fde97513129be0295b9105f2766d4d634bc1b"
 dependencies = [
  "bincode",
  "fast-math",
@@ -6076,7 +6076,7 @@ dependencies = [
 [[package]]
 name = "soon-derive"
 version = "0.1.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#021fde97513129be0295b9105f2766d4d634bc1b"
 dependencies = [
  "alloc-no-stdlib",
  "alloy-consensus",
@@ -6100,7 +6100,7 @@ dependencies = [
 [[package]]
 name = "soon-miniz-oxide"
 version = "0.1.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#021fde97513129be0295b9105f2766d4d634bc1b"
 dependencies = [
  "adler2",
 ]
@@ -6108,7 +6108,7 @@ dependencies = [
 [[package]]
 name = "soon-primitives"
 version = "0.1.0"
-source = "git+https://github.com/soonlabs/kona-soon?branch=dev#58277b21db69537c360a2be70ad6c67e3eb53f03"
+source = "git+https://github.com/soonlabs/kona-soon?branch=dev#021fde97513129be0295b9105f2766d4d634bc1b"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
